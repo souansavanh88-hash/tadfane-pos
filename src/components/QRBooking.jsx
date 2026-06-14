@@ -1,0 +1,3398 @@
+// QRBooking.jsx - Cashier POS Terminal (Staff Assignment & QR Scanner Updates)
+import React, { useState, useEffect, useRef } from "react";
+import { useLanguage } from "../utils/LanguageContext";
+
+const formatLocalDate = (dateStr) => {
+  if (!dateStr) return "-";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
+import { getDb, addBooking, saveDb, purgeTestData } from "../db/mockDb";
+import { formatLAK, formatTHB, formatUSD, generateBillId, getStatusLabel } from "../utils/helpers";
+import { 
+  Printer, Ticket, CreditCard, Wallet, Banknote, Clock, Users, Plus, Minus, 
+  Ship, Check, Calendar, QrCode, ExternalLink, RefreshCw, AlertTriangle, UserCheck, ShieldAlert, X, Scan 
+} from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+
+const calculateAge = (dobString) => {
+  if (!dobString) return "";
+  const birthDate = new Date(dobString);
+  if (isNaN(birthDate.getTime())) return "";
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age >= 0 ? age : 0;
+};
+
+const getDobInputVal = (dob) => {
+  if (!dob) return "";
+  const parts = dob.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dob;
+};
+
+const receiptTranslations = {
+  en: {
+    billNumber: "Bill Number:",
+    date: "Date:",
+    payment: "Payment:",
+    agent: "Agent:",
+    passengers: "Passengers:",
+    paxUnit: "Pax",
+    driver: "Driver:",
+    guides: "Guides:",
+    boats: "Boats:",
+    boatLabel: "Boat",
+    unassigned: "Unassigned",
+    passengerListHeader: "PASSENGERS",
+    noRegistered: "Waiting for Passenger Registration",
+    total: "TOTAL:",
+    thankYou: "THANK YOU",
+    cash: "CASH",
+    transfer: "TRANSFER",
+    card: "CARD",
+    ageUnit: "yrs",
+    waitingReg: "Waiting for Passenger Registration",
+    tel: "Tel: +856 20 555-9000",
+    address: "Vang Vieng, Laos",
+    unassignedShort: "Unassigned",
+    posBillPreview: "POS Bill Preview",
+    billId: "Bill ID",
+    group: "Group",
+    source: "Source:",
+    tripSlot: "Trip Slot:",
+    service: "Service:",
+    paxCountLabel: "Pax Count:",
+    passengerListPreview: "Passenger List:",
+    boatTickets: "Boat Tickets:",
+    totalLAK: "Total LAK:",
+    paymentMethodLabel: "Payment Method",
+    checkoutBtn: "Checkout & Print",
+    reprintBtn: "Reprint Bill Receipt",
+    dispatchBtn: "Dispatch",
+    completeBtn: "Complete Trip",
+    cancelBtn: "Cancel Bill",
+    auditLogsTitle: "Audit Logs:",
+    editLabel: "Edit"
+  },
+  la: {
+    billNumber: "ເລກທີບິນ:",
+    date: "ວັນເວລາ:",
+    payment: "ການຊຳລະ:",
+    agent: "ຕົວແທນ:",
+    passengers: "ຜູ້ໂດຍສານ:",
+    paxUnit: "ຄົນ",
+    driver: "ຄົນຂับລົດ:",
+    guides: "ໄກ້ດ:",
+    boats: "ເຮືອ:",
+    boatLabel: "ເຮືອລຳທີ",
+    unassigned: "ຍັງບໍ່ໄດ້ກຳນົດ",
+    passengerListHeader: "ລາຍຊື່ຜູ້ໂດຍສານ",
+    noRegistered: "ລໍຖ້າລົງທະບຽນຜູ້ໂດຍສານ",
+    total: "ຍອດລວມທັງໝົດ:",
+    thankYou: "ຂໍຂອບໃຈ",
+    cash: "ເງິນສົດ",
+    transfer: "ໂອນເງິນ",
+    card: "ບັດ",
+    ageUnit: "ປີ",
+    waitingReg: "ລໍຖ້າລົງທະບຽນຜູ້ໂດຍສານ",
+    tel: "ໂທ: +856 20 555-9000",
+    address: "ວັງວຽງ, ປະເທດລາວ",
+    unassignedShort: "ບໍ່ມີ",
+    posBillPreview: "ບິນຮັບເງິນ (ຕົວຢ່າງ)",
+    billId: "ເລກບິນ",
+    group: "ກຸ່ມ",
+    source: "ແຫຼ່ງທີ່ມາ:",
+    tripSlot: "ວັນເວລາ:",
+    service: "ບໍລິການ:",
+    paxCountLabel: "ຈຳນວນ:",
+    passengerListPreview: "ລາຍຊື່ຜູ້ໂດຍສານ:",
+    boatTickets: "ປີ້ເຮືອ:",
+    totalLAK: "ຍອດລວມ LAK:",
+    paymentMethodLabel: "ຊ່ອງທາງການຊຳລະ",
+    checkoutBtn: "ຢືນຢັນການຊຳລະ & ພິມບິນ",
+    reprintBtn: "ພິມບິນອີກຄັ້ງ",
+    dispatchBtn: "ປ່ອຍເຮືອ",
+    completeBtn: "ສຳເລັດທຣິບ",
+    cancelBtn: "ຍົກເລີກບິນ",
+    auditLogsTitle: "ປະຫວັດການແກ້ໄຂບິນ:",
+    editLabel: "ແກ້ໄຂ"
+  }
+};
+
+const getGenderLabel = (g, lang) => {
+  if (!g) return "-";
+  const lower = g.toLowerCase();
+  if (lower.includes("male") || lower === "ชาย" || lower === "ຊາຍ" || lower === "m") {
+    return lang === "en" ? "M" : "ຊາຍ";
+  }
+  if (lower.includes("female") || lower === "หญิง" || lower === "ຍิง" || lower === "f") {
+    return lang === "en" ? "F" : "ຍິງ";
+  }
+  return g;
+};
+
+export default function QRBooking({ currentUser, preloadedBookingId, clearPreloadedBooking }) {
+  const { lang, t } = useLanguage();
+  const [db, setDb] = useState(getDb());
+
+  const handleDobInputChange = (index, val) => {
+    let clean = val.replace(/[^0-9]/g, "");
+    if (clean.length > 8) clean = clean.slice(0, 8);
+    
+    let formatted = clean;
+    if (clean.length > 2 && clean.length <= 4) {
+      formatted = clean.slice(0, 2) + "/" + clean.slice(2);
+    } else if (clean.length > 4) {
+      formatted = clean.slice(0, 2) + "/" + clean.slice(2, 4) + "/" + clean.slice(4);
+    }
+    
+    setEditPassengers(prev =>
+      prev.map((p, idx) => {
+        if (idx === index) {
+          const updated = { ...p, dobInput: formatted };
+          if (clean.length === 8) {
+            const dd = clean.slice(0, 2);
+            const mm = clean.slice(2, 4);
+            const yyyy = clean.slice(4, 8);
+            
+            const dateStr = `${yyyy}-${mm}-${dd}`;
+            const testDate = new Date(dateStr);
+            if (!isNaN(testDate.getTime()) && testDate.getFullYear() === parseInt(yyyy)) {
+              updated.dob = dateStr;
+              updated.age = calculateAge(dateStr);
+            }
+          }
+          return updated;
+        }
+        return p;
+      })
+    );
+  };
+
+  const handleDobSelectChange = (index, part, val) => {
+    setEditPassengers(prev =>
+      prev.map((p, idx) => {
+        if (idx === index) {
+          let currentDob = p.dob || "";
+          let parts = currentDob.split("-");
+          if (parts.length !== 3) {
+            parts = ["", "", ""];
+          }
+          
+          if (part === "year") parts[0] = val;
+          if (part === "month") parts[1] = val;
+          if (part === "day") parts[2] = val;
+          
+          const newDob = parts.join("-");
+          const updated = { ...p };
+          
+          if (parts[0] && parts[1] && parts[2]) {
+            updated.dob = newDob;
+            updated.dobInput = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            updated.age = calculateAge(newDob);
+          } else {
+            updated.dob = newDob;
+            const dStr = parts[2] || "__";
+            const mStr = parts[1] || "__";
+            const yStr = parts[0] || "____";
+            updated.dobInput = `${dStr}/${mStr}/${yStr}`;
+          }
+          return updated;
+        }
+        return p;
+      })
+    );
+  };
+  
+  const ticketAssignees = db.users?.filter(u => u.responsibilities?.tickets).map(u => u.name) || [];
+  const dispatchAssignees = db.users?.filter(u => u.responsibilities?.crew_dispatch).map(u => u.name) || [];
+  
+  const canEdit = currentUser?.role === "owner" || currentUser?.role === "admin" || currentUser?.permissions?.["checkin-tickets"]?.edit === true;
+  const canDelete = currentUser?.role === "owner" || currentUser?.role === "admin" || currentUser?.permissions?.["checkin-tickets"]?.delete === true;
+  
+  // Create / Edit Form State
+  const [partnerId, setPartnerId] = useState(""); // empty = Walk In
+  const [paxCount, setPaxCount] = useState(1);
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - (offset * 60 * 1000));
+    return local.toISOString().split("T")[0];
+  });
+  const [time, setTime] = useState(() => {
+    const d = new Date();
+    const hours = String(d.getHours()).padStart(2, "0");
+    const mins = String(d.getMinutes()).padStart(2, "0");
+    return `${hours}:${mins}`;
+  });
+  const [isDateManual, setIsDateManual] = useState(false);
+  const [isTimeManual, setIsTimeManual] = useState(false);
+
+  // Loaded Booking State for Checkout / Crew assignment
+  const [loadedBooking, setLoadedBooking] = useState(null);
+  const [qrShowModalBooking, setQrShowModalBooking] = useState(null);
+
+  // Auto-update Date & Time in the background every 10 seconds (only if in creating-mode and not manually modified)
+  useEffect(() => {
+    if (loadedBooking) return;
+    const interval = setInterval(() => {
+      const d = new Date();
+      if (!isDateManual) {
+        const offset = d.getTimezoneOffset();
+        const local = new Date(d.getTime() - (offset * 60 * 1000));
+        setDate(local.toISOString().split("T")[0]);
+      }
+      if (!isTimeManual) {
+        const hours = String(d.getHours()).padStart(2, "0");
+        const mins = String(d.getMinutes()).padStart(2, "0");
+        setTime(`${hours}:${mins}`);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [loadedBooking, isDateManual, isTimeManual]);
+
+  const [selectedServiceId, setSelectedServiceId] = useState("SRV-004");
+  const [selectedTier, setSelectedTier] = useState("tier1"); // "tier1" or "tier3"
+  const [customPricePerPax, setCustomPricePerPax] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  
+  // Crew assignment form state (loaded from booking)
+  const [selectedGuideIds, setSelectedGuideIds] = useState([]); // Multiple guides
+  const [selectedBoatIds, setSelectedBoatIds] = useState([]); // Multiple boat IDs (selected cards)
+  const [assignedDriverId, setAssignedDriverId] = useState("");
+
+  // Edit Control States
+  const [isEditingPaidBill, setIsEditingPaidBill] = useState(false);
+  const [isManageBillOpen, setIsManageBillOpen] = useState(false);
+  const [manageBillTab, setManageBillTab] = useState("details");
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [editPaxCount, setEditPaxCount] = useState(1);
+  const [editServiceId, setEditServiceId] = useState("");
+  const [editTier, setEditTier] = useState("tier1");
+  const [editCustomPrice, setEditCustomPrice] = useState("");
+  const [editPaymentMethod, setEditPaymentMethod] = useState("cash");
+  const [editNotes, setEditNotes] = useState("");
+  const [editPassengers, setEditPassengers] = useState([]);
+  
+  // Registration code & QR print helper state
+  const [registrationGroupId, setRegistrationGroupId] = useState("REG-" + Math.floor(1000 + Math.random() * 9000));
+  const [customHostUrl, setCustomHostUrl] = useState(localStorage.getItem("pos_custom_host_url") || "");
+  const [billNumber, setBillNumber] = useState(generateBillId());
+  const [activeNotification, setActiveNotification] = useState(null);
+
+  // Scanner Modal state
+  const [showScannerModal, setShowScannerModal] = useState(false);
+  const [manualScanCode, setManualScanCode] = useState("");
+  const scannerRef = useRef(null);
+
+  // Time clock
+  const [currentTimeStr, setCurrentTimeStr] = useState("");
+  const [isPrintLoading, setIsPrintLoading] = useState(false);
+
+  // 1. Clock interval
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      setCurrentTimeStr(`${hh}:${mm}`);
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-save form draft to localStorage
+  useEffect(() => {
+    if (!loadedBooking) {
+      const draft = {
+        partnerId,
+        paxCount,
+        date,
+        time,
+        selectedServiceId,
+        selectedTier,
+        customPricePerPax,
+        paymentMethod,
+        registrationGroupId,
+        billNumber
+      };
+      localStorage.setItem("pos_pos_booking_draft", JSON.stringify(draft));
+    }
+  }, [
+    partnerId,
+    paxCount,
+    date,
+    time,
+    selectedServiceId,
+    selectedTier,
+    customPricePerPax,
+    paymentMethod,
+    registrationGroupId,
+    billNumber,
+    loadedBooking
+  ]);
+
+  // Restore draft from localStorage on mount
+  useEffect(() => {
+    const draftStr = localStorage.getItem("pos_pos_booking_draft");
+    if (draftStr) {
+      try {
+        const draft = JSON.parse(draftStr);
+        if (draft) {
+          if (draft.partnerId !== undefined) setPartnerId(draft.partnerId);
+          if (draft.paxCount !== undefined) setPaxCount(draft.paxCount);
+          
+          // Only restore date/time if it matches today's date to avoid stale data
+          const todayStr = new Date().toISOString().split("T")[0];
+          if (draft.date === todayStr) {
+            if (draft.date !== undefined) {
+              setDate(draft.date);
+              setIsDateManual(true);
+            }
+            if (draft.time !== undefined) {
+              setTime(draft.time);
+              setIsTimeManual(true);
+            }
+          }
+          
+          if (draft.selectedServiceId !== undefined) setSelectedServiceId(draft.selectedServiceId);
+          if (draft.selectedTier !== undefined) setSelectedTier(draft.selectedTier);
+          if (draft.customPricePerPax !== undefined) setCustomPricePerPax(draft.customPricePerPax);
+          if (draft.paymentMethod !== undefined) setPaymentMethod(draft.paymentMethod);
+          if (draft.registrationGroupId !== undefined) setRegistrationGroupId(draft.registrationGroupId);
+          if (draft.billNumber !== undefined) setBillNumber(draft.billNumber);
+        }
+      } catch (e) {
+        console.error("Failed to restore booking draft", e);
+      }
+    }
+  }, []);
+
+  // Sync Manage Bill modal states with loadedBooking
+  useEffect(() => {
+    if (isManageBillOpen && loadedBooking) {
+      setEditDate(loadedBooking.date || "");
+      setEditTime(loadedBooking.time || "");
+      setEditPaxCount(loadedBooking.paxCount || 1);
+      setEditServiceId(loadedBooking.serviceId || loadedBooking.selectedServiceId || "SRV-001");
+      setEditTier(loadedBooking.selectedTier || "tier1");
+      setEditCustomPrice(loadedBooking.customPricePerPax || "");
+      setEditPaymentMethod(loadedBooking.paymentMethod || "cash");
+      setEditNotes(loadedBooking.notes || "");
+      setEditPassengers(loadedBooking.passengers ? JSON.parse(JSON.stringify(loadedBooking.passengers)) : []);
+      setManageBillTab("details");
+    }
+  }, [isManageBillOpen, loadedBooking]);
+
+  // 2. Load DB & listen to real-time storage updates
+  useEffect(() => {
+    const handleDbUpdate = () => {
+      const data = getDb();
+      setDb(data);
+      setCustomHostUrl(localStorage.getItem("pos_custom_host_url") || "");
+    };
+    handleDbUpdate();
+    window.addEventListener("db-update", handleDbUpdate);
+    return () => window.removeEventListener("db-update", handleDbUpdate);
+  }, []);
+
+  // 2b. Automatically update selectedTier when paxCount or selectedServiceId changes
+  useEffect(() => {
+    if (selectedServiceId === "SRV-004" || selectedServiceId === "SRV-005") {
+      const autoTier = paxCount >= 3 ? "tier3" : "tier1";
+      setSelectedTier(autoTier);
+    }
+  }, [paxCount, selectedServiceId]);
+
+  // 2c. Auto-load preloadedBookingId from props if navigating from Customer Registration
+  useEffect(() => {
+    if (preloadedBookingId) {
+      const currentDb = getDb();
+      const found = (currentDb.bookings || []).find(b => b.id === preloadedBookingId);
+      if (found) {
+        handleLoadBooking(found);
+      }
+      if (clearPreloadedBooking) {
+        clearPreloadedBooking();
+      }
+    }
+  }, [preloadedBookingId]);
+
+  // Play Double Chime
+  const playDoubleChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      
+      const playNote = (time, freq, duration) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(0.15, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(time);
+        osc.stop(time + duration);
+      };
+      
+      playNote(now, 523.25, 0.4); // C5
+      playNote(now + 0.15, 659.25, 0.5); // E5
+    } catch (e) {
+      console.warn("Chime playback failed", e);
+    }
+  };
+
+  // 3. Real-time background polling for ready/registered bookings to play chime
+  useEffect(() => {
+    const notifiedBookings = new Set();
+    const pollInterval = setInterval(() => {
+      const currentDb = getDb();
+      const readyBks = (currentDb.bookings || []).filter(
+        b => b.status === "พร้อมชำระเงิน / พร้อมพิมพ์" ||
+             b.status === "พร้อมชำระเงิน" ||
+             b.status === "รอชำระเงิน" ||
+             b.status === "รອຊຳລະເງິນ" ||
+             b.status === "กรอกข้อมูลเรียบร้อย"
+      );
+
+      readyBks.forEach(bk => {
+        if (!notifiedBookings.has(bk.id)) {
+          notifiedBookings.add(bk.id);
+          playDoubleChime();
+          setActiveNotification({
+            id: bk.id,
+            groupId: bk.groupId,
+            message: `🔔 ລູກຄ້າກອກຂໍ້ມູນສຳເລັດແລ້ວ! ລະຫັດກຸ່ມ: ${bk.groupId} (${bk.partnerName || "Walk-in"})`
+          });
+        }
+      });
+    }, 2000);
+
+    return () => clearInterval(pollInterval);
+  }, []);
+
+  // HTML5 QR Code Scanner Mounting Hook
+  useEffect(() => {
+    if (!showScannerModal) return;
+    
+    // Give DOM time to render the reader element
+    const timer = setTimeout(() => {
+      if (!window.Html5QrcodeScanner) {
+        console.warn("Html5QrcodeScanner is not loaded on window yet.");
+        return;
+      }
+      
+      const onScanSuccess = (decodedText) => {
+        handleProcessDecodedText(decodedText);
+      };
+      
+      const onScanError = (err) => {
+        // Silent error
+      };
+      
+      const scanner = new window.Html5QrcodeScanner("reader", { 
+        fps: 10, 
+        qrbox: { width: 250, height: 250 } 
+      });
+      scanner.render(onScanSuccess, onScanError);
+      scannerRef.current = scanner;
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(err => console.warn("Error clearing scanner:", err));
+        scannerRef.current = null;
+      }
+    };
+  }, [showScannerModal]);
+
+  // Process manual or scanned code
+  const handleProcessDecodedText = (text) => {
+    let code = text.trim();
+    if (code.includes("groupId=")) {
+      try {
+        const urlObj = new URL(code);
+        code = urlObj.searchParams.get("groupId") || code;
+      } catch (e) {}
+    }
+    
+    code = code.trim().toUpperCase();
+    const currentDb = getDb();
+    const found = (currentDb.bookings || []).find(
+      b => b.groupId === code || b.id === code || b.billNumber === code
+    );
+    
+    if (found) {
+      handleLoadBooking(found);
+      setShowScannerModal(false);
+      setManualScanCode("");
+      playDoubleChime();
+    } else {
+      alert(`ไม่พບข้ອมูลບິลสำหรัບรหัส: ${code} / Booking not found for: ${code}`);
+    }
+  };
+
+  const handleManualScanSubmit = (e) => {
+    e.preventDefault();
+    if (manualScanCode.trim()) {
+      handleProcessDecodedText(manualScanCode);
+    }
+  };
+
+  // Get standard price helper (ignores overrides, returns seed rates)
+  const getStandardPrice = (serviceId, count) => {
+    if (serviceId === "SRV-004") {
+      return count >= 3 ? 1120 : 1580;
+    } else if (serviceId === "SRV-005") {
+      return count >= 3 ? 780 : 1900;
+    }
+    const service = db.services?.find(s => s.id === serviceId) || db.services?.[0];
+    return service ? service.price : 250000;
+  };
+
+  // Get tiered price helper based on passenger count and service currency/type selection
+  const getSelectedPricingDetails = (serviceId, tier, count, customPrice = "") => {
+    const rateTHB = db.settings.rateTHB || 620;
+    const hasCustom = customPrice !== "";
+    const customVal = hasCustom ? parseFloat(customPrice) : 0;
+    
+    if (serviceId === "SRV-004") { // Waterfall Rappelling
+      const priceTHB = hasCustom ? customVal : (tier === "tier1" ? 1580 : 1120);
+      const totalTHB = priceTHB * count;
+      return {
+        totalLAK: totalTHB * rateTHB,
+        pricePerPaxLAK: priceTHB * rateTHB,
+        rawPrice: priceTHB,
+        rawTotal: totalTHB,
+        currency: "THB",
+        isFlat: false
+      };
+    } else if (serviceId === "SRV-005") { // Adventure Boat
+      if (tier === "tier1") {
+        const priceTHB = hasCustom ? customVal : 1900;
+        const totalTHB = priceTHB;
+        return {
+          totalLAK: totalTHB * rateTHB,
+          pricePerPaxLAK: (priceTHB / (count || 1)) * rateTHB,
+          rawPrice: priceTHB,
+          rawTotal: totalTHB,
+          currency: "THB",
+          isFlat: true
+        };
+      } else {
+        const priceTHB = hasCustom ? customVal : 780;
+        const totalTHB = priceTHB * count;
+        return {
+          totalLAK: totalTHB * rateTHB,
+          pricePerPaxLAK: priceTHB * rateTHB,
+          rawPrice: priceTHB,
+          rawTotal: totalTHB,
+          currency: "THB",
+          isFlat: false
+        };
+      }
+    } else {
+      const service = db.services.find(s => s.id === serviceId) || db.services[0];
+      const basePrice = hasCustom ? customVal : (service.price || 250000);
+      const totalLAK = basePrice * count;
+      return {
+        totalLAK,
+        pricePerPaxLAK: basePrice,
+        rawPrice: basePrice,
+        rawTotal: totalLAK,
+        currency: "LAK",
+        isFlat: false
+      };
+    }
+  };
+
+  // Get current selected service
+  const currentService = db.services.find(s => s.id === selectedServiceId) || db.services[0];
+  const isBoatTrip = selectedServiceId === "SRV-001" || selectedServiceId === "SRV-005" || 
+                     (currentService && (currentService.name.toLowerCase().includes("boat") || currentService.name.includes("เรืອ") || currentService.name.includes("ເຮືອ")));
+  const pricingDetails = getSelectedPricingDetails(selectedServiceId, selectedTier, paxCount, customPricePerPax);
+  const totalPriceLAK = pricingDetails.totalLAK;
+  const defaultPrice = pricingDetails.rawPrice;
+  const activePricePerPax = customPricePerPax !== "" ? parseFloat(customPricePerPax) : defaultPrice;
+
+  // Generate self registration URL
+  const getSelfRegUrl = (grpId, bookingPartnerId = null) => {
+    let origin = customHostUrl.trim() || window.location.origin;
+    if (origin.endsWith("/")) {
+      origin = origin.slice(0, -1);
+    }
+    let pathname = window.location.pathname;
+    if (!pathname.startsWith("/")) {
+      pathname = "/" + pathname;
+    }
+    let url = `${origin}${pathname}?mode=self-register&groupId=${grpId || registrationGroupId}`;
+    const pId = bookingPartnerId !== null ? bookingPartnerId : partnerId;
+    if (pId) {
+      url += `&partnerId=${pId}`;
+    }
+    return url;
+  };
+
+  const triggerReceiptPrint = () => {
+    setIsPrintLoading(true);
+
+    // Inject @page CSS dynamically for thermal receipt print size
+    const styleEl = document.createElement("style");
+    styleEl.id = "receipt-print-style-rules";
+    styleEl.innerHTML = `
+      @page { size: 80mm auto !important; margin: 0 !important; }
+      body { margin: 0 !important; padding: 0 !important; }
+    `;
+    document.head.appendChild(styleEl);
+
+    const originalClass = document.body.className;
+    document.body.classList.add("print-receipt-mode");
+    setTimeout(() => {
+      window.print();
+      document.body.className = originalClass;
+      const el = document.getElementById("receipt-print-style-rules");
+      if (el) el.remove();
+      setIsPrintLoading(false);
+    }, 800);
+  };
+
+  const triggerQrSlipPrint = () => {
+    setIsPrintLoading(true);
+
+    // Inject @page CSS dynamically for thermal slip print size
+    const styleEl = document.createElement("style");
+    styleEl.id = "receipt-print-style-rules";
+    styleEl.innerHTML = `
+      @page { size: 80mm auto !important; margin: 0 !important; }
+      body { margin: 0 !important; padding: 0 !important; }
+    `;
+    document.head.appendChild(styleEl);
+
+    const originalClass = document.body.className;
+    document.body.classList.add("print-qr-slip-mode");
+    setTimeout(() => {
+      window.print();
+      document.body.className = originalClass;
+      const el = document.getElementById("receipt-print-style-rules");
+      if (el) el.remove();
+      setIsPrintLoading(false);
+    }, 800);
+  };
+
+  // Handles creating a new booking in "รอลูกค้ากรอกข้อมูล"
+  const handleCreateBooking = (e) => {
+    if (e) e.preventDefault();
+
+    const currentDb = getDb();
+    const isAgent = partnerId !== "";
+    const partnerObj = currentDb.partners.find(p => p.id === partnerId);
+    const sourceName = isAgent ? partnerObj?.name : "Walk-in (ລູກຄ້າທົ່ວໄປ)";
+
+    const newBooking = {
+      id: `BK-${1000 + currentDb.bookings.length + 1}`,
+      partnerId: partnerId || null,
+      partnerName: sourceName,
+      bookingSource: isAgent ? "agent" : "walk-in",
+      paxCount: parseInt(paxCount),
+      date,
+      time,
+      serviceId: selectedServiceId,
+      serviceName: currentService.name,
+      pricePerPax: activePricePerPax,
+      pricePaidLAK: totalPriceLAK,
+      paymentMethod,
+      billNumber,
+      status: "รอลูกค้ากรอกข้อมูล",
+      groupId: registrationGroupId,
+      passengers: [],
+      auditLogs: [],
+      guideIds: [],
+      assignedBoats: [],
+      driverId: "",
+      createdAt: new Date().toISOString()
+    };
+
+    currentDb.bookings.push(newBooking);
+    saveDb(currentDb);
+    setDb(currentDb);
+    setLoadedBooking(newBooking);
+
+    // Auto trigger print QR slip
+    setTimeout(() => {
+      triggerQrSlipPrint();
+      // Generate new group ID and bill number for next customer
+      setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
+      setBillNumber(generateBillId());
+    }, 200);
+  };
+
+  // Loads a booking to details pane
+  const handleLoadBooking = (bk) => {
+    setLoadedBooking(bk);
+    setPartnerId(bk.partnerId || "");
+    setPaxCount(bk.paxCount);
+    setDate(bk.date);
+    setTime(bk.time);
+    const srvId = bk.serviceId || "SRV-004";
+    setSelectedServiceId(srvId);
+
+    // Determine if custom price or standard price
+    const stdPrice = getStandardPrice(srvId, bk.paxCount);
+    if (Math.abs(bk.pricePerPax - stdPrice) < 0.01) {
+      setCustomPricePerPax("");
+    } else {
+      setCustomPricePerPax(bk.pricePerPax.toString());
+    }
+
+    // Determine loaded tier from original price per pax (or fallback to paxCount)
+    if (srvId === "SRV-004") {
+      if (Math.abs(bk.pricePerPax - 1120) < 10) {
+        setSelectedTier("tier3");
+      } else if (Math.abs(bk.pricePerPax - 1580) < 10) {
+        setSelectedTier("tier1");
+      } else {
+        setSelectedTier(bk.paxCount >= 3 ? "tier3" : "tier1");
+      }
+    } else if (srvId === "SRV-005") {
+      if (Math.abs(bk.pricePerPax - 780) < 10) {
+        setSelectedTier("tier3");
+      } else if (Math.abs(bk.pricePerPax - 1900) < 10) {
+        setSelectedTier("tier1");
+      } else {
+        setSelectedTier(bk.paxCount >= 3 ? "tier3" : "tier1");
+      }
+    } else {
+      setSelectedTier("tier1");
+    }
+    setPaymentMethod(bk.paymentMethod || "cash");
+    
+    // Load assigned crew
+    setSelectedGuideIds(bk.guideIds || (bk.guideId ? [bk.guideId] : []));
+    const loadedBoats = bk.assignedBoats || (bk.boatId ? [{ boatId: bk.boatId }] : []);
+    setSelectedBoatIds(loadedBoats.map(b => parseInt(b.boatId)).filter(id => !isNaN(id)));
+    setAssignedDriverId(bk.driverId || "");
+
+    setIsEditingPaidBill(false);
+  };
+
+  // Helper to check if a guide is busy on a given date (excluding current booking)
+  const isGuideBusyOnDate = (guideId, date, currentBookingId) => {
+    return (db.bookings || []).some(b => 
+      b.id !== currentBookingId &&
+      b.date === date && 
+      b.status !== "ยกเลิก" && 
+      b.guideIds && 
+      b.guideIds.includes(guideId)
+    );
+  };
+
+  // Helper to check if a boat is busy on a given date (excluding current booking)
+  const isBoatBusyOnDate = (boatId, date, currentBookingId) => {
+    return (db.bookings || []).some(b => 
+      b.id !== currentBookingId &&
+      b.date === date && 
+      b.status !== "ยกเลิก" && 
+      b.assignedBoats && 
+      b.assignedBoats.some(ab => parseInt(ab.boatId) === parseInt(boatId))
+    );
+  };
+
+  // Helper to check if a driver is busy on a given date (excluding current booking)
+  const isDriverBusyOnDate = (driverId, date, currentBookingId) => {
+    return (db.bookings || []).some(b => 
+      b.id !== currentBookingId &&
+      b.date === date && 
+      b.status !== "ยกเลิก" && 
+      b.driverId === driverId
+    );
+  };
+
+  // Auto-distribute passengers and guides across selected boats for compatibility sync
+  const getComputedAssignedBoats = (boatIds, guideIds, totalPax) => {
+    if (!boatIds || boatIds.length === 0) return [];
+    return boatIds.map((bid, idx) => {
+      // Rotate selected guides across selected boats, or leave empty if no guide selected
+      const guideIdForBoat = guideIds && guideIds.length > 0 ? guideIds[idx % guideIds.length] : "";
+      
+      // Distribute passenger count as equally as possible
+      const basePax = Math.floor(totalPax / boatIds.length);
+      const remainder = totalPax % boatIds.length;
+      const boatPaxCount = basePax + (idx < remainder ? 1 : 0);
+
+      return {
+        boatId: bid,
+        guideId: guideIdForBoat,
+        paxCount: boatPaxCount
+      };
+    });
+  };
+
+  const getInitials = (name) => {
+    if (!name) return "";
+    if (name.includes("(")) {
+      const match = name.match(/\(([^)]+)\)/);
+      if (match && match[1]) {
+        return match[1].slice(0, 2).toUpperCase();
+      }
+    }
+    const parts = name.split(" ");
+    return parts[0].slice(0, 2).toUpperCase();
+  };
+
+  const getAvatarBgColor = (id) => {
+    const hash = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const colors = ["#0f766e", "#1d4ed8", "#6d28d9", "#b45309", "#be185d", "#0369a1", "#047857"];
+    return colors[hash % colors.length];
+  };
+
+  const getGuideName = (id) => db.employees?.find(e => e.id === id)?.name || "Unassigned";
+  const getDriverName = (id) => db.employees?.find(e => e.id === id)?.name || "Unassigned";
+  const getBoatName = (id) => db.boats?.find(b => b.id === id)?.name || "Unassigned";
+  const handleAddNewDriver = () => {
+    const name = window.prompt("ກະລຸນາລະບຸຊື່ຄົນຂັບລົດ / Please enter driver name:");
+    if (!name || !name.trim()) return;
+
+    const currentDb = getDb();
+    const newDriver = {
+      id: `EMP-${Date.now()}`,
+      name: name.trim(),
+      role: "driver",
+      type: "freelance",
+      status: "active",
+      salary: 0,
+      tripRate: 50000,
+      bonus: 0
+    };
+
+    currentDb.employees = [...(currentDb.employees || []), newDriver];
+    saveDb(currentDb);
+    setDb(currentDb);
+    setAssignedDriverId(newDriver.id);
+  };
+
+  // Save staff assignment directly to booking
+  const handleSaveCrew = () => {
+    if (!loadedBooking) return;
+    const currentDb = getDb();
+
+    const computedBoats = isBoatTrip 
+      ? getComputedAssignedBoats(selectedBoatIds, selectedGuideIds, loadedBooking.paxCount)
+      : [];
+
+    currentDb.bookings = currentDb.bookings.map(b => {
+      if (b.id === loadedBooking.id) {
+        const updated = {
+          ...b,
+          guideIds: selectedGuideIds,
+          assignedBoats: computedBoats,
+          driverId: assignedDriverId || null,
+          // Legacy properties mapping for single guides/boats compat
+          guideId: selectedGuideIds[0] || null,
+          boatId: computedBoats[0]?.boatId ? parseInt(computedBoats[0].boatId) : null
+        };
+        // Keep state in sync
+        setLoadedBooking(updated);
+        return updated;
+      }
+      return b;
+    });
+
+    saveDb(currentDb);
+    setDb(currentDb);
+    alert("ບัນทึกข้ອมูลจัດพນักงาນเรີยບร้ອยแล้ว / Crew updated successfully!");
+  };
+
+  // Checkout and Print receipt
+  const handleCheckoutAndPrint = () => {
+    if (!loadedBooking) return;
+    const currentDb = getDb();
+
+    const d = new Date();
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - (offset * 60 * 1000));
+    const currentDateStr = local.toISOString().split("T")[0];
+    const currentHours = String(d.getHours()).padStart(2, "0");
+    const currentMins = String(d.getMinutes()).padStart(2, "0");
+    const currentTimeStr = `${currentHours}:${currentMins}`;
+
+    const computedBoats = isBoatTrip
+      ? getComputedAssignedBoats(selectedBoatIds, selectedGuideIds, loadedBooking.paxCount)
+      : [];
+
+    currentDb.bookings = currentDb.bookings.map(b => {
+      if (b.id === loadedBooking.id) {
+        const updated = {
+          ...b,
+          status: "ชำระเงินแล้ว / ออกบิลแล้ว",
+          paymentMethod: paymentMethod,
+          guideIds: selectedGuideIds,
+          assignedBoats: computedBoats,
+          driverId: assignedDriverId || null,
+          date: currentDateStr,
+          time: currentTimeStr,
+          // Legacy mappings
+          guideId: selectedGuideIds[0] || null,
+          boatId: computedBoats[0]?.boatId ? parseInt(computedBoats[0].boatId) : null
+        };
+        setLoadedBooking(updated);
+        return updated;
+      }
+      return b;
+    });
+
+    saveDb(currentDb);
+    setDb(currentDb);
+
+    setTimeout(() => {
+      triggerReceiptPrint();
+    }, 200);
+  };
+
+  // Unlock paid bill for editing
+  const handleUnlockPaidBill = () => {
+    setIsEditingPaidBill(true);
+  };
+
+  // Save edits to a paid bill (logs cashier name and timestamp)
+  const handleSaveEditsPaidBill = () => {
+    if (!loadedBooking) return;
+    const currentDb = getDb();
+
+    currentDb.bookings = currentDb.bookings.map(b => {
+      if (b.id === loadedBooking.id) {
+        const logEntry = {
+          updatedBy: currentUser?.name || "Unknown Cashier",
+          updatedAt: new Date().toISOString(),
+          oldPax: b.paxCount,
+          newPax: parseInt(paxCount),
+          oldPrice: b.pricePaidLAK,
+          newPrice: totalPriceLAK
+        };
+
+        const updated = {
+          ...b,
+          paxCount: parseInt(paxCount),
+          pricePerPax: activePricePerPax,
+          pricePaidLAK: totalPriceLAK,
+          date,
+          time,
+          serviceId: selectedServiceId,
+          serviceName: currentService.name,
+          paymentMethod,
+          auditLogs: [...(b.auditLogs || []), logEntry]
+        };
+
+        setLoadedBooking(updated);
+        return updated;
+      }
+      return b;
+    });
+
+    saveDb(currentDb);
+    setDb(currentDb);
+    setIsEditingPaidBill(false);
+    alert("ບัນทึกการแก้ไขแลະບัນทึกปรະวัตິการตรวจสອບสำเร็จ! / Bill updated & logged!");
+  };
+
+  // Cancel Booking
+  const handleCancelBooking = (bookingId) => {
+    if (!window.confirm("คุณต้ອงการยกเลิกບິลນີ้ใช่หรืອไม่? / Are you sure you want to cancel this bill?")) return;
+    const currentDb = getDb();
+    currentDb.bookings = currentDb.bookings.map(b => 
+      b.id === bookingId ? { ...b, status: "ยกเลิก" } : b
+    );
+    saveDb(currentDb);
+    setDb(currentDb);
+    if (loadedBooking?.id === bookingId) {
+      setLoadedBooking(null);
+    }
+  };
+
+  // Purge test customer and booking data
+  const handlePurgeData = () => {
+    const confirmMsg = lang === "en" 
+      ? "Warning: This will delete all bookings, registered customers, trip manifests, and custom expenses. Basic settings, agents, and staff will be kept. Proceed?" 
+      : "ຄຳເຕືອນ: ນີ້ຈະລຶບຂໍ້ມູນການຈອງ, ຜູ້ໂດຍສານທີ່ລົງທະບຽນ, ປະຫວັດການເດີນເຮືອ ແລະ ຄ່າໃຊ້ຈ่ายທັງໝົດ. ຂໍ້ມູນພື້ນຖານອື່ນໆຈະຍັງຄົງຢູ່. ຕ້ອງການດຳເນີນການຕໍ່ແມ່ນບໍ່?";
+    
+    if (window.confirm(confirmMsg)) {
+      purgeTestData();
+      const updatedDb = getDb();
+      setDb(updatedDb);
+      setLoadedBooking(null);
+      alert(lang === "en" ? "All customer and booking data has been reset!" : "ລຶບຂໍ້ມູນການຈອງ ແລະ ຜູ້ໂດຍສານທັງໝົດຮຽບຮ້ອຍແລ້ວ!");
+      window.location.reload();
+    }
+  };
+
+  // Dispatch Boat
+  const handleDispatchBoat = (bookingId) => {
+    const currentDb = getDb();
+    currentDb.bookings = currentDb.bookings.map(b => {
+      if (b.id === bookingId) {
+        const updated = { ...b, status: "ออกเรือแล้ว" };
+        setLoadedBooking(updated);
+        return updated;
+      }
+      return b;
+    });
+    saveDb(currentDb);
+    setDb(currentDb);
+  };
+
+  // Complete Trip
+  const handleCompleteTrip = (bookingId) => {
+    const currentDb = getDb();
+    currentDb.bookings = currentDb.bookings.map(b => {
+      if (b.id === bookingId) {
+        const updated = { ...b, status: "เสร็จสิ้น" };
+        setLoadedBooking(updated);
+        return updated;
+      }
+      return b;
+    });
+    saveDb(currentDb);
+    setDb(currentDb);
+  };
+
+  // Reset form
+  const handleResetForm = () => {
+    setLoadedBooking(null);
+    setPartnerId("");
+    setPaxCount(1);
+    setSelectedServiceId("SRV-001");
+    setCustomPricePerPax("");
+    setSelectedGuideIds([]);
+    setSelectedBoatIds([]);
+    setAssignedDriverId("");
+    setIsEditingPaidBill(false);
+    
+    const d = new Date();
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - (offset * 60 * 1000));
+    setDate(local.toISOString().split("T")[0]);
+    
+    const hours = String(d.getHours()).padStart(2, "0");
+    const mins = String(d.getMinutes()).padStart(2, "0");
+    setTime(`${hours}:${mins}`);
+    
+    setIsDateManual(false);
+    setIsTimeManual(false);
+    
+    setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
+    setBillNumber(generateBillId());
+    try {
+      localStorage.removeItem("pos_pos_booking_draft");
+    } catch (e) {}
+  };
+
+  // Filter list of bookings for queues
+  const bookings = db.bookings || [];
+
+  const registeringBookings = bookings.filter(b => 
+    b.status === "รอลูกค้ากรอกข้อมูล" || 
+    b.status === "กำลังกรอกข้อมูล" || 
+    b.status === "ยังไม่กรอกข้อมูล" || 
+    b.status === "กำลังลงทะเบียน"
+  );
+  
+  const readyBookings = bookings.filter(b => 
+    b.status === "พร้อมชำระเงิน / พร้อมพิมพ์" || 
+    b.status === "รอชำระเงิน" || 
+    b.status === "พร้อมชำระเงิน" || 
+    b.status === "รອຊຳລະເງິນ" ||
+    b.status === "กรอกข้อมูลเรียบร้อย"
+  );
+
+  const completedBookings = bookings.filter(b => 
+    b.status === "ชำระเงินแล้ว / ออกบิลแล้ว" || 
+    b.status === "ชำระแล้ว" || 
+    b.status === "ออกบิลแล้ว" || 
+    b.status === "ออกเรือแล้ว" || 
+    b.status === "เสร็จสิ้น"
+  );
+  
+  // Queue 1: กำลังลงทะเบียน
+  // Lock status check
+  const isLocked = loadedBooking && 
+                   (loadedBooking.status === "พร้อมชำระเงิน / พร้อมพิมพ์" || loadedBooking.status === "พร้อมชำระเงิน" || loadedBooking.status === "ชำระเงินแล้ว / ออกบิลแล้ว" || loadedBooking.status === "ชำระแล้ว" || loadedBooking.status === "ออกบิลแล้ว" || loadedBooking.status === "ออกเรือแล้ว" || loadedBooking.status === "เสร็จสิ้น") && 
+                   !isEditingPaidBill;
+
+  const isPaidStatus = loadedBooking && (
+    loadedBooking.status === "ชำระเงินแล้ว / ออกบิลแล้ว" ||
+    loadedBooking.status === "ชำระแล้ว" ||
+    loadedBooking.status === "ออกบิลแล้ว" ||
+    loadedBooking.status === "ออกเรือแล้ว" ||
+    loadedBooking.status === "เสร็จสิ้น"
+  );
+
+  const getSystemAlerts = () => {
+    const alerts = [];
+    const todayStr = new Date().toISOString().split("T")[0];
+    
+    // 1. Ready bookings count
+    const readyBks = (db.bookings || []).filter(
+      b => b.status === "พร้อมชำระเงิน / พร้อมพิมพ์" ||
+           b.status === "รอชำระเงิน" ||
+           b.status === "พร้อมชำระเงิน" ||
+           b.status === "รອຊຳລະເງິນ" ||
+           b.status === "กรอกข้อมูลเรียบร้อย"
+    );
+    if (readyBks.length > 0) {
+      alerts.push(`⚠️ ລູກຄ້າລໍຖ້າຊຳລະເງິນ ${readyBks.length} ບິນ / ${readyBks.length} Bills Pending Payment`);
+    }
+    
+    // 2. Boat capacity alert
+    const todayDispatchedTrips = (db.trips || []).filter(t => t.date === todayStr && t.status === "dispatched");
+    todayDispatchedTrips.forEach(trip => {
+      const boat = db.boats.find(b => b.id === trip.boatId);
+      if (boat) {
+        const paxCount = trip.customerIds.length;
+        const remaining = boat.capacity - paxCount;
+        if (remaining <= 2 && remaining > 0) {
+          alerts.push(`⚠️ ${boat.name} ໃກ້ຈະເຕັມແລ້ວ (ເຫຼືອ ${remaining} ບ່ອນ) / ${boat.name} is almost full (${remaining} seats left)`);
+        }
+      }
+    });
+
+    // 3. Time slot capacity alert
+    const slots = {};
+    (db.bookings || []).filter(b => b.date === todayStr && b.status !== "ยกเลิก" && b.status !== "ຍົกເລີກ").forEach(b => {
+      slots[b.time] = (slots[b.time] || 0) + b.paxCount;
+    });
+    Object.keys(slots).forEach(time => {
+      const maxSlotCapacity = 12; // 2 boats
+      const current = slots[time];
+      const left = maxSlotCapacity - current;
+      if (left <= 3 && left > 0) {
+        alerts.push(`⚠️ ຮອບເວລາ ${time} ເຫຼືອທີ່ວ່າງ ${left} ຄົນ / Time slot ${time} has only ${left} seats left`);
+      }
+    });
+
+    return alerts;
+  };
+
+  const systemAlerts = getSystemAlerts();
+
+  return (
+    <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px", color: "var(--text-primary)" }}>
+      {/* Print Loading Overlay */}
+      {isPrintLoading && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          background: "rgba(15, 23, 42, 0.85)",
+          backdropFilter: "blur(8px)",
+          zIndex: 999999,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "1.5rem"
+        }}>
+          <style>{`
+            @keyframes print-spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          <div style={{
+            width: "50px",
+            height: "50px",
+            border: "5px solid rgba(255, 255, 255, 0.2)",
+            borderTop: "5px solid #10b981",
+            borderRadius: "50%",
+            animation: "print-spin 1s linear infinite"
+          }}></div>
+          <div style={{ color: "#ffffff", fontWeight: "bold", fontSize: "1.2rem", textAlign: "center", fontFamily: "inherit" }}>
+            {lang === "en" ? "Preparing Receipt..." : "ກຳລັງກຽມພິມບິນ... / Preparing Receipt..."}
+          </div>
+        </div>
+      )}
+      {/* Top action row containing scan QR button */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
+        <div style={{ fontSize: "1.1rem", fontWeight: "800", display: "flex", alignItems: "center", gap: "6px" }}>
+          <span>Ticket Sales POS Terminal</span>
+          <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", background: "rgba(16, 185, 129, 0.15)", padding: "2px 8px", borderRadius: "10px", color: "#10b981" }}>
+            🟢 Live Sync
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: "10px" }}>
+          {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
+            <button
+              onClick={handlePurgeData}
+              style={{ padding: "12px 20px", borderRadius: "10px", background: "#be123c", border: "none", color: "#ffffff", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "0.95rem", boxShadow: "0 4px 12px rgba(190, 18, 60, 0.25)", transition: "all 0.2s ease" }}
+            >
+              🧹 {lang === "en" ? "Reset Customer Data" : "ລ້າງຂໍ້ມູນລູກຄ້າ"}
+            </button>
+          )}
+          <button
+            onClick={() => setShowScannerModal(true)}
+            style={{ padding: "12px 24px", borderRadius: "10px", background: "#0f766e", border: "none", color: "#ffffff", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "0.95rem", boxShadow: "0 4px 12px rgba(15, 118, 110, 0.25)", transition: "all 0.2s ease" }}
+          >
+            <Scan size={20} />
+            <span>ສແກນ QR Code / Scan QR</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Warnings Banner */}
+      {systemAlerts.length > 0 && (
+        <div style={{
+          background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)",
+          border: "1.5px solid #f59e0b",
+          color: "#b45309",
+          padding: "14px 20px",
+          borderRadius: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          boxShadow: "0 2px 6px rgba(245, 158, 11, 0.08)"
+        }}>
+          <strong style={{ fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span>🔔 ແຈ້ງເຕືອນລະບົບ / System Alerts ({systemAlerts.length}):</span>
+          </strong>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.8rem", fontWeight: "600" }}>
+            {systemAlerts.map((alertText, idx) => (
+              <div key={idx} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span>•</span>
+                <span>{alertText}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Alert banner for passenger registration alerts */}
+      {activeNotification && (
+        <div style={{
+          background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+          color: "#ffffff",
+          padding: "14px 20px",
+          borderRadius: "10px",
+          boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}>
+          <span style={{ fontWeight: "700" }}>{activeNotification.message}</span>
+          <button 
+            onClick={() => {
+              const bk = bookings.find(b => b.id === activeNotification.id);
+              if (bk) handleLoadBooking(bk);
+              setActiveNotification(null);
+            }}
+            style={{ background: "#ffffff", color: "#047857", border: "none", padding: "6px 12px", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" }}
+          >
+            ເປີດເບິ່ງ / View
+          </button>
+        </div>
+      )}
+
+      {/* Main Grid split */}
+      <div style={posGridStyle}>
+        
+        {/* Left Column: Form Panel */}
+        <div className="card shadow-lg" style={{ display: "flex", flexDirection: "column", gap: "15px", padding: "20px", background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", paddingBottom: "10px" }}>
+            <h3 style={{ margin: 0, fontWeight: "800", color: "var(--primary)", display: "flex", alignItems: "center", gap: "8px" }}>
+              {db.settings.logo ? (
+                <img src={db.settings.logo} alt="Logo" style={{ maxHeight: "24px", maxWidth: "45px", objectFit: "contain" }} />
+              ) : (
+                <Ship size={24} />
+              )}
+              {loadedBooking ? `ລາຍລະອຽດບິນ: ${loadedBooking.id}` : "ສ້າງບິນໃໝ່ (New Ticket)"}
+            </h3>
+            {loadedBooking && (
+              <button 
+                onClick={handleResetForm} 
+                style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", color: "#fca5a5", padding: "4px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+              >
+                ລ້າງຟອມ / Reset
+              </button>
+            )}
+          </div>
+
+          {ticketAssignees.length > 0 && (
+            <div style={{
+              background: "rgba(15, 118, 110, 0.05)",
+              border: "1px solid rgba(15, 118, 110, 0.2)",
+              borderRadius: "8px",
+              padding: "8px 12px",
+              fontSize: "0.8rem",
+              color: "#0f766e",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}>
+              <Users size={14} />
+              <span>{t("ticket_sales_assignee", "ຜູ້ຮັບຜິດຊອບງານຂາຍປີ້ / Ticket Sales")}: <strong>{ticketAssignees.join(", ")}</strong></span>
+            </div>
+          )}
+
+          <form onSubmit={handleCreateBooking} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {/* Agent Select Button Grid */}
+            <div>
+              <label style={fieldLabelStyle}>ແຫຼ່ງທີ່ມາ / Tour Partner Agent</label>
+              <div style={agentBtnGridStyle}>
+                <button
+                  type="button"
+                  onClick={() => !isLocked && setPartnerId("")}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "10px",
+                    borderRadius: "12px",
+                    cursor: isLocked ? "not-allowed" : "pointer",
+                    border: partnerId === "" ? "2px solid #10b981" : "1.5px solid #cbd5e1",
+                    background: partnerId === "" ? "#d1fae5" : "#ffffff",
+                    color: "#0f172a",
+                    boxShadow: partnerId === "" ? "0 4px 12px rgba(16, 185, 129, 0.2)" : "0 2px 4px rgba(0,0,0,0.02)",
+                    transition: "all 0.2s ease",
+                    outline: "none"
+                  }}
+                  disabled={isLocked}
+                >
+                  <div style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: partnerId === "" ? "rgba(16, 185, 129, 0.2)" : "rgba(15, 118, 110, 0.06)",
+                    color: partnerId === "" ? "#047857" : "#0f766e",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.1rem"
+                  }}>
+                    👤
+                  </div>
+                  <span style={{ fontSize: "0.8rem", fontWeight: "700" }}>Walk In</span>
+                </button>
+                {db.partners.map(p => {
+                  const isSelected = partnerId === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => !isLocked && setPartnerId(p.id)}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "10px",
+                        borderRadius: "12px",
+                        cursor: isLocked ? "not-allowed" : "pointer",
+                        border: isSelected ? "2px solid #10b981" : "1.5px solid #cbd5e1",
+                        background: isSelected ? "#d1fae5" : "#ffffff",
+                        color: "#0f172a",
+                        boxShadow: isSelected ? "0 4px 12px rgba(16, 185, 129, 0.2)" : "0 2px 4px rgba(0,0,0,0.02)",
+                        transition: "all 0.2s ease",
+                        outline: "none"
+                      }}
+                      disabled={isLocked}
+                    >
+                      <div style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "50%",
+                        background: isSelected ? "rgba(16, 185, 129, 0.2)" : "rgba(15, 118, 110, 0.06)",
+                        color: isSelected ? "#047857" : "#0f766e",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "1.1rem"
+                      }}>
+                        👤
+                      </div>
+                      <span style={{ fontSize: "0.8rem", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%" }}>
+                        {p.name.split(" ")[0]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Time and Date Selector */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div>
+                <label style={fieldLabelStyle}>ວັນທີເດີນທາງ / Date</label>
+                <input 
+                  type="date" 
+                  value={date} 
+                  onChange={(e) => {
+                    if (!isLocked) {
+                      setDate(e.target.value);
+                      setIsDateManual(true);
+                    }
+                  }} 
+                  style={inputStyle} 
+                  required
+                  disabled={isLocked}
+                />
+              </div>
+              <div>
+                <label style={fieldLabelStyle}>ຮອບເວລາ / Time Slot</label>
+                <input 
+                  type="time" 
+                  value={time} 
+                  onChange={(e) => {
+                    if (!isLocked) {
+                      setTime(e.target.value);
+                      setIsTimeManual(true);
+                    }
+                  }} 
+                  style={inputStyle} 
+                  required
+                  disabled={isLocked}
+                />
+              </div>
+            </div>
+
+            {/* Service selection blocks instead of dropdown */}
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ ...fieldLabelStyle, marginBottom: "8px", display: "block" }}>ປະເພດການບໍລິການ / Activity Service</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                
+                {/* Block 1: Waterfall Rappelling */}
+                <div 
+                  style={{
+                    border: selectedServiceId === "SRV-004" ? "2px solid #10b981" : "1.5px solid #cbd5e1",
+                    borderRadius: "12px",
+                    padding: "12px",
+                    background: selectedServiceId === "SRV-004" ? "#e6fbf1" : "#ffffff",
+                    boxShadow: selectedServiceId === "SRV-004" ? "0 4px 12px rgba(16, 185, 129, 0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
+                    transition: "all 0.2s ease",
+                    cursor: isLocked ? "not-allowed" : "pointer"
+                  }}
+                  onClick={() => {
+                    if (!isLocked) {
+                      setSelectedServiceId("SRV-004");
+                      setSelectedTier(paxCount >= 3 ? "tier3" : "tier1");
+                      setCustomPricePerPax("");
+                    }
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "800", color: "#0f766e", fontSize: "0.9rem", marginBottom: "10px" }}>
+                    <span>🧗</span>
+                    <span>Waterfall Rappelling</span>
+                  </div>
+                  
+                  {/* Option 1: 1-2 pax */}
+                  <div 
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      background: (selectedServiceId === "SRV-004" && selectedTier === "tier1") ? "#d1fae5" : "transparent",
+                      border: (selectedServiceId === "SRV-004" && selectedTier === "tier1") ? "1.5px solid #10b981" : "1.5px solid transparent",
+                      marginBottom: "6px"
+                    }}
+                  >
+                    <div style={{
+                      width: "18px",
+                      height: "18px",
+                      borderRadius: "50%",
+                      border: (selectedServiceId === "SRV-004" && selectedTier === "tier1") ? "2px solid #10b981" : "2px solid #cbd5e1",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: (selectedServiceId === "SRV-004" && selectedTier === "tier1") ? "#10b981" : "#ffffff"
+                    }}>
+                      {(selectedServiceId === "SRV-004" && selectedTier === "tier1") && <span style={{ color: "#ffffff", fontSize: "0.65rem", fontWeight: "900" }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#1e293b" }}>{lang === "en" ? "1-2 Pax: 1,580 THB/pax" : "1-2 ທ່ານ: 1,580 THB/ທ່ານ"}</span>
+                  </div>
+
+                  {/* Option 2: 3+ pax */}
+                  <div 
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      background: (selectedServiceId === "SRV-004" && selectedTier === "tier3") ? "#d1fae5" : "transparent",
+                      border: (selectedServiceId === "SRV-004" && selectedTier === "tier3") ? "1.5px solid #10b981" : "1.5px solid transparent",
+                    }}
+                  >
+                    <div style={{
+                      width: "18px",
+                      height: "18px",
+                      borderRadius: "50%",
+                      border: (selectedServiceId === "SRV-004" && selectedTier === "tier3") ? "2px solid #10b981" : "2px solid #cbd5e1",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: (selectedServiceId === "SRV-004" && selectedTier === "tier3") ? "#10b981" : "#ffffff"
+                    }}>
+                      {(selectedServiceId === "SRV-004" && selectedTier === "tier3") && <span style={{ color: "#ffffff", fontSize: "0.65rem", fontWeight: "900" }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#1e293b" }}>{lang === "en" ? "3+ Pax: 1,120 THB/pax" : "3 ທ່ານຂຶ້ນໄປ: 1,120 THB/ທ່ານ"}</span>
+                  </div>
+                </div>
+
+                {/* Block 2: Adventure Boat */}
+                <div 
+                  style={{
+                    border: selectedServiceId === "SRV-005" ? "2px solid #10b981" : "1.5px solid #cbd5e1",
+                    borderRadius: "12px",
+                    padding: "12px",
+                    background: selectedServiceId === "SRV-005" ? "#e6fbf1" : "#ffffff",
+                    boxShadow: selectedServiceId === "SRV-005" ? "0 4px 12px rgba(16, 185, 129, 0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
+                    transition: "all 0.2s ease",
+                    cursor: isLocked ? "not-allowed" : "pointer"
+                  }}
+                  onClick={() => {
+                    if (!isLocked) {
+                      setSelectedServiceId("SRV-005");
+                      setSelectedTier(paxCount >= 3 ? "tier3" : "tier1");
+                      setCustomPricePerPax("");
+                    }
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "800", color: "#0f766e", fontSize: "0.9rem", marginBottom: "10px" }}>
+                    <span>🚤</span>
+                    <span>Adventure Boat</span>
+                  </div>
+                  
+                  {/* Option 1: 1-2 pax */}
+                  <div 
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      background: (selectedServiceId === "SRV-005" && selectedTier === "tier1") ? "#d1fae5" : "transparent",
+                      border: (selectedServiceId === "SRV-005" && selectedTier === "tier1") ? "1.5px solid #10b981" : "1.5px solid transparent",
+                      marginBottom: "6px"
+                    }}
+                  >
+                    <div style={{
+                      width: "18px",
+                      height: "18px",
+                      borderRadius: "50%",
+                      border: (selectedServiceId === "SRV-005" && selectedTier === "tier1") ? "2px solid #10b981" : "2px solid #cbd5e1",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: (selectedServiceId === "SRV-005" && selectedTier === "tier1") ? "#10b981" : "#ffffff"
+                    }}>
+                      {(selectedServiceId === "SRV-005" && selectedTier === "tier1") && <span style={{ color: "#ffffff", fontSize: "0.65rem", fontWeight: "900" }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#1e293b" }}>{lang === "en" ? "1-2 Pax: 1,900 THB/round" : "1-2 ທ່ານ: 1,900 THB/ຮອບ"}</span>
+                  </div>
+
+                  {/* Option 2: 3+ pax */}
+                  <div 
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      background: (selectedServiceId === "SRV-005" && selectedTier === "tier3") ? "#d1fae5" : "transparent",
+                      border: (selectedServiceId === "SRV-005" && selectedTier === "tier3") ? "1.5px solid #10b981" : "1.5px solid transparent",
+                    }}
+                  >
+                    <div style={{
+                      width: "18px",
+                      height: "18px",
+                      borderRadius: "50%",
+                      border: (selectedServiceId === "SRV-005" && selectedTier === "tier3") ? "2px solid #10b981" : "2px solid #cbd5e1",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: (selectedServiceId === "SRV-005" && selectedTier === "tier3") ? "#10b981" : "#ffffff"
+                    }}>
+                      {(selectedServiceId === "SRV-005" && selectedTier === "tier3") && <span style={{ color: "#ffffff", fontSize: "0.65rem", fontWeight: "900" }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#1e293b" }}>{lang === "en" ? "3+ Pax: 780 THB/pax" : "3 ທ່ານຂຶ້ນໄປ: 780 THB/ທ່ານ"}</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Pax Count & Price controls */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "10px" }}>
+              <div>
+                <label style={fieldLabelStyle}>ຈຳນວນລູກຄ້າ / Passengers</label>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={() => !isLocked && setPaxCount(Math.max(1, paxCount - 1))}
+                    style={paxCountBtnStyle}
+                    disabled={isLocked}
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <input
+                    type="number"
+                    value={paxCount}
+                    onChange={(e) => !isLocked && setPaxCount(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ ...inputStyle, textAlign: "center", flex: 1, margin: "0 5px" }}
+                    min="1"
+                    disabled={isLocked}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => !isLocked && setPaxCount(paxCount + 1)}
+                    style={paxCountBtnStyle}
+                    disabled={isLocked}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label style={fieldLabelStyle}>
+                  {pricingDetails.isFlat
+                    ? `ລາຄາເໝົາ / Flat Rate (${pricingDetails.currency})`
+                    : `ລາຄາຕໍ່ຫົວ / Price per Pax (${pricingDetails.currency})`}
+                </label>
+                <input
+                  type="number"
+                  placeholder={defaultPrice.toString()}
+                  value={customPricePerPax}
+                  onChange={(e) => !isLocked && setCustomPricePerPax(e.target.value)}
+                  style={inputStyle}
+                  disabled={isLocked || !canEdit}
+                />
+              </div>
+            </div>
+
+            {/* Total Display */}
+            <div style={{ marginTop: "10px", padding: "12px", background: "var(--bg-secondary)", borderRadius: "8px", border: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-muted)" }}>ລວມທັງໝົດ / Total Price</span>
+              <strong style={{ fontSize: "1.3rem", color: "var(--primary)" }}>{formatLAK(totalPriceLAK)} LAK</strong>
+            </div>
+
+            {/* Group code display (pre-creation) */}
+            {!loadedBooking && (
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px", alignItems: "center", marginTop: "5px" }}>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                  Group Code: <strong>{registrationGroupId}</strong><br />
+                  Bill ID: <strong>{billNumber}</strong>
+                </div>
+                <button
+                  type="submit"
+                  style={{ padding: "14px 20px", borderRadius: "10px", background: "#10b981", border: "none", color: "#fff", fontWeight: "800", fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)", transition: "all 0.2s ease" }}
+                >
+                  <QrCode size={20} />
+                  <span>➕ ສ້າງບິນ & ພິມ QR / Create Booking & Print QR</span>
+                </button>
+              </div>
+            )}
+
+            {/* Edit / Audit Controls on Paid/Locked Bills */}
+            {loadedBooking && isPaidStatus && !isEditingPaidBill && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "5px" }}>
+                <div style={{ padding: "8px 12px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <UserCheck size={16} color="#10b981" />
+                  <span style={{ fontSize: "0.8rem", color: "#10b981", fontWeight: "bold" }}>{t("paid_bill_indicator", "ບິນນີ້ຊຳລະເງິນແລ້ວ / Paid Bill")}</span>
+                </div>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={handleUnlockPaidBill}
+                    style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "#b45309", border: "none", color: "#fff", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                  >
+                    <AlertTriangle size={18} />
+                    <span>{t("edit_bill_audit_req", "ແກ້ໄຂບິນ / Edit Bill (ຕ້ອງກວດສອບ)")}</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Save Edits button when editing paid bill */}
+            {isEditingPaidBill && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "5px", padding: "10px", background: "rgba(180, 83, 9, 0.05)", border: "1px solid rgba(180, 83, 9, 0.2)", borderRadius: "8px" }}>
+                <div style={{ fontSize: "0.85rem", color: "#fca5a5", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <ShieldAlert size={16} />
+                  <span>{t("edit_paid_bill_audit", "ກຳລັງແກ້ໄຂຂໍ້ມູນບິນທີ່ຈ່າຍເງິນແລ້ວ (Audit Logger Active)")}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveEditsPaidBill}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "#059669", border: "none", color: "#fff", fontWeight: "bold", cursor: "pointer" }}
+                >
+                  {t("save_edits_btn", "ບັນທຶກການແກ້ໄຂ / Save Edits")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPaidBill(false)}
+                  style={{ width: "100%", padding: "6px", borderRadius: "8px", background: "transparent", border: "1px solid var(--border-color)", color: "var(--text-muted)", fontSize: "0.8rem", cursor: "pointer" }}
+                >
+                  {t("cancel_edits_btn", "ຍົກເລີກການແກ້ໄຂ / Cancel Edits")}
+                </button>
+              </div>
+            )}
+          </form>
+        </div>
+
+        {/* Right Column: Queues & Bill Details Preview */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+          
+          {/* QUEUE 1: กำลังลงทะเบียน / Registering Queue */}
+          <div className="card" style={{ padding: "15px", border: "1.5px dashed #0284c7", background: "rgba(2, 132, 199, 0.03)", borderRadius: "10px" }}>
+            <label style={{ fontSize: "0.85rem", fontWeight: "800", color: "#0284c7", display: "flex", alignItems: "center", gap: "6px", marginBottom: "5px" }}>
+              ⏳ 1. {t("registering_queue", "ກຳລັງລົງທະບຽນ / Registering Queue")} ({registeringBookings.length})
+            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "140px", overflowY: "auto" }}>
+              {registeringBookings.length === 0 ? (
+                <div style={{ fontStyle: "italic", fontSize: "0.8rem", color: "var(--text-muted)", padding: "10px", textAlign: "center" }}>
+                  {t("no_groups_registering", "ບໍ່ມີກຸ່ມກຳລັງລົງທະບຽນ / No registering groups")}
+                </div>
+              ) : (
+                registeringBookings.map(bk => (
+                  <div key={bk.id} style={queueCardStyle}>
+                    <div>
+                      <strong style={{ fontSize: "0.9rem", color: "var(--primary)" }}>{bk.groupId}</strong>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "5px" }}>
+                        ({bk.partnerName?.split(" ")[0]}) - {bk.paxCount} pax
+                      </span>
+                      <div style={{ fontSize: "0.7rem", color: "#0284c7", marginTop: "2px", fontWeight: "bold" }}>
+                        {t("status_label", "ສະຖານະ / Status")}: {getStatusLabel(bk.status, t)} ({bk.passengers ? bk.passengers.length : 0}/{bk.paxCount} registered)
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "5px" }}>
+                      <button
+                        onClick={() => {
+                          setQrShowModalBooking(bk);
+                        }}
+                        style={queueActionBtnStyle("#0284c7")}
+                        title={t("show_qr_screen", "ສະແດງ QR ເທິງຈໍ / Show QR on Screen")}
+                      >
+                        <QrCode size={14} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLoadedBooking(bk);
+                          setRegistrationGroupId(bk.groupId);
+                          setTimeout(() => {
+                            triggerQrSlipPrint();
+                          }, 100);
+                        }}
+                        style={queueActionBtnStyle("#0d9488")}
+                        title={t("print_qr_slip", "ພິມໃບ QR / Print QR Slip")}
+                      >
+                        <Printer size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleLoadBooking(bk)}
+                        style={queueActionBtnStyle("var(--primary)")}
+                      >
+                        {t("load_btn", "ໂຫລດ / Load")}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* QUEUE 2: พร้อมชำระเงิน / Ready to Checkout Queue */}
+          <div className="card" style={{ padding: "15px", border: "1.5px solid #10b981", background: "rgba(16, 185, 129, 0.03)", borderRadius: "10px" }}>
+            <label style={{ fontSize: "0.85rem", fontWeight: "800", color: "#10b981", display: "flex", alignItems: "center", gap: "6px", marginBottom: "5px" }}>
+              🟢 2. {t("ready_checkout_queue", "ພ້ອມຊຳລະເງິນ / Ready to Checkout")} ({readyBookings.length})
+            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "140px", overflowY: "auto" }}>
+              {readyBookings.length === 0 ? (
+                <div style={{ fontStyle: "italic", fontSize: "0.8rem", color: "var(--text-muted)", padding: "10px", textAlign: "center" }}>
+                  {t("no_ready_groups", "ບໍ່ມີກຸ່ມທີ່ພ້ອມຊຳລະເງິນ / No ready groups")}
+                </div>
+              ) : (
+                readyBookings.map(bk => (
+                  <div key={bk.id} style={queueCardStyle}>
+                    <div>
+                      <strong style={{ fontSize: "0.9rem", color: "#10b981" }}>{bk.groupId}</strong>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "5px" }}>
+                        ({bk.partnerName?.split(" ")[0]}) - {bk.paxCount} pax
+                      </span>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-primary)", marginTop: "2px" }}>
+                        {t("passengers_label", "ຜູ້ໂດຍສານ / Passengers")}: {bk.passengers?.map(p => p?.name || "").filter(Boolean).join(", ")}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleLoadBooking(bk)}
+                      style={queueActionBtnStyle("#10b981")}
+                    >
+                      {t("open_bill", "ເປີດບິນ / POS")}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* POS Bill Receipt Preview Panel */}
+          {loadedBooking && (() => {
+            const rt = receiptTranslations[lang] || receiptTranslations.la;
+            return (
+              <div className="receipt-paper card shadow-lg" style={{ padding: "20px", background: "#ffffff", color: "#000000", border: "1px solid #cbd5e1", borderRadius: "10px" }}>
+                {/* Receipt Header */}
+                <div style={{ position: "relative", borderBottom: "1px dashed #000000", paddingBottom: "10px", marginBottom: "12px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsManageBillOpen(true)}
+                    style={{
+                      position: "absolute",
+                      right: "0px",
+                      top: "0px",
+                      background: "rgba(15, 118, 110, 0.1)",
+                      border: "1px solid #0f766e",
+                      color: "#0f766e",
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "0.85rem",
+                      fontWeight: "bold",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}
+                    title={t("manage_bill_desc", "ຈັດການໃບບິນ / Manage Bill")}
+                  >
+                    ⚙️ {rt.editLabel}
+                  </button>
+                  <div style={{ textAlign: "center" }}>
+                    {db.settings.logo && (
+                      <img src={db.settings.logo} alt="Logo" style={{ maxHeight: "60px", maxWidth: "160px", objectFit: "contain", marginBottom: "8px" }} />
+                    )}
+                    <div style={{ fontWeight: "900", fontSize: "1.3rem", letterSpacing: "1px", color: "#000000" }}>TADFANE RAFTING</div>
+                    <div style={{ fontWeight: "900", fontSize: "1.1rem", color: "#000000", marginTop: "2px" }}>ຕາດຟານ ລ່ອງແກ່ງ</div>
+                    <div style={{ fontSize: "0.85rem", color: "#64748b", textTransform: "uppercase", marginTop: "4px", fontWeight: "700" }}>
+                      {rt.posBillPreview}
+                    </div>
+                    <div style={{ fontSize: "0.8rem", marginTop: "8px", border: "1px solid #000000", display: "inline-block", padding: "4px 10px", borderRadius: "6px", color: "#000000", fontWeight: "bold" }}>
+                      {rt.billId}: {loadedBooking.billNumber} | {rt.group}: {loadedBooking.groupId}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Stats / Info */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "1rem", color: "#000000" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", borderBottom: "1px dotted #cbd5e1", paddingBottom: "4px" }}>
+                    <span style={{ color: "#475569" }}>{rt.source}</span>
+                    <span style={{ fontWeight: "700", textAlign: "right", wordBreak: "break-word" }}>{loadedBooking.partnerName}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", borderBottom: "1px dotted #cbd5e1", paddingBottom: "4px" }}>
+                    <span style={{ color: "#475569" }}>{rt.date}</span>
+                    <span style={{ fontWeight: "600", textAlign: "right" }}>{formatLocalDate(loadedBooking.date)} | {loadedBooking.time} ນ.</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", borderBottom: "1px dotted #cbd5e1", paddingBottom: "4px" }}>
+                    <span style={{ color: "#475569" }}>{rt.service}</span>
+                    <span style={{ fontWeight: "700", textAlign: "right", wordBreak: "break-word" }}>{loadedBooking.serviceName}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", borderBottom: "1px dotted #cbd5e1", paddingBottom: "4px" }}>
+                    <span style={{ color: "#475569" }}>{rt.passengers}</span>
+                    <span style={{ fontWeight: "700", textAlign: "right" }}>{loadedBooking.paxCount} {rt.paxUnit}</span>
+                  </div>
+                </div>
+
+                {/* Passengers lists */}
+                <div style={{ borderTop: "1px dashed #000000", marginTop: "10px", paddingTop: "8px", color: "#000000" }}>
+                  <div style={{ fontSize: "0.95rem", fontWeight: "bold", marginBottom: "4px" }}>{rt.passengerListPreview}</div>
+                  <div style={{ maxHeight: "110px", overflowY: "auto", fontSize: "0.95rem", display: "flex", flexDirection: "column", gap: "4px" }}>
+                    {loadedBooking.passengers && loadedBooking.passengers.length > 0 ? (
+                      loadedBooking.passengers.map((p, idx) => (
+                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+                          <span style={{ flex: 1, wordBreak: "break-word" }}>{idx + 1}. {p?.name || "N/A"}</span>
+                          <span style={{ color: "#475569", whiteSpace: "nowrap" }}>
+                            ({p?.age || "-"} {rt.ageUnit} | {getGenderLabel(p?.gender, lang)} | {p?.nationality || "-"} | {p?.phone || "-"})
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ fontStyle: "italic", color: "#ef4444", fontWeight: "700" }}>
+                        ⚠️ {rt.waitingReg}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              {/* Staff Assignments Form Section */}
+              <div style={{ borderTop: "1.5px solid #e2e8f0", marginTop: "15px", paddingTop: "15px", color: "#000000", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ fontSize: "0.95rem", fontWeight: "800", color: "#0f766e", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Ship size={20} />
+                  <span>⚓ {t("staff_boat_assignments", "ຈັດພະນັກງານ ແລະ ເຮືອ / Staff & Boat Assignments")}</span>
+                </div>
+
+                {dispatchAssignees.length > 0 && (
+                  <div style={{
+                    background: "rgba(16, 185, 129, 0.05)",
+                    border: "1px solid rgba(16, 185, 129, 0.2)",
+                    borderRadius: "8px",
+                    padding: "8px 12px",
+                    fontSize: "0.8rem",
+                    color: "#10b981",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}>
+                    <Users size={14} />
+                    <span>{t("tour_dispatch_assignee", "ຜູ້ຮັບຜິດຊອບຈັດໄກ້ດ / Tour Dispatch")}: <strong>{dispatchAssignees.join(", ")}</strong></span>
+                  </div>
+                )}
+                
+                {/* 1. Multiple Tour Guides */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.85rem", fontWeight: "800", color: "#475569" }}>
+                    1. Tour Guide ({t("select_multiple_guides", "ເລືອກໄດ້ຫຼາຍກວ່າ 1 ຄົນ")})
+                  </label>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+                    gap: "10px",
+                    marginTop: "6px"
+                  }}>
+                    {db.employees.filter(emp => emp.role === "guide").map(g => {
+                      const isSelected = selectedGuideIds.includes(g.id);
+
+                      const handleCardClick = () => {
+                        setSelectedGuideIds(prev => 
+                          prev.includes(g.id) ? prev.filter(id => id !== g.id) : [...prev, g.id]
+                        );
+                      };
+
+                      const nickname = g.name.split(" (")[1]?.replace(")", "") || g.name.split(" ")[0];
+
+                      return (
+                        <div 
+                          key={g.id}
+                          onClick={handleCardClick}
+                          style={{
+                            border: isSelected ? "2px solid #10b981" : "1.5px solid #cbd5e1",
+                            borderRadius: "10px",
+                            padding: "8px 12px",
+                            cursor: "pointer",
+                            background: isSelected ? "#d1fae5" : "#ffffff",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            userSelect: "none",
+                            transition: "all 0.15s ease",
+                            color: "#0f172a"
+                          }}
+                        >
+                          <span style={{ fontSize: "1rem" }}>👤</span>
+                          <span style={{ fontSize: "0.85rem", fontWeight: "700" }}>{nickname}</span>
+                          {isSelected && <span style={{ marginLeft: "auto", color: "#047857", fontWeight: "bold" }}>✓</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Tour Driver */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label style={{ fontSize: "0.85rem", fontWeight: "800", color: "#475569" }}>
+                      2. Driver / ຄົນຂັບລົດ ({t("select_one_driver", "ເລືອກໄດ້ 1 ຄົນເທົ່ານັ້ນ")})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddNewDriver}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#0f766e",
+                        fontSize: "0.8rem",
+                        fontWeight: "800",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}
+                    >
+                      + Add Driver / ເພີ່ມຄົນຂັບລົດ
+                    </button>
+                  </div>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+                    gap: "10px",
+                    marginTop: "6px"
+                  }}>
+                    {db.employees.filter(emp => emp.role === "driver").map(d => {
+                      const isSelected = assignedDriverId === d.id;
+
+                      const handleCardClick = () => {
+                        setAssignedDriverId(prev => prev === d.id ? "" : d.id);
+                      };
+
+                      const nickname = d.name.split(" (")[1]?.replace(")", "") || d.name.split(" ")[0];
+
+                      return (
+                        <div 
+                          key={d.id}
+                          onClick={handleCardClick}
+                          style={{
+                            border: isSelected ? "2px solid #10b981" : "1.5px solid #cbd5e1",
+                            borderRadius: "10px",
+                            padding: "8px 12px",
+                            cursor: "pointer",
+                            background: isSelected ? "#d1fae5" : "#ffffff",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            userSelect: "none",
+                            transition: "all 0.15s ease",
+                            color: "#0f172a"
+                          }}
+                        >
+                          <span style={{ fontSize: "1rem" }}>🚐</span>
+                          <span style={{ fontSize: "0.85rem", fontWeight: "700" }}>{nickname}</span>
+                          {isSelected && <span style={{ marginLeft: "auto", color: "#047857", fontWeight: "bold" }}>✓</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {isBoatTrip && (
+                  <>
+                    {/* 3. Multiple Boats */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "800", color: "#475569" }}>
+                        3. Boat ({t("select_multiple_boats", "ເລືອກໄດ້ຫຼາຍກວ່າ 1 ລຳ")})
+                      </label>
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(75px, 1fr))",
+                        gap: "8px",
+                        marginTop: "6px"
+                      }}>
+                        {db.boats.map(b => {
+                          const isSelected = selectedBoatIds.includes(b.id);
+
+                          const handleCardClick = () => {
+                            setSelectedBoatIds(prev => 
+                              prev.includes(b.id) ? prev.filter(id => id !== b.id) : [...prev, b.id]
+                            );
+                          };
+
+                          const boatNum = b.name.match(/\d+/) ? b.name.match(/\d+/)[0].padStart(2, "0") : b.name;
+
+                          return (
+                            <div 
+                              key={b.id}
+                              onClick={handleCardClick}
+                              style={{
+                                border: isSelected ? "2px solid #10b981" : "1.5px solid #cbd5e1",
+                                borderRadius: "10px",
+                                padding: "8px",
+                                cursor: "pointer",
+                                background: isSelected ? "#d1fae5" : "#ffffff",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                userSelect: "none",
+                                transition: "all 0.15s ease",
+                                color: "#0f172a",
+                                justifyContent: "center"
+                              }}
+                            >
+                              <span style={{ fontSize: "0.95rem" }}>🚤</span>
+                              <span style={{ fontSize: "0.85rem", fontWeight: "700" }}>{boatNum}</span>
+                              {isSelected && <span style={{ color: "#047857", fontWeight: "bold", fontSize: "0.75rem" }}>✓</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSaveCrew}
+                  style={{ width: "100%", padding: "14px 20px", border: "none", background: "#0f766e", color: "#ffffff", borderRadius: "10px", fontWeight: "800", cursor: "pointer", fontSize: "0.95rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", boxShadow: "0 4px 10px rgba(15, 118, 110, 0.2)", transition: "all 0.2s" }}
+                >
+                  <Check size={18} />
+                  <span>{t("save_assignments", "ບັນທຶກການຈັດພະນັກງານ / Save Assignments")}</span>
+                </button>
+              </div>
+              <div style={{ borderTop: "1.5px solid #000000", marginTop: "12px", paddingTop: "8px", color: "#000000" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", borderBottom: "1px dotted #cbd5e1", paddingBottom: "4px", fontSize: "1.05rem" }}>
+                  <span>{rt.boatTickets}</span>
+                  <span style={{ fontWeight: "700" }}>{formatLAK(loadedBooking.pricePaidLAK)} LAK</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "6px" }}>
+                  <span style={{ fontWeight: "bold", fontSize: "1.05rem" }}>{rt.totalLAK}</span>
+                  <span style={{ fontWeight: "900", fontSize: "1.5rem", color: "#0f766e" }}>{formatLAK(loadedBooking.pricePaidLAK)} LAK</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", color: "#475569", marginTop: "4px" }}>
+                  <span>≈ {formatTHB(loadedBooking.pricePaidLAK / db.settings.rateTHB)} THB</span>
+                  <span>≈ {formatUSD(loadedBooking.pricePaidLAK / db.settings.rateUSD)} USD</span>
+                </div>
+              </div>
+
+              {/* Payment Method Selector & Checkout Actions */}
+              {!isPaidStatus ? (
+                <div style={{ borderTop: "1px dashed #000000", marginTop: "12px", paddingTop: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div>
+                    <label style={receiptFieldLabelStyle}>{rt.paymentMethodLabel}</label>
+                    <div style={{ display: "flex", gap: "5px" }}>
+                      <button
+                        onClick={() => setPaymentMethod("cash")}
+                        style={paymentMethod === "cash" ? activePaymentBtnStyle : inactivePaymentBtnStyle}
+                      >
+                        <Banknote size={14} /> Cash
+                      </button>
+                      <button
+                        onClick={() => setPaymentMethod("transfer")}
+                        style={paymentMethod === "transfer" ? activePaymentBtnStyle : inactivePaymentBtnStyle}
+                      >
+                        <Wallet size={14} /> Transfer
+                      </button>
+                      <button
+                        onClick={() => setPaymentMethod("card")}
+                        style={paymentMethod === "card" ? activePaymentBtnStyle : inactivePaymentBtnStyle}
+                      >
+                        <CreditCard size={14} /> Card
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCheckoutAndPrint}
+                    style={{ width: "100%", padding: "16px 20px", borderRadius: "10px", background: "#15803d", border: "none", color: "#fff", fontWeight: "800", fontSize: "1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "8px", boxShadow: "0 4px 12px rgba(21, 128, 61, 0.3)", transition: "all 0.2s ease" }}
+                  >
+                    <Printer size={20} />
+                    <span>💵 {rt.checkoutBtn}</span>
+                  </button>
+                </div>
+              ) : (
+                <div style={{ borderTop: "1px dashed #000000", marginTop: "12px", paddingTop: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <button
+                    onClick={triggerReceiptPrint}
+                    style={{ width: "100%", padding: "14px 20px", borderRadius: "10px", background: "#3b82f6", border: "none", color: "#fff", fontWeight: "800", fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.25)", transition: "all 0.2s ease" }}
+                  >
+                    <Printer size={18} />
+                    <span>🖨️ {rt.reprintBtn}</span>
+                  </button>
+                  
+                  {(loadedBooking.status === "ชำระแล้ว" || loadedBooking.status === "ชำระเงินแล้ว / ออกบิลแล้ว") && (
+                    <button
+                      onClick={() => handleDispatchBoat(loadedBooking.id)}
+                      style={{ width: "100%", padding: "14px 20px", borderRadius: "10px", background: "#2563eb", border: "none", color: "#fff", fontWeight: "800", fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)", transition: "all 0.2s ease" }}
+                    >
+                      <span>{rt.dispatchBtn}</span>
+                    </button>
+                  )}
+ 
+                  {loadedBooking.status === "ออกเรือแล้ว" && (
+                    <button
+                      onClick={() => handleCompleteTrip(loadedBooking.id)}
+                      style={{ width: "100%", padding: "14px 20px", borderRadius: "10px", background: "#6b7280", border: "none", color: "#fff", fontWeight: "800", fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", boxShadow: "0 4px 12px rgba(107, 114, 128, 0.25)", transition: "all 0.2s ease" }}
+                    >
+                      <span>{rt.completeBtn}</span>
+                    </button>
+                  )}
+ 
+                  {canDelete && (
+                    <button
+                      onClick={() => handleCancelBooking(loadedBooking.id)}
+                      style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "#ef4444", border: "none", color: "#fff", fontWeight: "bold", fontSize: "0.85rem", cursor: "pointer", marginTop: "4px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                    >
+                      <span>{rt.cancelBtn}</span>
+                    </button>
+                  )}
+ 
+                  {/* Audit Logs list inside POS receipt */}
+                  {loadedBooking.auditLogs && loadedBooking.auditLogs.length > 0 && (
+                    <div style={{ marginTop: "10px", padding: "8px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.7rem", color: "#475569" }}>
+                      <div style={{ fontWeight: "bold", color: "#b45309", marginBottom: "4px" }}>{rt.auditLogsTitle}</div>
+                      {loadedBooking.auditLogs.map((log, idx) => (
+                        <div key={idx} style={{ borderBottom: "1px dashed #e2e8f0", paddingBottom: "2px", marginBottom: "2px" }}>
+                          - {new Date(log.updatedAt).toLocaleString()}: {log.updatedBy} {lang === "en" ? "Edit bill" : "ແກ້ໄຂບິນ"} (Pax: {log.oldPax} → {log.newPax})
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+          {/* History/Paid list for reprint / history */}
+          <div className="card" style={{ padding: "15px", borderRadius: "10px", border: "1px solid var(--border-color)" }}>
+            <label style={{ fontSize: "0.85rem", fontWeight: "800", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+              📜 ບິນທີ່ອອກແລ້ວ / Recent Checked-out Bills ({completedBookings.length})
+            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "140px", overflowY: "auto" }}>
+              {completedBookings.slice().reverse().map(bk => (
+                <div key={bk.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg-secondary)", padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border-color)", fontSize: "0.8rem" }}>
+                  <div>
+                    <strong>{bk.billNumber}</strong> ({bk.partnerName?.split(" ")[0]}) - {bk.paxCount} {t("pax_unit", "ຄົນ")}
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                      Guides: {bk.guideIds?.map(gid => getGuideName(gid).split(" ")[0]).join(", ") || "None"} | 
+                      Boats: {bk.assignedBoats?.map(ab => getBoatName(ab.boatId).split(" ")[0]).join(", ") || "None"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleLoadBooking(bk)}
+                    style={{ padding: "3px 8px", background: "rgba(71, 85, 105, 0.15)", border: "none", color: "var(--text-primary)", borderRadius: "4px", cursor: "pointer", fontSize: "0.75rem", fontWeight: "bold" }}
+                  >
+                    {t("open_bill_btn", "ເປີດບິນ / Open")}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ---------------- MANAGE BILL MODAL OVERLAY ---------------- */}
+      {isManageBillOpen && loadedBooking && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 23, 42, 0.75)",
+          backdropFilter: "blur(8px)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#ffffff",
+            width: "100%",
+            maxWidth: "780px",
+            height: "90vh",
+            maxHeight: "750px",
+            borderRadius: "20px",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            display: "flex",
+            flexDirection: "column",
+            color: "#0f172a",
+            overflow: "hidden",
+            animation: "scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)"
+          }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid #cbd5e1" }}>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <strong style={{ fontSize: "1.2rem", color: "#0f766e" }}>⚙️ t("manage_bill_desc", "ຈັດການໃບບິນ / Manage Bill") Details</strong>
+                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{t("edit_bill_desc", "ແກ້ໄຂລາຍລະອຽດ, ຈັດພະນັກງານ ແລະ ຂໍ້ມູນຜູ້ໂດຍສານ")} ID: {loadedBooking.billNumber}</span>
+              </div>
+              <button 
+                onClick={() => setIsManageBillOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Tab selector */}
+            <div style={{ display: "flex", background: "#f8fafc", borderBottom: "1px solid #cbd5e1", padding: "0 16px" }}>
+              <button
+                type="button"
+                onClick={() => setManageBillTab("details")}
+                style={{
+                  padding: "14px 20px",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: manageBillTab === "details" ? "3px solid #0f766e" : "3px solid transparent",
+                  color: manageBillTab === "details" ? "#0f766e" : "#64748b",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  fontSize: "0.9rem"
+                }}
+              >
+                {t("bill_details_tab", "ລາຍລະອຽດບິນ / Bill Details")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setManageBillTab("passengers")}
+                style={{
+                  padding: "14px 20px",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: manageBillTab === "passengers" ? "3px solid #0f766e" : "3px solid transparent",
+                  color: manageBillTab === "passengers" ? "#0f766e" : "#64748b",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  fontSize: "0.9rem"
+                }}
+              >
+                {t("passengers_tab", "ລາຍຊື່ຜູ້ໂດຍສານ")} ({editPaxCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setManageBillTab("logs")}
+                style={{
+                  padding: "14px 20px",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: manageBillTab === "logs" ? "3px solid #0f766e" : "3px solid transparent",
+                  color: manageBillTab === "logs" ? "#0f766e" : "#64748b",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  fontSize: "0.9rem"
+                }}
+              >
+                {t("audit_logs_tab", "ປະຫວັດການແກ້ໄຂ / Audit Logs")} ({loadedBooking.auditLogs?.length || 0})
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+              {manageBillTab === "details" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>{t("date_label", "ວັນທີເດີນທາງ")}</label>
+                      <input 
+                        type="date"
+                        className="form-control"
+                        value={editDate}
+                        onChange={(e) => setEditDate(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>{t("time_label", "ຮອບເວລາ")}</label>
+                      <input 
+                        type="time"
+                        className="form-control"
+                        value={editTime}
+                        onChange={(e) => setEditTime(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>{t("pax_count_label", "ຈຳນວນຄົນ")}</label>
+                      <input 
+                        type="number"
+                        className="form-control"
+                        value={editPaxCount}
+                        onChange={(e) => {
+                          const newCount = Math.max(1, parseInt(e.target.value) || 1);
+                          setEditPaxCount(newCount);
+                          
+                          // Dynamically align passengers array length
+                          setEditPassengers(prev => {
+                            const updated = [...prev];
+                            if (newCount < updated.length) {
+                              return updated.slice(0, newCount);
+                            } else if (newCount > updated.length) {
+                              const diff = newCount - updated.length;
+                              for (let i = 0; i < diff; i++) {
+                                updated.push({
+                                  firstName: "",
+                                  lastName: "",
+                                  docNumber: "",
+                                  nationality: "",
+                                  gender: "",
+                                  phone: "",
+                                  age: "",
+                                  dob: "",
+                                  docExpiry: "",
+                                  facePhoto: ""
+                                });
+                              }
+                            }
+                            return updated;
+                          });
+                        }}
+                        min="1"
+                        required
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>{t("service_label", "ກິດຈະກຳ / ບໍລິການ")}</label>
+                      <select 
+                        className="form-control"
+                        value={editServiceId}
+                        onChange={(e) => setEditServiceId(e.target.value)}
+                        required
+                      >
+                        {db.services?.filter(s => s.status === "active").map(srv => (
+                          <option key={srv.id} value={srv.id}>{srv.name} ({srv.currency})</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>{t("price_tier_label", "ລະດັບລາຄາ / Price Tier")}</label>
+                      <select 
+                        className="form-control"
+                        value={editTier}
+                        onChange={(e) => setEditTier(e.target.value)}
+                      >
+                        <option value="tier1">{t("price_tier1", "ລາຄາເລີ່ມຕົ້ນ (Tier 1 / Flat)")}</option>
+                        <option value="tier3">{t("price_tier3", "ລາຄາໂປຣໂມຊັ່ນ/ກຸ່ມໃຫຍ່ (Tier 3)")}</option>
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>{t("custom_price_label", "ລາຄາຕັ້ງເອງ / Custom Price")}</label>
+                      <input 
+                        type="number"
+                        className="form-control"
+                        placeholder={t("custom_price_placeholder", "ປະວ່າງໄວ້ເພື່ອໃຊ້ລາຄາເລີ່ມຕົ້ນ")}
+                        value={editCustomPrice}
+                        onChange={(e) => setEditCustomPrice(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>{t("payment_method_label", "ວິທີການຊຳລະເງິນ")}</label>
+                      <select 
+                        className="form-control"
+                        value={editPaymentMethod}
+                        onChange={(e) => setEditPaymentMethod(e.target.value)}
+                        required
+                      >
+                        <option value="cash">{t("cash_payment", "ເງິນສົດ / Cash (LAK)")}</option>
+                        <option value="qr">{t("qr_payment", "ແກນ QR / Bank QR Transfer")}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>{t("notes", "ບັນທຶກ / Notes")}</label>
+                    <textarea 
+                      className="form-control"
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      placeholder={t("notes_placeholder", "ໝາຍເຫດເພີ່ມເຕີມ...")}
+                      rows="3"
+                    />
+                  </div>
+
+                  {/* Pricing feedback widget */}
+                  {(() => {
+                    const priceDetails = getSelectedPricingDetails(editServiceId, editTier, editPaxCount, editCustomPrice);
+                    return (
+                      <div style={{ padding: "16px", background: "rgba(15, 118, 110, 0.05)", border: "1px solid #cbd5e1", borderRadius: "10px", marginTop: "8px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700" }}>
+                          <span>{t("recalculated_total", "ລາຄາສຸດທິໃໝ່ / Recalculated Total:")}</span>
+                          <span style={{ color: "#0f766e", fontSize: "1.1rem" }}>{formatLAK(priceDetails.totalLAK)} LAK</span>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "4px" }}>
+                          ({priceDetails.rawPrice.toLocaleString()} {priceDetails.currency} {priceDetails.isFlat ? t("flat_rate", "ເໝົາລຳ") : t("per_pax", "ຕໍ່ຄົນ")})
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {manageBillTab === "passengers" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                  {Array.from({ length: editPaxCount }).map((_, idx) => {
+                    const pax = editPassengers[idx] || {
+                      firstName: "",
+                      lastName: "",
+                      docNumber: "",
+                      nationality: "",
+                      gender: "",
+                      phone: "",
+                      age: "",
+                      dob: "",
+                      docExpiry: "",
+                      emergencyName: "",
+                      emergencyRelation: "",
+                      emergencyPhone: "",
+                      facePhoto: ""
+                    };
+
+                    const handlePaxChange = (field, val) => {
+                      setEditPassengers(prev => {
+                        const copy = [...prev];
+                        if (!copy[idx]) copy[idx] = {};
+                        copy[idx] = { ...copy[idx], [field]: val };
+                        return copy;
+                      });
+                    };
+
+                    return (
+                      <div key={idx} style={{ padding: "16px", border: "1px solid #e2e8f0", borderRadius: "12px", background: "#f8fafc" }}>
+                        <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "#0f766e", marginBottom: "12px", borderBottom: "1px solid #e2e8f0", paddingBottom: "6px" }}>
+                          👤 {t("passenger_number", "ຜູ້ໂດຍສານຄົນທີ")} {idx + 1} / Passenger #{idx + 1}
+                        </div>
+                        
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("first_name_label", "ຊື່ແທ້ (EN) / First Name")}</label>
+                            <input 
+                              type="text"
+                              className="form-control"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              value={pax.firstName || ""}
+                              onChange={(e) => handlePaxChange("firstName", e.target.value)}
+                              placeholder="Somchai"
+                            />
+                          </div>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("last_name_label", "ນາມສະກຸນ (EN) / Last Name")}</label>
+                            <input 
+                              type="text"
+                              className="form-control"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              value={pax.lastName || ""}
+                              onChange={(e) => handlePaxChange("lastName", e.target.value)}
+                              placeholder="Saetang"
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "12px" }}>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("nationality_label", "ສັນຊາດ / Nationality")}</label>
+                            <input 
+                              type="text"
+                              className="form-control"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              value={pax.nationality || ""}
+                              onChange={(e) => handlePaxChange("nationality", e.target.value)}
+                              placeholder="TH, LA, US..."
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("dob_label", "ວັນເກີດ / DOB (DD/MM/YYYY)")}</label>
+                            <input 
+                              type="text"
+                              className="form-control"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              placeholder="DD/MM/YYYY"
+                              value={pax.dobInput || getDobInputVal(pax.dob)}
+                              onChange={(e) => handleDobInputChange(idx, e.target.value)}
+                            />
+                            
+                            {/* Dropdowns helper */}
+                            <div style={{ display: "flex", gap: "4px", marginTop: "4px" }}>
+                              <select
+                                style={{ flex: 1, height: "24px", fontSize: "0.7rem", borderRadius: "4px", border: "1px solid #cbd5e1", padding: 0 }}
+                                value={pax.dob ? pax.dob.split("-")[2] : ""}
+                                onChange={(e) => handleDobSelectChange(idx, "day", e.target.value)}
+                              >
+                                <option value="">{t("day", "ວັນ / Day")}</option>
+                                {Array.from({ length: 31 }, (_, i) => {
+                                  const d = String(i + 1).padStart(2, "0");
+                                  return <option key={d} value={d}>{d}</option>;
+                                })}
+                              </select>
+                              
+                              <select
+                                style={{ flex: 1.2, height: "24px", fontSize: "0.7rem", borderRadius: "4px", border: "1px solid #cbd5e1", padding: 0 }}
+                                value={pax.dob ? pax.dob.split("-")[1] : ""}
+                                onChange={(e) => handleDobSelectChange(idx, "month", e.target.value)}
+                              >
+                                <option value="">{t("month", "ເດືອນ / Mo")}</option>
+                                {Array.from({ length: 12 }, (_, i) => {
+                                  const m = String(i + 1).padStart(2, "0");
+                                  return <option key={m} value={m}>{m}</option>;
+                                })}
+                              </select>
+                              
+                              <select
+                                style={{ flex: 1.5, height: "24px", fontSize: "0.7rem", borderRadius: "4px", border: "1px solid #cbd5e1", padding: 0 }}
+                                value={pax.dob ? pax.dob.split("-")[0] : ""}
+                                onChange={(e) => handleDobSelectChange(idx, "year", e.target.value)}
+                              >
+                                <option value="">{t("year", "ປີ / Year")}</option>
+                                {Array.from({ length: 100 }, (_, i) => {
+                                  const y = String(new Date().getFullYear() - i);
+                                  return <option key={y} value={y}>{y}</option>;
+                                })}
+                              </select>
+                            </div>
+                          </div>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("gender_label", "ເພດ / Gender")}</label>
+                            <select 
+                              className="form-control"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              value={pax.gender || ""}
+                              onChange={(e) => handlePaxChange("gender", e.target.value)}
+                            >
+                              <option value="">{t("select", "ເລືອກ / Select")}</option>
+                              <option value="Male">{t("male", "ຊາຍ / Male")}</option>
+                              <option value="Female">{t("female", "ຍິງ / Female")}</option>
+                              <option value="Other">{t("other", "ອື່ນໆ / Other")}</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("phone_label", "ເບີໂທຕິດຕໍ່ / Phone")}</label>
+                            <input 
+                              type="text"
+                              className="form-control"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              value={pax.phone || ""}
+                              onChange={(e) => handlePaxChange("phone", e.target.value)}
+                              placeholder="+66..."
+                            />
+                          </div>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("age_label", "ອາຍຸ / Age")}</label>
+                            <input 
+                              type="number"
+                              className="form-control"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              value={pax.age || ""}
+                              onChange={(e) => handlePaxChange("age", e.target.value)}
+                              placeholder={t("years_placeholder", "ປີ (Years)")}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Emergency Contact */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr 1.2fr", gap: "12px", marginTop: "12px", borderTop: "1px dashed #cbd5e1", paddingTop: "12px" }}>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("emergency_name_label", "ຊື່ຜູ້ຕິດຕໍ່ສຸກເສີນ / Emergency Name")}</label>
+                            <input 
+                              type="text"
+                              className="form-control"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              value={pax.emergencyName || ""}
+                              onChange={(e) => handlePaxChange("emergencyName", e.target.value)}
+                              placeholder="Name"
+                            />
+                          </div>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("emergency_relation_label", "ຄວາມສຳພັນ / Relation")}</label>
+                            <input 
+                              type="text"
+                              className="form-control"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              value={pax.emergencyRelation || ""}
+                              onChange={(e) => handlePaxChange("emergencyRelation", e.target.value)}
+                              placeholder="Relation"
+                            />
+                          </div>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("emergency_phone_label", "ເບີໂທສຸກເສີນ / Emergency Phone")}</label>
+                            <input 
+                              type="text"
+                              className="form-control"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              value={pax.emergencyPhone || ""}
+                              onChange={(e) => handlePaxChange("emergencyPhone", e.target.value)}
+                              placeholder="Phone number"
+                            />
+                          </div>
+                        </div>
+
+                        {pax.facePhoto && (
+                          <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "0.75rem", fontWeight: "700" }}>{t("selfie_label", "ຮູບຖ່າຍໃບໜ້າ / Selfie:")}</span>
+                            <img src={pax.facePhoto} alt="Selfie" style={{ height: "40px", width: "40px", objectFit: "cover", borderRadius: "50%", border: "1px solid #cbd5e1" }} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {manageBillTab === "logs" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {loadedBooking.auditLogs && loadedBooking.auditLogs.length > 0 ? (
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid #cbd5e1", textAlign: "left", color: "#64748b" }}>
+                          <th style={{ padding: "10px" }}>{t("time_label", "ເວລາ / Time")}</th>
+                          <th style={{ padding: "10px" }}>{t("operator_label", "ຜູ້ດຳເນີນງານ / Operator")}</th>
+                          <th style={{ padding: "10px" }}>{t("pax_change_label", "ການປ່ຽນແປງຈຳນວນຄົນ / Pax Change")}</th>
+                          <th style={{ padding: "10px" }}>{t("details_label", "ລາຍລະອຽດ / Details")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadedBooking.auditLogs.map((log, idx) => (
+                          <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                            <td style={{ padding: "10px" }}>{new Date(log.updatedAt).toLocaleString()}</td>
+                            <td style={{ padding: "10px", fontWeight: "600" }}>{log.updatedBy}</td>
+                            <td style={{ padding: "10px" }}>{log.oldPax} ➔ {log.newPax}</td>
+                            <td style={{ padding: "10px", color: "#475569" }}>
+                              {log.details || (lang === "en" ? `Edit details (Old: ${log.oldPax} pax, New: ${log.newPax} pax)` : `ແກ້ໄຂລາຍລະອຽດບິນ (ເກົ່າ: ${log.oldPax} ຄົນ, ໃໝ່: ${log.newPax} ຄົນ)`)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                      <span style={{ fontSize: "2rem" }}>📜</span>
+                      <p style={{ marginTop: "10px", fontSize: "0.9rem" }}>{t("no_edits_logged", "ບໍ່ມີປະຫວັດການແກ້ໄຂບິນ / No edits logged for this bill.")}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 24px", borderTop: "1px solid #cbd5e1", background: "#f8fafc" }}>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerReceiptPrint();
+                  }}
+                  className="btn btn-secondary"
+                  style={{ padding: "10px 16px", fontSize: "0.85rem" }}
+                >
+                  🖨️ {t("reprint_bill_btn", "ພິມໃບບິນ / Reprint Bill")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerQrSlipPrint();
+                  }}
+                  className="btn btn-secondary"
+                  style={{ padding: "10px 16px", fontSize: "0.85rem" }}
+                >
+                  📱 {t("reprint_qr_btn", "ພິມສລິບ QR / Reprint QR")}
+                </button>
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(t("confirm_cancel_bill", "ທ່ານຕ້ອງການຍົກເລີກບິນນີ້ແມ່ນຫຼືບໍ່? / Cancel this bill?"))) {
+                        handleCancelBooking(loadedBooking.id);
+                        setIsManageBillOpen(false);
+                      }
+                    }}
+                    className="btn btn-danger"
+                    style={{ padding: "10px 16px", fontSize: "0.85rem", background: "#ef4444" }}
+                  >
+                    ❌ {t("cancel_bill", "ຍົກເລີກບິນ / Cancel Bill")}
+                  </button>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsManageBillOpen(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: "10px 20px", fontSize: "0.85rem" }}
+                >
+                  {t("close_label", "ປິດ / Close")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const priceDetails = getSelectedPricingDetails(editServiceId, editTier, editPaxCount, editCustomPrice);
+                    const newLog = {
+                      updatedAt: new Date().toISOString(),
+                      updatedBy: currentUser?.name || "Unknown Staff",
+                      oldPax: loadedBooking.paxCount,
+                      newPax: editPaxCount,
+                      details: (lang === "en" ? `Edit details (Price: ${formatLAK(priceDetails.totalLAK)})` : `ແກ້ໄຂລາຍລະອຽດບິນ (ລາຄາ: ${formatLAK(priceDetails.totalLAK)})`)
+                    };
+                    const updatedLogs = [...(loadedBooking.auditLogs || []), newLog];
+
+                    const updatedBooking = {
+                      ...loadedBooking,
+                      date: editDate,
+                      time: editTime,
+                      paxCount: editPaxCount,
+                      selectedServiceId: editServiceId,
+                      serviceId: editServiceId,
+                      serviceName: db.services.find(s => s.id === editServiceId)?.name || loadedBooking.serviceName,
+                      selectedTier: editTier,
+                      customPricePerPax: editCustomPrice,
+                      pricePaidLAK: priceDetails.totalLAK,
+                      paymentMethod: editPaymentMethod,
+                      notes: editNotes,
+                      passengers: editPassengers.map(p => ({
+                        ...p,
+                        name: `${p.firstName || ""} ${p.lastName || ""}`.trim()
+                      })),
+                      auditLogs: updatedLogs
+                    };
+
+                    const currentDb = getDb();
+                    currentDb.bookings = currentDb.bookings.map(b => b.id === loadedBooking.id ? updatedBooking : b);
+                    saveDb(currentDb);
+                    setDb(currentDb);
+                    setLoadedBooking(updatedBooking);
+                    setIsManageBillOpen(false);
+                    alert(t("bill_edits_saved_alert", "ບັນທຶກການແກ້ໄຂບິນສຳເລັດແລ້ວ! / Bill edits saved successfully!"));
+                  }}
+                  className="btn btn-success"
+                  style={{ padding: "10px 24px", fontSize: "0.85rem" }}
+                >
+                  💾 {t("save_changes", "ບັນທຶກການແກ້ໄຂ / Save Changes")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- HARDWARE / COMPUTER CAMERA QR CODE SCANNER MODAL ---------------- */}
+      {showScannerModal && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 23, 42, 0.75)",
+          backdropFilter: "blur(5px)",
+          zIndex: 99999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "15px"
+        }}>
+          <div style={{
+            background: "#ffffff",
+            width: "100%",
+            maxWidth: "460px",
+            borderRadius: "16px",
+            padding: "20px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+            color: "#000000"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
+              <strong style={{ fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "6px", color: "#0f766e" }}>
+                <Scan size={20} /> {t("scan_qr_btn", "ສະແກນ QR Code / QR Scanner")}
+              </strong>
+              <button 
+                onClick={() => setShowScannerModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Video Reader Element for html5-qrcode */}
+            <div id="reader" style={{ width: "100%", background: "#f8fafc", borderRadius: "8px", overflow: "hidden", border: "1px solid #cbd5e1" }}></div>
+
+            {/* Manual Text Input / USB Hardware Barcode scanner support */}
+            <form onSubmit={handleManualScanSubmit} style={{ display: "flex", flexDirection: "column", gap: "5px", borderTop: "1px solid #e2e8f0", paddingTop: "15px" }}>
+              <label style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#475569" }}>
+                {t("enter_code_manually", "ປ້ອນລະຫັດກຸ່ມ ຫຼື ສະແກນຜ່ານສາຍ USB / Enter Group Code Manually")}
+              </label>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <input
+                  type="text"
+                  placeholder={t("group_code_placeholder", "ເຊັ່ນ: REG-1234 ຫຼື BK-1002")}
+                  value={manualScanCode}
+                  onChange={(e) => setManualScanCode(e.target.value)}
+                  style={{ flex: 1, height: "36px", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "0 10px", outline: "none", fontSize: "0.85rem", textTransform: "uppercase" }}
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  style={{ padding: "0 15px", borderRadius: "6px", background: "#0f766e", color: "#ffffff", border: "none", fontWeight: "bold", cursor: "pointer", fontSize: "0.85rem" }}
+                >
+                  {t("open_bill_btn", "ເປີດບິນ / Open")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- HIDDEN PRINTABLE DOM (Only Visible to @media print) ---------------- */}
+      {loadedBooking && (() => {
+        const rt = receiptTranslations[lang] || receiptTranslations.la;
+        return (
+          <div className="printable-area">
+            <div className="receipt-print" style={{ color: "#000000", fontFamily: "monospace", fontSize: "16px", width: "100%", margin: "0 auto", padding: "12px", lineHeight: "1.5", fontWeight: "700" }}>
+              <div style={{ textAlign: "center", borderBottom: "2px dashed #000000", paddingBottom: "8px", marginBottom: "8px" }}>
+                {db.settings.logo && (
+                  <img src={db.settings.logo} alt="Logo" style={{ maxHeight: "80px", maxWidth: "220px", objectFit: "contain", marginBottom: "8px" }} />
+                )}
+                <h3 style={{ margin: "4px 0 0 0", fontWeight: "900", fontSize: "20px", color: "#000000", letterSpacing: "1px" }}>TADFANE RAFTING</h3>
+                <h4 style={{ margin: "2px 0 0 0", fontWeight: "900", fontSize: "16px", color: "#000000" }}>ຕາດຟານ ລ່ອງແກ່ງ</h4>
+                <p style={{ fontSize: "12px", margin: "4px 0 2px 0", fontWeight: "bold" }}>{rt.address}</p>
+                <p style={{ fontSize: "12px", margin: "0", fontWeight: "bold" }}>{rt.tel}</p>
+              </div>
+
+              <div style={{ fontSize: "15px", marginBottom: "6px", lineHeight: "1.5" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{rt.billNumber}</strong>
+                  <span>{loadedBooking.billNumber}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{rt.date}</strong>
+                  <span>{formatLocalDate(loadedBooking.date)} {loadedBooking.time}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{rt.payment}</strong>
+                  <span>
+                    {loadedBooking.paymentMethod === "cash"
+                      ? rt.cash
+                      : loadedBooking.paymentMethod === "transfer"
+                      ? rt.transfer
+                      : loadedBooking.paymentMethod === "card"
+                      ? rt.card
+                      : loadedBooking.paymentMethod?.toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{rt.agent}</strong>
+                  <span>{loadedBooking.partnerName}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{rt.passengers}</strong>
+                  <span>{loadedBooking.paxCount} {rt.paxUnit}</span>
+                </div>
+                
+                <div style={{ borderTop: "2px dashed #000000", margin: "6px 0" }}></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{rt.driver}</strong>
+                  <span>{getDriverName(loadedBooking.driverId) || rt.unassigned}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{rt.guides}</strong>
+                  <span>{loadedBooking.guideIds?.map(gId => getGuideName(gId).split(" ")[0]).join(" & ") || rt.unassigned}</span>
+                </div>
+                
+                <div style={{ borderTop: "2px dotted #000000", margin: "4px 0", paddingTop: "4px" }}>
+                  <strong>{rt.boats}</strong>
+                </div>
+                {loadedBooking.assignedBoats && loadedBooking.assignedBoats.length > 0 ? (
+                  loadedBooking.assignedBoats.map((ab, index) => (
+                    <div key={index} style={{ paddingLeft: "6px", fontSize: "12px", fontWeight: "700", display: "flex", justifyContent: "space-between" }}>
+                      <span>{rt.boatLabel} {index + 1}: {getBoatName(ab.boatId)}</span>
+                      <span>({ab.paxCount} {rt.paxUnit})</span>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ paddingLeft: "6px", fontSize: "12px" }}>{rt.unassigned}</div>
+                )}
+              </div>
+
+              <div style={{ borderTop: "2px dashed #000000", margin: "6px 0" }}></div>
+              <div style={{ fontSize: "14px", marginBottom: "6px" }}>
+                <div style={{ fontWeight: "900", marginBottom: "4px" }}>
+                  {rt.passengerListHeader} ({loadedBooking.paxCount} {rt.paxUnit}):
+                </div>
+                {loadedBooking.passengers && loadedBooking.passengers.length > 0 ? (
+                  loadedBooking.passengers.map((pax, idx) => (
+                    <div key={idx} style={{ paddingLeft: "6px", fontWeight: "700", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+                      <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
+                        {idx + 1}. {pax?.name || "N/A"}
+                      </span>
+                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                        ({pax?.age || "-"} {rt.ageUnit} | {getGenderLabel(pax?.gender, lang)} | {pax?.nationality || "-"})
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ paddingLeft: "6px", fontStyle: "italic", color: "#000000" }}>
+                    {rt.waitingReg}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ borderTop: "2px dashed #000000", margin: "6px 0" }}></div>
+              <div style={{ fontSize: "15px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
+                  <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
+                    {loadedBooking.serviceName} x{loadedBooking.paxCount}:
+                  </span>
+                  <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                    {formatLAK(loadedBooking.pricePaidLAK)} LAK
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "900", fontSize: "20px", marginTop: "8px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
+                  <span style={{ flex: 1, textAlign: "left" }}>{rt.total}</span>
+                  <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                    {formatLAK(loadedBooking.pricePaidLAK)} LAK
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", marginTop: "6px", fontWeight: "700" }}>
+                  <span>THB:</span>
+                  <span>{formatTHB(loadedBooking.pricePaidLAK / db.settings.rateTHB)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", fontWeight: "700" }}>
+                  <span>USD:</span>
+                  <span>{formatUSD(loadedBooking.pricePaidLAK / db.settings.rateUSD)}</span>
+                </div>
+              </div>
+
+              <div style={{ marginTop: "20px", textAlign: "center", borderTop: "2px dashed #000000", paddingTop: "8px" }}>
+                <p style={{ fontSize: "14px", margin: "0", fontWeight: "900", color: "#000000" }}>{rt.thankYou}</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+{/* ---------------- HIDDEN PRINTABLE SIGN STANDEE (Only Visible to @media print in print-qr-sign-mode) ---------------- */}
+      <div className="printable-area">
+        <div className="qr-sign-print" style={{ color: "#000000", textAlign: "center", padding: "40px", fontFamily: "sans-serif" }}>
+          <h1 style={{ fontWeight: "900", fontSize: "2.4rem", color: "#000000", margin: "0 0 5px 0" }}>TADFANE RAFTING</h1>
+          <h2 style={{ fontWeight: "900", fontSize: "1.8rem", color: "#000000", margin: "0 0 15px 0" }}>ຕາດຟານ ລ່ອງແກ່ງ</h2>
+          <h3 style={{ fontSize: "1.3rem", color: "#475569", marginBottom: "1.5rem" }}>ລົງທະບຽນຜູ້ໂດຍສານ / Customer Registration</h3>
+          
+          <div style={{ margin: "25px 0", display: "flex", justifyContent: "center" }}>
+            <QRCodeSVG value={getSelfRegUrl(loadedBooking?.groupId, loadedBooking?.partnerId)} size={280} includeMargin={true} />
+          </div>
+
+          <div style={{ fontSize: "1.3rem", fontWeight: "900", margin: "20px 0", color: "#000000" }}>
+            Group Code / ລະຫັດກຸ່ມ: <span style={{ textDecoration: "underline" }}>{loadedBooking?.groupId || registrationGroupId}</span>
+          </div>
+
+          <div style={{ textAlign: "left", maxWidth: "440px", margin: "0 auto", fontSize: "0.95rem", lineHeight: "1.6", fontWeight: "700" }}>
+            <p>1. Scan the QR Code using your mobile phone camera.</p>
+            <p>2. Agree to safety rules & terms.</p>
+            <p>3. Enter name, nationality, age, gender, phone details and submit.</p>
+            <p>4. Please notify cashier after submit.</p>
+          </div>
+        </div>
+      </div>
+{/* ---------------- HIDDEN PRINTABLE QR SLIP (Only Visible to @media print in print-qr-slip-mode) ---------------- */}
+      {loadedBooking && (
+        <div className="printable-area">
+          <div className="qr-slip-print" style={{ color: "#000000", width: "260px", margin: "0 auto", padding: "12px", textAlign: "center", fontFamily: "monospace", lineHeight: "1.5" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: "900", color: "#000000", margin: "0" }}>TADFANE RAFTING</h3>
+            <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#000000", margin: "2px 0 0 0" }}>ຕາດຟານ ລ່ອງແກ່ງ</h4>
+            <p style={{ fontWeight: "bold", fontSize: "11px", margin: "6px 0 6px 0", color: "#000000" }}>ບິນລົງທະບຽນລູກຄ້າ / Register Slip</p>
+            
+            <div style={{ display: "inline-block", padding: "10px", background: "#ffffff", border: "1px solid #000000", borderRadius: "8px", margin: "10px 0" }}>
+              <QRCodeSVG value={getSelfRegUrl(loadedBooking.groupId, loadedBooking.partnerId)} size={150} includeMargin={true} />
+            </div>
+
+            <div style={{ border: "2px dashed #000000", borderRadius: "6px", padding: "8px", margin: "8px 0", background: "#ffffff" }}>
+              <span style={{ fontSize: "11px", fontWeight: "bold", display: "block" }}>ລະຫັດກຸ່ມ / Group Code</span>
+              <span style={{ fontSize: "20px", fontWeight: "800", letterSpacing: "1px", display: "block" }}>{loadedBooking.groupId}</span>
+            </div>
+
+            <div style={{ textAlign: "left", fontSize: "11px", background: "#f1f5f9", padding: "8px 12px", borderRadius: "8px", marginTop: "10px", border: "1px solid #cbd5e1", fontWeight: "700" }}>
+              <strong>1. ສະແກນ QR Code / Scan QR</strong><br />
+              Scan QR code with your phone camera.<br />
+              <strong>2. ກອກຂໍ້ມູນ / Enter Details</strong><br />
+              Fill in name, nationality, gender, age, phone and submit.
+            </div>
+
+            <div style={{ marginTop: "15px", fontSize: "11px", fontStyle: "italic", borderTop: "1px dashed #000000", paddingTop: "6px", fontWeight: "700" }}>
+              Thank you / ຂໍຂອບໃຈ
+            </div>
+          </div>
+        </div>
+      )}
+{/* ---------------- SCREEN QR DISPLAY MODAL (Show QR to Customer at Counter) ---------------- */}
+      {qrShowModalBooking && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 23, 42, 0.75)",
+          backdropFilter: "blur(5px)",
+          zIndex: 99999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "15px"
+        }}>
+          <div style={{
+            background: "var(--bg-card, #ffffff)",
+            border: "1px solid var(--border-color, #cbd5e1)",
+            width: "100%",
+            maxWidth: "460px",
+            borderRadius: "16px",
+            padding: "24px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "20px",
+            color: "var(--text-primary, #000000)"
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", borderBottom: "1px solid var(--border-color, #e2e8f0)", paddingBottom: "12px" }}>
+              <strong style={{ fontSize: "1.2rem", display: "flex", alignItems: "center", gap: "8px", color: "var(--primary, #0f766e)" }}>
+                <QrCode size={24} /> ສະແກນລົງທະບຽນ / Scan to Register
+              </strong>
+              <button 
+                onClick={() => setQrShowModalBooking(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted, #64748b)" }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Group Code Info Card */}
+            <div style={{
+              width: "100%",
+              background: "linear-gradient(135deg, rgba(15, 118, 110, 0.1) 0%, rgba(2, 132, 199, 0.1) 100%)",
+              border: "1px solid var(--border-color, #cbd5e1)",
+              borderRadius: "12px",
+              padding: "12px 20px",
+              textAlign: "center"
+            }}>
+              <span style={{ fontSize: "0.85rem", color: "var(--text-muted, #64748b)", textTransform: "uppercase", fontWeight: "bold", letterSpacing: "0.5px" }}>
+                ລະຫັດກຸ່ມ / Group Code
+              </span>
+              <div style={{ fontSize: "2rem", fontWeight: "900", color: "var(--primary, #0f766e)", letterSpacing: "1px", margin: "4px 0" }}>
+                {qrShowModalBooking.groupId}
+              </div>
+              <span style={{ fontSize: "0.9rem", color: "var(--text-primary)", fontWeight: "600" }}>
+                {qrShowModalBooking.partnerName || "Walk-in"} &bull; {qrShowModalBooking.paxCount} pax
+              </span>
+            </div>
+
+            {/* QR Code */}
+            <div style={{
+              background: "#ffffff",
+              padding: "16px",
+              borderRadius: "12px",
+              boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+              border: "1px solid #cbd5e1",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center"
+            }}>
+              <QRCodeSVG value={getSelfRegUrl(qrShowModalBooking.groupId, qrShowModalBooking.partnerId)} size={260} includeMargin={true} />
+            </div>
+
+            {/* Display the URL text under the QR code */}
+            <div style={{
+              fontSize: "0.8rem",
+              wordBreak: "break-all",
+              color: "#334155",
+              background: "#f1f5f9",
+              padding: "8px 12px",
+              borderRadius: "8px",
+              border: "1px solid #cbd5e1",
+              fontFamily: "monospace",
+              textAlign: "center",
+              width: "100%",
+              fontWeight: "600"
+            }}>
+              {getSelfRegUrl(qrShowModalBooking.groupId, qrShowModalBooking.partnerId)}
+            </div>
+
+            {/* Instructions */}
+            <div style={{
+              fontSize: "0.85rem",
+              textAlign: "left",
+              width: "100%",
+              background: "var(--bg-secondary, #f8fafc)",
+              padding: "12px 16px",
+              borderRadius: "10px",
+              border: "1px solid var(--border-color, #cbd5e1)",
+              lineHeight: "1.5"
+            }}>
+              <strong style={{ color: "var(--primary, #0f766e)", display: "block", marginBottom: "4px" }}>
+                {t("customer_instructions", "ຄຳແນະນຳສຳລັບລູກຄ້າ / Instructions:")}
+              </strong>
+              {t("inst_step1", "1. ເປີດກ້ອງມືຖືສະແກນ QR Code ນີ້ / 1. Open mobile camera to scan this QR Code")}<br />
+              {t("inst_step2", "2. ກົດຍອມຮັບເງື່ອນໄຂຄວາມປອດໄພ / 2. Accept safety terms")}<br />
+              {t("inst_step3", "3. ກອກຂໍ້ມູນສ່ວນຕົວໃຫ້ຄົບຖ້ວນທຸກຄົນ ແລ້ວກົດບັນທຶກ / 3. Fill details and save")}
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => setQrShowModalBooking(null)}
+              style={{
+                width: "100%",
+                padding: "12px",
+                borderRadius: "10px",
+                background: "var(--primary, #0f766e)",
+                border: "none",
+                color: "#ffffff",
+                fontWeight: "800",
+                cursor: "pointer",
+                textAlign: "center",
+                boxShadow: "0 4px 12px rgba(15, 118, 110, 0.2)"
+              }}
+            >
+              {t("close_screen", "ປິດໜ້າຈໍນີ້ / Close")}
+            </button>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+// Layout design styling objects
+const posGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1.1fr",
+  gap: "20px"
+};
+
+const fieldLabelStyle = {
+  fontSize: "0.8rem",
+  fontWeight: "700",
+  color: "var(--text-muted)",
+  marginBottom: "4px",
+  display: "block"
+};
+
+const receiptFieldLabelStyle = {
+  fontSize: "0.7rem",
+  fontWeight: "700",
+  color: "#475569",
+  marginBottom: "2px",
+  display: "block"
+};
+
+const inputStyle = {
+  width: "100%",
+  height: "38px",
+  borderRadius: "8px",
+  border: "1px solid var(--border-color)",
+  background: "var(--bg-secondary)",
+  color: "var(--text-primary)",
+  padding: "0 10px",
+  fontSize: "0.85rem",
+  outline: "none",
+  boxSizing: "border-box"
+};
+
+const receiptSelectStyle = {
+  width: "100%",
+  height: "32px",
+  borderRadius: "6px",
+  border: "1px solid #cbd5e1",
+  background: "#ffffff",
+  color: "#000000",
+  padding: "0 5px",
+  fontSize: "0.8rem",
+  outline: "none",
+  boxSizing: "border-box"
+};
+
+const paxCountBtnStyle = {
+  width: "36px",
+  height: "36px",
+  borderRadius: "8px",
+  border: "1px solid var(--border-color)",
+  background: "var(--bg-secondary)",
+  color: "var(--text-primary)",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center"
+};
+
+const agentBtnGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(95px, 1fr))",
+  gap: "10px",
+  marginTop: "6px"
+};
+
+const activeAgentBtnStyle = {
+  padding: "8px 5px",
+  borderRadius: "8px",
+  background: "#0f766e",
+  border: "none",
+  color: "#ffffff",
+  fontWeight: "bold",
+  fontSize: "0.8rem",
+  cursor: "pointer",
+  textAlign: "center"
+};
+
+const inactiveAgentBtnStyle = {
+  padding: "8px 5px",
+  borderRadius: "8px",
+  background: "var(--bg-secondary)",
+  border: "1px solid var(--border-color)",
+  color: "var(--text-muted)",
+  fontSize: "0.8rem",
+  cursor: "pointer",
+  textAlign: "center"
+};
+
+const activePaymentBtnStyle = {
+  flex: 1,
+  padding: "8px",
+  borderRadius: "6px",
+  background: "#0f766e",
+  border: "none",
+  color: "#ffffff",
+  fontWeight: "bold",
+  fontSize: "0.8rem",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "4px"
+};
+
+const inactivePaymentBtnStyle = {
+  flex: 1,
+  padding: "8px",
+  borderRadius: "6px",
+  background: "#ffffff",
+  border: "1px solid #cbd5e1",
+  color: "#475569",
+  fontSize: "0.8rem",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "4px"
+};
+
+const queueCardStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  background: "var(--bg-secondary)",
+  padding: "8px 12px",
+  borderRadius: "8px",
+  border: "1px solid var(--border-color)"
+};
+
+const queueActionBtnStyle = (color) => ({
+  padding: "4px 8px",
+  borderRadius: "6px",
+  background: color,
+  border: "none",
+  color: "#ffffff",
+  fontWeight: "bold",
+  fontSize: "0.75rem",
+  cursor: "pointer"
+});
+
+const receiptLineItemStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  borderBottom: "1px dotted #e2e8f0",
+  paddingBottom: "3px"
+};

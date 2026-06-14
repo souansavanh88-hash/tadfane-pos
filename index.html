@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pos</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        fetch('/api/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: window.location.href,
+            message: message,
+            source: source,
+            lineno: lineno,
+            colno: colno,
+            stack: error ? error.stack : ''
+          })
+        }).catch(err => {});
+      };
+      window.addEventListener('unhandledrejection', function(event) {
+        fetch('/api/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: window.location.href,
+            message: event.reason ? event.reason.message : 'Unhandled Rejection',
+            stack: event.reason ? event.reason.stack : ''
+          })
+        }).catch(err => {});
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
