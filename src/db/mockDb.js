@@ -508,16 +508,6 @@ export const saveDb = (db) => {
   memoryDb = db;
   safeSetItem(DB_KEY, JSON.stringify(db));
   
-  // Proactively send database state to server sync endpoint
-  if (typeof window !== "undefined" && window.fetch) {
-    window.fetch("/api/db", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(db)
-    }).catch(err => console.warn("Failed to push DB update to server:", err));
-  }
 
   try {
     window.dispatchEvent(new Event("db-update"));

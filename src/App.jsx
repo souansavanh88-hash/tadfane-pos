@@ -138,46 +138,7 @@ export default function App() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Poll server database API to sync with other devices on local network
-  useEffect(() => {
-    const syncDb = async () => {
-      try {
-        const response = await fetch("/api/db");
-        if (response.ok) {
-          const data = await response.json();
-          const localStr = localStorage.getItem("pos_boat_db");
-          
-          if (Object.keys(data).length === 0 || !data.bookings) {
-            // Server has no database yet. Initialize it with our local DB!
-            const localDb = localStr ? JSON.parse(localStr) : null;
-            if (localDb && localDb.bookings) {
-              await fetch("/api/db", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(localDb)
-              });
-            }
-          } else {
-            // Server has a valid database. Sync it locally, running migration first!
-            const migrated = migrateDb(data);
-            if (migrated) {
-              // If migration modified the data, push the migrated database back to the server
-              await fetch("/api/db", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-              }).catch(err => console.warn("Failed to push migrated DB to server:", err));
-            }
-            const serverStr = JSON.stringify(data);
-            if (localStr !== serverStr) {
-              localStorage.setItem("pos_boat_db", serverStr);
-              window.dispatchEvent(new Event("db-update"));
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("Failed to sync database from server:", e);
-      }
+ 
     };
     // Sync initially
     syncDb();
