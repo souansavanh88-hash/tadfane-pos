@@ -67,7 +67,7 @@ const dbSyncPlugin = () => ({
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), dbSyncPlugin()],
   server: {
     allowedHosts: true
   }
