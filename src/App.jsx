@@ -138,15 +138,7 @@ export default function App() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
- 
-    };
-    // Sync initially
-    syncDb();
-    // Sync every 2 seconds
-    const interval = setInterval(syncDb, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
+  
   // Route helper to jump to details
   const handleSelectTrip = (tripId) => {
     setSelectedTripId(tripId);
