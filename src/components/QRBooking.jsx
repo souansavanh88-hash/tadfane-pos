@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLanguage } from "../utils/LanguageContext";
 import { getDb, addBooking, saveDb, purgeTestData } from "../db/mockDb";
 import { fireDb } from "../db/firebaseConfig";
-import { isFirebaseConfigured } from "../db/firebaseSync";
+import { isFirebaseConfigured, getBookingFromFirebase } from "../db/firebaseSync";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { formatLAK, formatTHB, formatUSD, generateBillId, getStatusLabel } from "../utils/helpers";
 import { 
@@ -559,7 +559,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   }, [showScannerModal]);
 
   // Process manual or scanned code
-  const handleProcessDecodedText = (text) => {
+  const handleProcessDecodedText = async (text) => {
     let code = text.trim();
     if (code.includes("groupId=")) {
       try {
@@ -570,9 +570,24 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     
     code = code.trim().toUpperCase();
     const currentDb = getDb();
-    const found = (currentDb.bookings || []).find(
+    let found = (currentDb.bookings || []).find(
       b => b.groupId === code || b.id === code || b.billNumber === code
     );
+    
+    if (!found && isFirebaseConfigured()) {
+      try {
+        // Try to fetch from Firebase Cloud if not found in local memory
+        const cloudBk = await getBookingFromFirebase(code);
+        if (cloudBk) {
+          currentDb.bookings.push(cloudBk);
+          saveDb(currentDb);
+          setDb(currentDb);
+          found = cloudBk;
+        }
+      } catch (err) {
+        console.warn("Firebase scanned booking lookup error:", err);
+      }
+    }
     
     if (found) {
       handleLoadBooking(found);
@@ -580,7 +595,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       setManualScanCode("");
       playDoubleChime();
     } else {
-      alert(`ไม่พບข้ອมูลບິลสำหรัບรหัส: ${code} / Booking not found for: ${code}`);
+      alert(`ไม่พบข้อมูลบิลสำหรับรหัส: ${code} / Booking not found for: ${code}`);
     }
   };
 
@@ -716,7 +731,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       const el = document.getElementById("receipt-print-style-rules");
       if (el) el.remove();
       setIsPrintLoading(false);
-    }, 800);
+    }, 50);
   };
 
   const triggerQrSlipPrint = () => {
@@ -739,7 +754,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       const el = document.getElementById("receipt-print-style-rules");
       if (el) el.remove();
       setIsPrintLoading(false);
-    }, 800);
+    }, 50);
   };
 
   // Handles creating a new booking in "รอลูกค้ากรอกข้อมูล"
