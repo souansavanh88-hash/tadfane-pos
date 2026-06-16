@@ -827,8 +827,8 @@ export default function SelfRegisterPortal() {
         let width = video.videoWidth || 1280;
         let height = video.videoHeight || 720;
         
-        // Scale down to max 800px width/height
-        const maxDim = 800;
+        // Scale down to max 640px width/height to drastically save RAM!
+        const maxDim = 640;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.floor((height / width) * maxDim);
@@ -844,8 +844,8 @@ export default function SelfRegisterPortal() {
         
         const ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0, width, height);
-        // Use lower quality jpeg to save memory during base64 conversion
-        capturedImg = canvas.toDataURL("image/jpeg", 0.6);
+        // Use very low quality jpeg just for UI preview
+        capturedImg = canvas.toDataURL("image/jpeg", 0.4);
       } catch (err) {
         console.warn("SelfRegisterPortal: Document canvas capture failed:", err);
       }
@@ -865,8 +865,9 @@ export default function SelfRegisterPortal() {
       // Import tesseract.js dynamically to speed up initial bundle load
       const Tesseract = (await import("tesseract.js")).default;
       
-      // Perform OCR
-      const result = await Tesseract.recognize(capturedImg, "eng");
+      // Perform OCR by passing the canvas element directly to avoid base64 memory spike!
+      const imageToOcr = canvasRef.current || capturedImg;
+      const result = await Tesseract.recognize(imageToOcr, "eng");
       const text = result?.data?.text || "";
       console.log("OCR Extracted text:", text);
       
