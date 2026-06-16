@@ -620,7 +620,7 @@ export default function SelfRegisterPortal() {
 
   // Auto-save draft effect removed in single passenger registration mode
 
-  // Lookup booking in the local database (proactive server sync + URL param fallback)
+  // Lookup booking: Firebase first (works on Vercel), then local server, then URL fallback
   useEffect(() => {
     if (!activeGroupId) {
       setBooking(null);
@@ -636,41 +636,49 @@ export default function SelfRegisterPortal() {
         setLookupError(false);
       }
 
-      // Proactively sync database from server to get the latest created bookings
-      let serverSyncOk = false;
-      try {
-        const response = await fetch("/api/db?t=" + Date.now(), {
-          headers: {
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache"
-          }
-        });
-        if (response.ok && isMounted) {
-          const data = await response.json();
-          if (data && data.bookings) {
-            localStorage.setItem("pos_boat_db", JSON.stringify(data));
-            window.dispatchEvent(new Event("db-update"));
-            serverSyncOk = true;
-          }
+      const cleanCode = activeGroupId.trim().toUpperCase();
+      let foundBooking = null;
+
+      // STRATEGY 1: Try Firebase Cloud first (primary for Vercel)
+      if (!foundBooking && isFirebaseConfigured()) {
+        foundBooking = await getBookingFromFirebase(cleanCode);
+        if (foundBooking) {
+          console.log("[Firebase] Booking found in cloud:", foundBooking.groupId);
         }
-      } catch (err) {
-        console.warn("Direct DB sync failed (expected on Vercel production):", err);
+      }
+
+      // STRATEGY 2: Try local server /api/db (works on localhost)
+      if (!foundBooking) {
+        try {
+          const response = await fetch("/api/db?t=" + Date.now(), {
+            headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+          });
+          if (response.ok && isMounted) {
+            const data = await response.json();
+            if (data && data.bookings) {
+              localStorage.setItem("pos_boat_db", JSON.stringify(data));
+              window.dispatchEvent(new Event("db-update"));
+              foundBooking = (data.bookings || []).find(
+                b => b.groupId === cleanCode && b.status !== "ยกเลิก"
+              );
+            }
+          }
+        } catch (err) {
+          console.warn("Direct DB sync failed (expected on Vercel production):", err);
+        }
+      }
+
+      // STRATEGY 3: Try local localStorage
+      if (!foundBooking) {
+        const currentDb = getDb();
+        foundBooking = (currentDb.bookings || []).find(
+          b => b.groupId === cleanCode && b.status !== "ยกเลิก"
+        );
       }
 
       if (!isMounted) return;
 
-      const currentDb = getDb();
-      const cleanCode = activeGroupId.trim().toUpperCase();
-      let foundBooking = (currentDb.bookings || []).find(
-        b => b.groupId === cleanCode && b.status !== "ยกเลิก"
-      );
-
-      // FALLBACK 1: Try to get from Firebase if configured
-      if (!foundBooking) {
-        foundBooking = await getBookingFromFirebase(cleanCode);
-      }
-
-      // FALLBACK 2: If no booking found in local DB/Firebase and we have paxCount from URL, create a virtual booking
+      // FALLBACK: If no booking found and we have paxCount from URL, create a virtual booking
       if (!foundBooking && urlPaxCount > 0) {
         foundBooking = {
           id: urlBookingId || ("VIRTUAL-" + cleanCode),
@@ -679,7 +687,7 @@ export default function SelfRegisterPortal() {
           partnerId: params.get("partnerId") || "",
           status: "กำลังกรอกข้อมูล",
           passengers: [],
-          isVirtual: true // Flag to indicate this booking was created from URL params
+          isVirtual: true
         };
       }
 
@@ -687,6 +695,7 @@ export default function SelfRegisterPortal() {
         if (foundBooking.status === "รอลูกค้ากรอกข้อมูล" || foundBooking.status === "ยังไม่กรอกข้อมูล") {
           foundBooking.status = "กำลังกรอกข้อมูล";
           if (!foundBooking.isVirtual) {
+            const currentDb = getDb();
             currentDb.bookings = currentDb.bookings.map(b =>
               b.id === foundBooking.id ? { ...b, status: "กำลังกรอกข้อมูล" } : b
             );
@@ -722,7 +731,7 @@ export default function SelfRegisterPortal() {
         if (attempt < 3) {
           setTimeout(() => {
             if (isMounted) lookupBooking(attempt + 1);
-          }, 1000);
+          }, 1500);
         } else {
           if (isMounted) {
             setBooking(null);
@@ -1116,89 +1125,85 @@ export default function SelfRegisterPortal() {
         registeredAt: new Date().toISOString()
       };
 
-      // Try server-side save first (works on localhost dev server with /api/db)
-      let serverSaved = false;
-      try {
-        const response = await fetch("/api/db?t=" + Date.now(), {
-          headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
-        });
-        if (response.ok) {
-          const currentDb = await response.json();
-          const cleanCode = booking.groupId.trim().toUpperCase();
-          const latestBookingIndex = (currentDb.bookings || []).findIndex(
-            b => b.groupId === cleanCode && b.status !== "ยกเลิก"
-          );
+      let saved = false;
 
-          if (latestBookingIndex !== -1) {
-            const latestBooking = currentDb.bookings[latestBookingIndex];
-            const currentPassengers = latestBooking.passengers || [];
-
-            if (currentPassengers.length >= latestBooking.paxCount) {
-              alert(lang === "en" 
-                ? "This group registration is already full!" 
-                : lang === "la" 
-                ? "ກຸ່ມນີ້ລົງທະບຽນຄົບຈຳນວນແລ້ວ!" 
-                : "กลุ่มนี้ลงทะเบียนครบจำนวนแล้ว!");
-              setIsLoading(false);
-              setBooking(latestBooking);
-              return;
-            }
-
-            const updatedPassengers = [...currentPassengers, newPassenger];
-            const isFull = updatedPassengers.length >= latestBooking.paxCount;
-
-            currentDb.bookings[latestBookingIndex] = {
-              ...latestBooking,
-              status: isFull ? "กรอกข้อมูลเรียบร้อย" : "กำลังกรอกข้อมูล",
-              passengers: updatedPassengers
-            };
-
-            const saveResponse = await fetch("/api/db", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(currentDb)
-            });
-
-            if (saveResponse.ok) {
-              serverSaved = true;
-              localStorage.setItem("pos_boat_db", JSON.stringify(currentDb));
-              window.dispatchEvent(new Event("db-update"));
-              setBooking(currentDb.bookings[latestBookingIndex]);
-            }
+      // ===== STRATEGY 1: Firebase Cloud (Primary - works on Vercel) =====
+      if (!saved && isFirebaseConfigured()) {
+        try {
+          const docId = await saveRegistrationToFirebase(booking.groupId, booking.id, newPassenger);
+          if (docId) {
+            saved = true;
+            console.log("[Firebase] Customer registration saved. Document ID:", docId);
           }
-        }
-      } catch (err) {
-        console.warn("Server save failed (expected on Vercel production):", err);
-      }
-
-      // Fallback 1: Try saving to Firebase Cloud
-      let firebaseSaved = false;
-      if (!serverSaved) {
-        if (isFirebaseConfigured()) {
-          try {
-            const docId = await saveRegistrationToFirebase(booking.groupId, booking.id, newPassenger);
-            if (docId) {
-              firebaseSaved = true;
-              console.log("[Firebase] Customer registration successfully synced. Document ID:", docId);
-            }
-          } catch (error) {
-            console.error("Firebase submit error:", error);
-            alert("ส่งข้อมูลไม่สำเร็จ (Firebase Error): " + error.message);
-            setIsLoading(false);
-            return; // Stop and display the exact error instead of hiding it!
-          }
+        } catch (error) {
+          console.error("Firebase submit error:", error);
+          // Don't return yet, try server fallback
         }
       }
 
-      // Fallback 2: Save registration data to localStorage on the customer's phone
-      if (!serverSaved && !firebaseSaved) {
-        // Store registration in localStorage keyed by groupId
+      // ===== STRATEGY 2: Local Server /api/db (Fallback - works on localhost) =====
+      if (!saved) {
+        try {
+          const response = await fetch("/api/db?t=" + Date.now(), {
+            headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+          });
+          if (response.ok) {
+            const currentDb = await response.json();
+            const cleanCode = booking.groupId.trim().toUpperCase();
+            const latestBookingIndex = (currentDb.bookings || []).findIndex(
+              b => b.groupId === cleanCode && b.status !== "ยกเลิก"
+            );
+
+            if (latestBookingIndex !== -1) {
+              const latestBooking = currentDb.bookings[latestBookingIndex];
+              const currentPassengers = latestBooking.passengers || [];
+
+              if (currentPassengers.length >= latestBooking.paxCount) {
+                alert(lang === "en" 
+                  ? "This group registration is already full!" 
+                  : lang === "la" 
+                  ? "ກຸ່ມນີ້ລົງທະບຽນຄົບຈຳນວນແລ້ວ!" 
+                  : "กลุ่มนี้ลงทะเบียนครบจำนวนแล้ว!");
+                setIsLoading(false);
+                setBooking(latestBooking);
+                return;
+              }
+
+              const updatedPassengers = [...currentPassengers, newPassenger];
+              const isFull = updatedPassengers.length >= latestBooking.paxCount;
+
+              currentDb.bookings[latestBookingIndex] = {
+                ...latestBooking,
+                status: isFull ? "กรอกข้อมูลเรียบร้อย" : "กำลังกรอกข้อมูล",
+                passengers: updatedPassengers
+              };
+
+              const saveResponse = await fetch("/api/db", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(currentDb)
+              });
+
+              if (saveResponse.ok) {
+                saved = true;
+                localStorage.setItem("pos_boat_db", JSON.stringify(currentDb));
+                window.dispatchEvent(new Event("db-update"));
+                setBooking(currentDb.bookings[latestBookingIndex]);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("Server save failed (expected on Vercel production):", err);
+        }
+      }
+
+      // ===== STRATEGY 3: localStorage fallback (last resort) =====
+      if (!saved) {
         const regKey = `pos_reg_${booking.groupId}`;
         const existingRegs = JSON.parse(localStorage.getItem(regKey) || "[]");
         existingRegs.push(newPassenger);
         localStorage.setItem(regKey, JSON.stringify(existingRegs));
 
-        // Update the virtual booking to reflect the new passenger
         const updatedBooking = {
           ...booking,
           passengers: [...(booking.passengers || []), newPassenger]
@@ -1208,6 +1213,12 @@ export default function SelfRegisterPortal() {
           updatedBooking.status = "กรอกข้อมูลเรียบร้อย";
         }
         setBooking(updatedBooking);
+      }
+
+      if (!saved) {
+        alert("ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง / Registration failed. Please try again.");
+        setIsLoading(false);
+        return;
       }
 
       setRegSuccess(true);
