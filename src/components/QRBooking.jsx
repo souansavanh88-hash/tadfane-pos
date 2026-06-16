@@ -725,13 +725,14 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
     const originalClass = document.body.className;
     document.body.classList.add("print-receipt-mode");
-    setTimeout(() => {
-      window.print();
-      document.body.className = originalClass;
-      const el = document.getElementById("receipt-print-style-rules");
-      if (el) el.remove();
-      setIsPrintLoading(false);
-    }, 50);
+    
+    // Trigger print synchronously to ensure gesture tracking is preserved
+    window.print();
+    
+    document.body.className = originalClass;
+    const el = document.getElementById("receipt-print-style-rules");
+    if (el) el.remove();
+    setIsPrintLoading(false);
   };
 
   const triggerQrSlipPrint = () => {
@@ -748,13 +749,14 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
     const originalClass = document.body.className;
     document.body.classList.add("print-qr-slip-mode");
-    setTimeout(() => {
-      window.print();
-      document.body.className = originalClass;
-      const el = document.getElementById("receipt-print-style-rules");
-      if (el) el.remove();
-      setIsPrintLoading(false);
-    }, 50);
+    
+    // Trigger print synchronously to ensure gesture tracking is preserved
+    window.print();
+    
+    document.body.className = originalClass;
+    const el = document.getElementById("receipt-print-style-rules");
+    if (el) el.remove();
+    setIsPrintLoading(false);
   };
 
   // Handles creating a new booking in "รอลูกค้ากรอกข้อมูล"
