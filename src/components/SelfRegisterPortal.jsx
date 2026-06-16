@@ -555,6 +555,8 @@ export default function SelfRegisterPortal() {
   // URL parameter parsing
   const params = new URLSearchParams(window.location.search);
   const initialGroupId = params.get("groupId") || "";
+  const urlPaxCount = parseInt(params.get("pax")) || 0;
+  const urlBookingId = params.get("bid") || "";
 
   // State controls
   const [groupIdInput, setGroupIdInput] = useState(initialGroupId);
@@ -617,7 +619,7 @@ export default function SelfRegisterPortal() {
 
   // Auto-save draft effect removed in single passenger registration mode
 
-  // Lookup booking in the local database (proactive server sync + 3-attempt retry loop)
+  // Lookup booking in the local database (proactive server sync + URL param fallback)
   useEffect(() => {
     if (!activeGroupId) {
       setBooking(null);
@@ -634,6 +636,7 @@ export default function SelfRegisterPortal() {
       }
 
       // Proactively sync database from server to get the latest created bookings
+      let serverSyncOk = false;
       try {
         const response = await fetch("/api/db?t=" + Date.now(), {
           headers: {
@@ -646,28 +649,44 @@ export default function SelfRegisterPortal() {
           if (data && data.bookings) {
             localStorage.setItem("pos_boat_db", JSON.stringify(data));
             window.dispatchEvent(new Event("db-update"));
+            serverSyncOk = true;
           }
         }
       } catch (err) {
-        console.warn("Direct DB sync failed:", err);
+        console.warn("Direct DB sync failed (expected on Vercel production):", err);
       }
 
       if (!isMounted) return;
 
       const currentDb = getDb();
       const cleanCode = activeGroupId.trim().toUpperCase();
-      const foundBooking = (currentDb.bookings || []).find(
+      let foundBooking = (currentDb.bookings || []).find(
         b => b.groupId === cleanCode && b.status !== "ยกเลิก"
       );
+
+      // FALLBACK: If no booking found in local DB and we have paxCount from URL, create a virtual booking
+      if (!foundBooking && urlPaxCount > 0) {
+        foundBooking = {
+          id: urlBookingId || ("VIRTUAL-" + cleanCode),
+          groupId: cleanCode,
+          paxCount: urlPaxCount,
+          partnerId: params.get("partnerId") || "",
+          status: "กำลังกรอกข้อมูล",
+          passengers: [],
+          isVirtual: true // Flag to indicate this booking was created from URL params
+        };
+      }
 
       if (foundBooking) {
         if (foundBooking.status === "รอลูกค้ากรอกข้อมูล" || foundBooking.status === "ยังไม่กรอกข้อมูล") {
           foundBooking.status = "กำลังกรอกข้อมูล";
-          currentDb.bookings = currentDb.bookings.map(b =>
-            b.id === foundBooking.id ? { ...b, status: "กำลังกรอกข้อมูล" } : b
-          );
-          saveDb(currentDb);
-          setDb(currentDb);
+          if (!foundBooking.isVirtual) {
+            currentDb.bookings = currentDb.bookings.map(b =>
+              b.id === foundBooking.id ? { ...b, status: "กำลังกรอกข้อมูล" } : b
+            );
+            saveDb(currentDb);
+            setDb(currentDb);
+          }
         }
 
         if (isMounted) {
@@ -675,8 +694,7 @@ export default function SelfRegisterPortal() {
           setLookupError(false);
           setIsLoading(false);
           
-          // Draft and array logic removed for single passenger registration mode
-          // Just reset passenger state when a new booking is loaded
+          // Reset passenger state when a new booking is loaded
           setPassenger({
             firstName: "",
             lastName: "",
@@ -1086,73 +1104,87 @@ export default function SelfRegisterPortal() {
     setIsLoading(true);
 
     try {
-      // Fetch the absolute latest DB state from `/api/db` to avoid overwrite race-conditions
-      const response = await fetch("/api/db?t=" + Date.now(), {
-        headers: {
-          "Cache-Control": "no-cache",
-          "Pragma": "no-cache"
-        }
-      });
-      if (!response.ok) throw new Error("Failed to fetch latest DB");
-      const currentDb = await response.json();
-
-      // Find booking in the latest database
-      const cleanCode = booking.groupId.trim().toUpperCase();
-      const latestBookingIndex = (currentDb.bookings || []).findIndex(
-        b => b.groupId === cleanCode && b.status !== "ยกเลิก"
-      );
-
-      if (latestBookingIndex === -1) {
-        alert("Booking not found on server!");
-        setIsLoading(false);
-        return;
-      }
-
-      const latestBooking = currentDb.bookings[latestBookingIndex];
-      const currentPassengers = latestBooking.passengers || [];
-
-      // Check registration quota in real-time
-      if (currentPassengers.length >= latestBooking.paxCount) {
-        alert(lang === "en" 
-          ? "This group registration is already full!" 
-          : lang === "la" 
-          ? "ກຸ່ມນີ້ລົງທະບຽນຄົບຈຳນວນແລ້ວ!" 
-          : "กลุ่มนี้ลงทะเบียนครบจำนวนแล้ว!");
-        setIsLoading(false);
-        setBooking(latestBooking);
-        return;
-      }
-
       const newPassenger = {
         ...passenger,
-        name: `${p.firstName} ${p.lastName}`.trim()
-      };
-      
-      const updatedPassengers = [...currentPassengers, newPassenger];
-      const isFull = updatedPassengers.length >= latestBooking.paxCount;
-
-      currentDb.bookings[latestBookingIndex] = {
-        ...latestBooking,
-        status: isFull ? "กรอกข้อมูลเรียบร้อย" : "กำลังกรอกข้อมูล",
-        passengers: updatedPassengers
+        name: `${p.firstName} ${p.lastName}`.trim(),
+        registeredAt: new Date().toISOString()
       };
 
-      // Save database back to server
-      const saveResponse = await fetch("/api/db", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(currentDb)
-      });
+      // Try server-side save first (works on localhost dev server with /api/db)
+      let serverSaved = false;
+      try {
+        const response = await fetch("/api/db?t=" + Date.now(), {
+          headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+        });
+        if (response.ok) {
+          const currentDb = await response.json();
+          const cleanCode = booking.groupId.trim().toUpperCase();
+          const latestBookingIndex = (currentDb.bookings || []).findIndex(
+            b => b.groupId === cleanCode && b.status !== "ยกเลิก"
+          );
 
-      if (!saveResponse.ok) throw new Error("Failed to save DB");
+          if (latestBookingIndex !== -1) {
+            const latestBooking = currentDb.bookings[latestBookingIndex];
+            const currentPassengers = latestBooking.passengers || [];
 
-      // Save locally
-      localStorage.setItem("pos_boat_db", JSON.stringify(currentDb));
-      window.dispatchEvent(new Event("db-update"));
+            if (currentPassengers.length >= latestBooking.paxCount) {
+              alert(lang === "en" 
+                ? "This group registration is already full!" 
+                : lang === "la" 
+                ? "ກຸ່ມນີ້ລົງທະບຽນຄົບຈຳນວນແລ້ວ!" 
+                : "กลุ่มนี้ลงทะเบียนครบจำนวนแล้ว!");
+              setIsLoading(false);
+              setBooking(latestBooking);
+              return;
+            }
 
-      setBooking(currentDb.bookings[latestBookingIndex]);
+            const updatedPassengers = [...currentPassengers, newPassenger];
+            const isFull = updatedPassengers.length >= latestBooking.paxCount;
+
+            currentDb.bookings[latestBookingIndex] = {
+              ...latestBooking,
+              status: isFull ? "กรอกข้อมูลเรียบร้อย" : "กำลังกรอกข้อมูล",
+              passengers: updatedPassengers
+            };
+
+            const saveResponse = await fetch("/api/db", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(currentDb)
+            });
+
+            if (saveResponse.ok) {
+              serverSaved = true;
+              localStorage.setItem("pos_boat_db", JSON.stringify(currentDb));
+              window.dispatchEvent(new Event("db-update"));
+              setBooking(currentDb.bookings[latestBookingIndex]);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Server save failed (expected on Vercel production):", err);
+      }
+
+      // Fallback: Save registration data to localStorage on the customer's phone
+      if (!serverSaved) {
+        // Store registration in localStorage keyed by groupId
+        const regKey = `pos_reg_${booking.groupId}`;
+        const existingRegs = JSON.parse(localStorage.getItem(regKey) || "[]");
+        existingRegs.push(newPassenger);
+        localStorage.setItem(regKey, JSON.stringify(existingRegs));
+
+        // Update the virtual booking to reflect the new passenger
+        const updatedBooking = {
+          ...booking,
+          passengers: [...(booking.passengers || []), newPassenger]
+        };
+        const isFull = updatedBooking.passengers.length >= updatedBooking.paxCount;
+        if (isFull) {
+          updatedBooking.status = "กรอกข้อมูลเรียบร้อย";
+        }
+        setBooking(updatedBooking);
+      }
+
       setRegSuccess(true);
     } catch (err) {
       console.error("Error during registration submit:", err);

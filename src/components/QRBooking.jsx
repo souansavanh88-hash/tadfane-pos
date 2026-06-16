@@ -670,7 +670,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     : discountAmount;
 
   // Generate self registration URL
-  const getSelfRegUrl = (grpId, bookingPartnerId = null) => {
+  const getSelfRegUrl = (grpId, bookingPartnerId = null, bookingPaxCount = null, bookingId = null) => {
     let origin = customHostUrl.trim() || window.location.origin;
     if (origin.endsWith("/")) {
       origin = origin.slice(0, -1);
@@ -683,6 +683,12 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     const pId = bookingPartnerId !== null ? bookingPartnerId : partnerId;
     if (pId) {
       url += `&partnerId=${pId}`;
+    }
+    if (bookingPaxCount) {
+      url += `&pax=${bookingPaxCount}`;
+    }
+    if (bookingId) {
+      url += `&bid=${bookingId}`;
     }
     return url;
   };
@@ -3291,7 +3297,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
           <h3 style={{ fontSize: "1.3rem", color: "#475569", marginBottom: "1.5rem" }}>ລົງທະບຽນຜູ້ໂດຍສານ / Customer Registration</h3>
           
           <div style={{ margin: "25px 0", display: "flex", justifyContent: "center" }}>
-            <QRCodeSVG value={getSelfRegUrl(loadedBooking?.groupId, loadedBooking?.partnerId)} size={280} includeMargin={true} />
+            <QRCodeSVG value={getSelfRegUrl(loadedBooking?.groupId, loadedBooking?.partnerId, loadedBooking?.paxCount, loadedBooking?.id)} size={280} includeMargin={true} />
           </div>
 
           <div style={{ fontSize: "1.3rem", fontWeight: "900", margin: "20px 0", color: "#000000" }}>
@@ -3315,7 +3321,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             <p style={{ fontWeight: "bold", fontSize: "11px", margin: "6px 0 6px 0", color: "#000000" }}>ບິນລົງທະບຽນລູກຄ້າ / Register Slip</p>
             
             <div style={{ display: "inline-block", padding: "10px", background: "#ffffff", border: "1px solid #000000", borderRadius: "8px", margin: "10px 0" }}>
-              <QRCodeSVG value={getSelfRegUrl(loadedBooking.groupId, loadedBooking.partnerId)} size={150} includeMargin={true} />
+              <QRCodeSVG value={getSelfRegUrl(loadedBooking.groupId, loadedBooking.partnerId, loadedBooking.paxCount, loadedBooking.id)} size={150} includeMargin={true} />
             </div>
 
             <div style={{ border: "2px dashed #000000", borderRadius: "6px", padding: "8px", margin: "8px 0", background: "#ffffff" }}>
@@ -3409,7 +3415,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
               justifyContent: "center",
               alignItems: "center"
             }}>
-              <QRCodeSVG value={getSelfRegUrl(qrShowModalBooking.groupId, qrShowModalBooking.partnerId)} size={260} includeMargin={true} />
+              <QRCodeSVG value={getSelfRegUrl(qrShowModalBooking.groupId, qrShowModalBooking.partnerId, qrShowModalBooking.paxCount, qrShowModalBooking.id)} size={260} includeMargin={true} />
             </div>
 
             {/* Display the URL text under the QR code */}
@@ -3426,7 +3432,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
               width: "100%",
               fontWeight: "600"
             }}>
-              {getSelfRegUrl(qrShowModalBooking.groupId, qrShowModalBooking.partnerId)}
+              {getSelfRegUrl(qrShowModalBooking.groupId, qrShowModalBooking.partnerId, qrShowModalBooking.paxCount, qrShowModalBooking.id)}
             </div>
 
             {/* Instructions */}
