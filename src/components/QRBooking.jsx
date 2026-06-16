@@ -11,6 +11,7 @@ import {
   Ship, Check, Calendar, QrCode, ExternalLink, RefreshCw, AlertTriangle, UserCheck, ShieldAlert, X, Scan, Settings 
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 const formatLocalDate = (dateStr) => {
   if (!dateStr) return "-";
@@ -528,11 +529,6 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     
     // Give DOM time to render the reader element
     const timer = setTimeout(() => {
-      if (!window.Html5QrcodeScanner) {
-        console.warn("Html5QrcodeScanner is not loaded on window yet.");
-        return;
-      }
-      
       const onScanSuccess = (decodedText) => {
         handleProcessDecodedText(decodedText);
       };
@@ -541,7 +537,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         // Silent error
       };
       
-      const scanner = new window.Html5QrcodeScanner("reader", { 
+      const scanner = new Html5QrcodeScanner("reader", { 
         fps: 10, 
         qrbox: { width: 250, height: 250 } 
       });
