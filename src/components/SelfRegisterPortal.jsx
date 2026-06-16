@@ -823,15 +823,29 @@ export default function SelfRegisterPortal() {
         const canvas = canvasRef.current;
         const video = videoRef.current;
         
-        // Use video's actual resolution (higher resolution is essential for accurate OCR!)
-        const width = video.videoWidth || 1280;
-        const height = video.videoHeight || 720;
+        // Use a much smaller resolution to prevent Out Of Memory (OOM) crashes on mobile devices!
+        let width = video.videoWidth || 1280;
+        let height = video.videoHeight || 720;
+        
+        // Scale down to max 800px width/height
+        const maxDim = 800;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.floor((height / width) * maxDim);
+            width = maxDim;
+          } else {
+            width = Math.floor((width / height) * maxDim);
+            height = maxDim;
+          }
+        }
+        
         canvas.width = width;
         canvas.height = height;
         
         const ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0, width, height);
-        capturedImg = canvas.toDataURL("image/jpeg", 0.9);
+        // Use lower quality jpeg to save memory during base64 conversion
+        capturedImg = canvas.toDataURL("image/jpeg", 0.6);
       } catch (err) {
         console.warn("SelfRegisterPortal: Document canvas capture failed:", err);
       }
