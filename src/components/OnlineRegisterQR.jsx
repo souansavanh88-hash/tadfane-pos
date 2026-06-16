@@ -21,6 +21,7 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
   useEffect(() => {
     const handleDbUpdate = () => {
       setDb(getDb());
+      setCustomHostUrl(localStorage.getItem("pos_custom_host_url") || "");
     };
     handleDbUpdate();
     window.addEventListener("db-update", handleDbUpdate);

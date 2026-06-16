@@ -16,11 +16,13 @@ import LiveStatusBoard from "./components/LiveStatusBoard";
 import { migrateDb } from "./db/mockDb";
 import { useLanguage } from "./utils/LanguageContext";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { isFirebaseConfigured } from "./db/firebaseSync";
 
 
 export default function App() {
   const { lang, t } = useLanguage();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [tunnelUrl, setTunnelUrl] = useState(localStorage.getItem("pos_custom_host_url") || "");
 
   const [currentUser, setCurrentUser] = useState(() => {
     try {
@@ -136,6 +138,30 @@ export default function App() {
       }
     };
     window.addEventListener("storage", handleStorageChange);
+
+    // Auto-detect public Cloudflare tunnel host if running locally
+    fetch("/host-ip.json?t=" + Date.now())
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error("No host-ip.json");
+      })
+      .then(data => {
+        if (data && data.hostIp) {
+          const currentHost = localStorage.getItem("pos_custom_host_url");
+          if (currentHost !== data.hostIp) {
+            console.log("[Tunnel] Auto-updating custom host URL to:", data.hostIp);
+            localStorage.setItem("pos_custom_host_url", data.hostIp);
+            setTunnelUrl(data.hostIp);
+            window.dispatchEvent(new Event("db-update"));
+          } else {
+            setTunnelUrl(data.hostIp);
+          }
+        }
+      })
+      .catch(err => {
+        // Safe to ignore on standalone/static Vercel deployments
+      });
+
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
@@ -328,6 +354,14 @@ export default function App() {
     }
   };
 
+  const isProductionWeb = typeof window !== "undefined" && 
+    window.location.hostname !== "localhost" && 
+    window.location.hostname !== "127.0.0.1" && 
+    !window.location.hostname.startsWith("192.168.") && 
+    !window.location.hostname.endsWith(".trycloudflare.com");
+  
+  const showSyncWarning = isProductionWeb && !isFirebaseConfigured();
+
   return (
     <ErrorBoundary>
       <div className="app-container">
@@ -341,6 +375,41 @@ export default function App() {
 
         {/* Main Viewport */}
         <main className="main-content">
+          {showSyncWarning && (
+            <div style={{
+              background: "#fffbeb",
+              borderLeft: "4px solid #d97706",
+              padding: "16px 20px",
+              marginBottom: "20px",
+              borderRadius: "8px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              color: "#78350f"
+            }}>
+              <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                <span style={{ fontSize: "1.25rem", marginTop: "-2px" }}>⚠️</span>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: "0 0 4px 0", fontSize: "0.95rem", fontWeight: "700" }}>
+                    คำเตือน: ระบบไม่ได้เชื่อมต่อคลาวด์ (Firebase) / Cloud DB Offline
+                  </h4>
+                  <p style={{ margin: "0 0 12px 0", fontSize: "0.85rem", lineHeight: "1.5" }}>
+                    ขณะนี้คุณใช้งานผ่านลิงก์ Vercel ซึ่งไม่สามารถเชื่อมต่อฐานข้อมูลได้โดยตรง ข้อมูลที่ลูกค้าสแกนและลงทะเบียนบนมือถือ<b>จะไม่ส่งเข้ามาที่คอมพิวเตอร์เครื่องนี้</b>!
+                  </p>
+                  {tunnelUrl ? (
+                    <div style={{ background: "#ffffff", padding: "12px 16px", borderRadius: "6px", border: "1px solid #fcd34d", display: "inline-block" }}>
+                      <span style={{ fontSize: "0.85rem", fontWeight: "600" }}>👉 กรุณาเข้าใช้งานผ่านลิงก์เซิร์ฟเวอร์หลักของร้าน (เครื่องแคชเชียร์):</span><br />
+                      <a href={tunnelUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.95rem", color: "#b45309", fontWeight: "700", textDecoration: "underline", wordBreak: "break-all" }}>
+                        {tunnelUrl}
+                      </a>
+                    </div>
+                  ) : (
+                    <p style={{ margin: "0", fontSize: "0.85rem", fontWeight: "600" }}>
+                      👉 โปรดเปิดระบบและรันผ่านเซิร์ฟเวอร์แคชเชียร์ (Localhost/Cloudflare Tunnel) เพื่อให้ระบบสแกนและซิงก์ทำงานได้สมบูรณ์
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           {renderTabContent()}
         </main>
 
