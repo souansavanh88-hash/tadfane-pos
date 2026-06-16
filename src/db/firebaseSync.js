@@ -13,110 +13,91 @@ import {
   where, 
   getDocs,
   serverTimestamp,
-  updateDoc
+  updateDoc,
+  arrayUnion,
+  orderBy
 } from "firebase/firestore";
 
-const DB_DOC_ID = "main_database";
-const DB_COLLECTION = "pos_data";
-const REG_COLLECTION = "registrations";
+const BOOKINGS_COLLECTION = "pos_bookings";
 
 // ============================================================
-// CASHIER SIDE: Save entire DB to Firebase (called from saveDb)
+// Check if Firebase is properly configured
 // ============================================================
-export const syncDbToFirebase = async (dbData) => {
-  if (!isFirebaseConfigured()) return false;
+export const isFirebaseConfigured = () => {
   try {
-    // Remove large binary data (face photos) before syncing to save bandwidth
-    const cleanData = JSON.parse(JSON.stringify(dbData));
-    if (cleanData.bookings) {
-      cleanData.bookings = cleanData.bookings.map(b => {
-        if (b.passengers) {
-          b.passengers = b.passengers.map(p => ({
-            ...p,
-            facePhoto: p.facePhoto ? "[photo]" : ""
-          }));
-        }
-        return b;
-      });
-    }
-    cleanData._updatedAt = new Date().toISOString();
-    
-    await setDoc(doc(fireDb, DB_COLLECTION, DB_DOC_ID), cleanData);
-    console.log("[Firebase] DB synced to cloud successfully");
-    return true;
+    return fireDb !== null && fireDb !== undefined;
   } catch (err) {
-    console.warn("[Firebase] Failed to sync DB to cloud:", err);
     return false;
   }
 };
 
 // ============================================================
-// CUSTOMER SIDE: Get booking by groupId from Firebase
+// CASHIER SIDE: Add a new booking to Firebase
 // ============================================================
-export const getBookingFromFirebase = async (groupId) => {
+export const addBookingToFirebase = async (bookingData) => {
   if (!isFirebaseConfigured()) return null;
   try {
-    const docRef = doc(fireDb, DB_COLLECTION, DB_DOC_ID);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      const cleanCode = groupId.trim().toUpperCase();
-      const booking = (data.bookings || []).find(
-        b => b.groupId === cleanCode && b.status !== "ยกเลิก"
-      );
-      return booking || null;
-    }
-    return null;
-  } catch (err) {
-    console.warn("[Firebase] Failed to get booking from cloud:", err);
-    return null;
-  }
-};
-
-// ============================================================
-// CUSTOMER SIDE: Save registration to Firebase
-// ============================================================
-export const saveRegistrationToFirebase = async (groupId, bookingId, passengerData) => {
-  if (!isFirebaseConfigured()) return null;
-  try {
-    // Save to registrations collection
-    const regData = {
-      groupId: groupId.trim().toUpperCase(),
-      bookingId: bookingId,
-      passenger: {
-        ...passengerData,
-        facePhoto: passengerData.facePhoto ? "[photo]" : ""
-      },
-      registeredAt: new Date().toISOString(),
-      status: "waiting_payment",
-      paymentStatus: "pending",
-      processed: false,
+    const docData = {
+      ...bookingData,
+      createdAt: new Date().toISOString(),
       _serverTimestamp: serverTimestamp()
     };
     
-    const docRef = await addDoc(collection(fireDb, REG_COLLECTION), regData);
-    console.log("[Firebase] Customer saved with ID:", docRef.id);
+    // Use the bookingId as the document ID if provided, else let Firestore auto-generate
+    let docRef;
+    if (bookingData.id) {
+      docRef = doc(fireDb, BOOKINGS_COLLECTION, bookingData.id);
+      await setDoc(docRef, docData);
+    } else {
+      docRef = await addDoc(collection(fireDb, BOOKINGS_COLLECTION), docData);
+    }
+    console.log("[Firebase] Booking added to cloud successfully:", docRef.id);
     return docRef.id;
   } catch (err) {
-    console.error("[Firebase] Failed to save registration:", err);
+    console.error("[Firebase] Failed to add booking:", err);
     throw err;
   }
 };
 
 // ============================================================
-// CASHIER SIDE: Listen for real-time DB changes from Firebase
+// CASHIER/CUSTOMER SIDE: Update an existing booking
 // ============================================================
-export const listenToFirebaseDb = (callback) => {
+export const updateBookingInFirebase = async (bookingId, updates) => {
+  if (!isFirebaseConfigured()) return false;
+  try {
+    const docRef = doc(fireDb, BOOKINGS_COLLECTION, bookingId);
+    
+    const updateData = {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      _serverUpdatedAt: serverTimestamp()
+    };
+    
+    await updateDoc(docRef, updateData);
+    console.log(`[Firebase] Booking ${bookingId} updated successfully`);
+    return true;
+  } catch (err) {
+    console.error(`[Firebase] Failed to update booking ${bookingId}:`, err);
+    return false;
+  }
+};
+
+// ============================================================
+// CASHIER SIDE: Listen for real-time DB changes (All Bookings)
+// ============================================================
+export const listenToAllBookings = (callback) => {
   if (!isFirebaseConfigured()) return null;
   try {
-    const docRef = doc(fireDb, DB_COLLECTION, DB_DOC_ID);
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        console.log("[Firebase] Real-time DB update received");
-        callback(data);
-      }
+    const q = query(collection(fireDb, BOOKINGS_COLLECTION));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const bookings = [];
+      snapshot.forEach((doc) => {
+        bookings.push({ id: doc.id, ...doc.data() });
+      });
+      // Sort by createdAt descending
+      bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      console.log("[Firebase] Real-time bookings update received:", bookings.length);
+      callback(bookings);
     }, (err) => {
       console.warn("[Firebase] Real-time listener error:", err);
     });
@@ -128,54 +109,58 @@ export const listenToFirebaseDb = (callback) => {
 };
 
 // ============================================================
-// Check if Firebase is properly configured (not placeholder)
+// CUSTOMER SIDE: Get booking by groupId from Firebase
 // ============================================================
-export const isFirebaseConfigured = () => {
-  try {
-    // If the fireDb was created without errors, Firebase is configured
-    return fireDb !== null && fireDb !== undefined;
-  } catch (err) {
-    return false;
-  }
-};
-
-// ============================================================
-// CASHIER SIDE: Listen to real-time unprocessed registrations
-// ============================================================
-export const listenToRegistrations = (callback) => {
+export const getBookingFromFirebase = async (groupId) => {
   if (!isFirebaseConfigured()) return null;
   try {
+    const cleanCode = groupId.trim().toUpperCase();
     const q = query(
-      collection(fireDb, REG_COLLECTION),
-      where("processed", "==", false)
+      collection(fireDb, BOOKINGS_COLLECTION),
+      where("groupId", "==", cleanCode)
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const regs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      callback(regs);
-    }, (err) => {
-      console.warn("[Firebase] Registrations listener error:", err);
-    });
-    return unsubscribe;
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      // Find the first one that is not cancelled
+      const bookingDoc = querySnapshot.docs.find(doc => doc.data().status !== "ยกเลิก" && doc.data().status !== "cancelled");
+      if (bookingDoc) {
+        return { id: bookingDoc.id, ...bookingDoc.data() };
+      }
+    }
+    return null;
   } catch (err) {
-    console.warn("[Firebase] Failed to set up registrations listener:", err);
+    console.warn("[Firebase] Failed to get booking from cloud:", err);
     return null;
   }
 };
 
 // ============================================================
-// CASHIER SIDE: Mark registration as processed
+// CUSTOMER SIDE: Add passenger to booking (Registration)
 // ============================================================
-export const markRegistrationProcessed = async (regId) => {
+export const addPassengerToFirebaseBooking = async (bookingId, passengerData) => {
   if (!isFirebaseConfigured()) return false;
   try {
-    const docRef = doc(fireDb, REG_COLLECTION, regId);
-    await updateDoc(docRef, { processed: true });
+    const docRef = doc(fireDb, BOOKINGS_COLLECTION, bookingId);
+    
+    // Add registered timestamp and photo flag
+    const processedPassenger = {
+      ...passengerData,
+      registeredAt: new Date().toISOString(),
+      facePhoto: passengerData.facePhoto ? "[photo]" : ""
+    };
+    
+    await updateDoc(docRef, {
+      passengers: arrayUnion(processedPassenger),
+      updatedAt: new Date().toISOString(),
+      _serverUpdatedAt: serverTimestamp()
+    });
+    
+    console.log("[Firebase] Passenger added to booking successfully");
     return true;
   } catch (err) {
-    console.warn("[Firebase] Failed to mark registration processed:", err);
-    return false;
+    console.error("[Firebase] Failed to add passenger:", err);
+    throw err;
   }
 };

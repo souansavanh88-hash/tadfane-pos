@@ -5,10 +5,8 @@ import App from './App.jsx'
 import { LanguageProvider } from './utils/LanguageContext.jsx'
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
     <LanguageProvider>
       <App />
     </LanguageProvider>
-  </StrictMode>,
 )
 

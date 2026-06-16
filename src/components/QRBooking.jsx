@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLanguage } from "../utils/LanguageContext";
 import { getDb, addBooking, saveDb, purgeTestData } from "../db/mockDb";
 import { fireDb } from "../db/firebaseConfig";
-import { isFirebaseConfigured, getBookingFromFirebase } from "../db/firebaseSync";
+import { isFirebaseConfigured, getBookingFromFirebase, listenToAllBookings, addBookingToFirebase, updateBookingInFirebase } from "../db/firebaseSync";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { formatLAK, formatTHB, formatUSD, generateBillId, getStatusLabel } from "../utils/helpers";
 import { 
@@ -162,6 +162,7 @@ const getGenderLabel = (g, lang) => {
 export default function QRBooking({ currentUser, preloadedBookingId, clearPreloadedBooking }) {
   const { lang, t } = useLanguage();
   const [db, setDb] = useState(getDb());
+  const [firebaseBookings, setFirebaseBookings] = useState([]);
 
   const handleDobInputChange = (index, val) => {
     let clean = val.replace(/[^0-9]/g, "");
@@ -430,19 +431,31 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       const data = getDb();
       setDb(data);
       setCustomHostUrl(localStorage.getItem("pos_custom_host_url") || "");
-
-      // Sync the loaded booking with the latest data from the database
-      if (loadedBooking) {
-        const latest = (data.bookings || []).find(b => b.id === loadedBooking.id);
-        if (latest) {
-          setLoadedBooking(latest);
-        }
-      }
     };
     handleDbUpdate();
     window.addEventListener("db-update", handleDbUpdate);
     return () => window.removeEventListener("db-update", handleDbUpdate);
-  }, [loadedBooking]);
+  }, []);
+
+  // 2a. Listen to Firebase Bookings
+  useEffect(() => {
+    const unsubscribe = listenToAllBookings((bookings) => {
+      setFirebaseBookings(bookings);
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // 2b. Sync loaded booking with latest Firebase data
+  useEffect(() => {
+    if (loadedBooking) {
+      const latest = firebaseBookings.find(b => b.id === loadedBooking.id);
+      if (latest && JSON.stringify(latest) !== JSON.stringify(loadedBooking)) {
+        setLoadedBooking(latest);
+      }
+    }
+  }, [firebaseBookings, loadedBooking]);
 
   // 2b. Automatically update selectedTier when paxCount or selectedServiceId changes
   useEffect(() => {
@@ -455,8 +468,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   // 2c. Auto-load preloadedBookingId from props if navigating from Customer Registration
   useEffect(() => {
     if (preloadedBookingId) {
-      const currentDb = getDb();
-      const found = (currentDb.bookings || []).find(b => b.id === preloadedBookingId);
+      const found = firebaseBookings.find(b => b.id === preloadedBookingId);
       if (found) {
         handleLoadBooking(found);
       }
@@ -565,8 +577,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     }
     
     code = code.trim().toUpperCase();
-    const currentDb = getDb();
-    let found = (currentDb.bookings || []).find(
+    let found = firebaseBookings.find(
       b => b.groupId === code || b.id === code || b.billNumber === code
     );
     
@@ -575,9 +586,6 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         // Try to fetch from Firebase Cloud if not found in local memory
         const cloudBk = await getBookingFromFirebase(code);
         if (cloudBk) {
-          currentDb.bookings.push(cloudBk);
-          saveDb(currentDb);
-          setDb(currentDb);
           found = cloudBk;
         }
       } catch (err) {
@@ -755,8 +763,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     setIsPrintLoading(false);
   };
 
-  // Handles creating a new booking in "รอลูกค้ากรอกข้อมูล"
-  const handleCreateBooking = (e) => {
+  // Handles creating a new booking in "registering"
+  const handleCreateBooking = async (e) => {
     if (e) e.preventDefault();
 
     const currentDb = getDb();
@@ -764,8 +772,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     const partnerObj = currentDb.partners.find(p => p.id === partnerId);
     const sourceName = isAgent ? partnerObj?.name : "Walk-in (ລູກຄ້າທົ່ວໄປ)";
 
+    // Generate a unique ID synchronously so we can print without async block
+    const uniqueId = `BK-${Date.now()}`;
+
     const newBooking = {
-      id: `BK-${1000 + currentDb.bookings.length + 1}`,
+      id: uniqueId,
       partnerId: partnerId || null,
       partnerName: sourceName,
       bookingSource: isAgent ? "agent" : "walk-in",
@@ -782,28 +793,31 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       paidLAK: (totalPriceLAK - computedDiscountLAK) - debtAmount,
       paymentMethod,
       billNumber,
-      status: "รอลูกค้ากรอกข้อมูล",
+      status: "registering", // Enforce standard status
+      paymentStatus: "pending",
       groupId: registrationGroupId,
       passengers: [],
       auditLogs: [],
       guideIds: [],
       assignedBoats: [],
       driverId: "",
-      createdAt: new Date().toISOString()
     };
 
-    currentDb.bookings.push(newBooking);
-    saveDb(currentDb);
-    setDb(currentDb);
     setLoadedBooking(newBooking);
 
-    // Auto trigger print QR slip
+    // Synchronous print call to bypass Chrome popup blocker
     setTimeout(() => {
       triggerQrSlipPrint();
+      
+      // Now save to Firebase asynchronously
+      addBookingToFirebase(newBooking).catch(err => {
+        alert("Failed to create booking in cloud. Please check network.");
+      });
+
       // Generate new group ID and bill number for next customer
       setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
       setBillNumber(generateBillId());
-    }, 200);
+    }, 50); // Minimal delay just for DOM flush
   };
 
   // Loads a booking to details pane
@@ -998,9 +1012,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   };
 
   // Checkout and Print receipt
-  const handleCheckoutAndPrint = () => {
+  const handleCheckoutAndPrint = async () => {
     if (!loadedBooking) return;
-    const currentDb = getDb();
 
     const d = new Date();
     const offset = d.getTimezoneOffset();
@@ -1014,54 +1027,40 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       ? getComputedAssignedBoats(selectedBoatIds, selectedGuideIds, loadedBooking.paxCount)
       : [];
 
-    currentDb.bookings = currentDb.bookings.map(b => {
-      if (b.id === loadedBooking.id) {
-        const updated = {
-          ...b,
-          status: "ชำระเงินแล้ว / ออกบิลแล้ว",
-          paymentMethod: paymentMethod,
-          discountLAK: computedDiscountLAK,
-          netPriceLAK: (b.pricePaidLAK || totalPriceLAK) - computedDiscountLAK,
-          debtLAK: debtAmount,
-          paidLAK: ((b.pricePaidLAK || totalPriceLAK) - computedDiscountLAK) - debtAmount,
-          guideIds: selectedGuideIds,
-          assignedBoats: computedBoats,
-          driverId: selectedDriverIds[0] || null,
-          driverIds: selectedDriverIds,
-          vehicleCount: vehicleCount,
-          boatCount: boatCount,
-          date: currentDateStr,
-          time: currentTimeStr,
-          // Legacy mappings
-          guideId: selectedGuideIds[0] || null,
-          boatId: computedBoats[0]?.boatId ? parseInt(computedBoats[0].boatId) : null
-        };
-        setLoadedBooking(updated);
-        return updated;
-      }
-      return b;
-    });
+    const updates = {
+      status: "completed",
+      paymentStatus: "paid",
+      paymentMethod: paymentMethod,
+      discountLAK: computedDiscountLAK,
+      netPriceLAK: (loadedBooking.pricePaidLAK || totalPriceLAK) - computedDiscountLAK,
+      debtLAK: debtAmount,
+      paidLAK: ((loadedBooking.pricePaidLAK || totalPriceLAK) - computedDiscountLAK) - debtAmount,
+      guideIds: selectedGuideIds,
+      assignedBoats: computedBoats,
+      driverId: selectedDriverIds[0] || null,
+      driverIds: selectedDriverIds,
+      vehicleCount: vehicleCount,
+      boatCount: boatCount,
+      date: currentDateStr,
+      time: currentTimeStr,
+      // Legacy mappings
+      guideId: selectedGuideIds[0] || null,
+      boatId: computedBoats[0]?.boatId ? parseInt(computedBoats[0].boatId) : null,
+      paidAt: new Date().toISOString()
+    };
 
-    saveDb(currentDb);
-    setDb(currentDb);
-    // Sync passengers to Firestore
-    if (isFirebaseConfigured()) {
-      (loadedBooking.passengers || []).forEach(async (p) => {
-        try {
-          const passengerDoc = doc(fireDb, "registrations", p.id);
-          await updateDoc(passengerDoc, {
-            status: "completed",
-            paymentStatus: "paid",
-            paidAt: serverTimestamp(),
-          });
-        } catch (e) {
-          console.warn("Failed to update passenger in Firestore", e);
-        }
-      });
-    }
+    // Optimistically update local state for printing
+    setLoadedBooking({ ...loadedBooking, ...updates });
+
+    // Synchronous print bypasses Chrome block
     setTimeout(() => {
       triggerReceiptPrint();
-    }, 200);
+      
+      // Sync to cloud asynchronously
+      updateBookingInFirebase(loadedBooking.id, updates).catch(err => {
+        alert("Failed to checkout in cloud");
+      });
+    }, 50);
   };
 
   // Unlock paid bill for editing
@@ -1070,61 +1069,54 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   };
 
   // Save edits to a paid bill (logs cashier name and timestamp)
-  const handleSaveEditsPaidBill = () => {
+  const handleSaveEditsPaidBill = async () => {
     if (!loadedBooking) return;
-    const currentDb = getDb();
 
-    currentDb.bookings = currentDb.bookings.map(b => {
-      if (b.id === loadedBooking.id) {
-        const logEntry = {
-          updatedBy: currentUser?.name || "Unknown Cashier",
-          updatedAt: new Date().toISOString(),
-          oldPax: b.paxCount,
-          newPax: parseInt(paxCount),
-          oldPrice: b.pricePaidLAK,
-          newPrice: totalPriceLAK
-        };
+    const logEntry = {
+      updatedBy: currentUser?.name || "Unknown Cashier",
+      updatedAt: new Date().toISOString(),
+      oldPax: loadedBooking.paxCount,
+      newPax: parseInt(paxCount),
+      oldPrice: loadedBooking.pricePaidLAK,
+      newPrice: totalPriceLAK
+    };
 
-        const updated = {
-          ...b,
-          paxCount: parseInt(paxCount),
-          pricePerPax: activePricePerPax,
-          pricePaidLAK: totalPriceLAK,
-          discountLAK: computedDiscountLAK,
-          netPriceLAK: totalPriceLAK - computedDiscountLAK,
-          debtLAK: debtAmount,
-          paidLAK: (totalPriceLAK - computedDiscountLAK) - debtAmount,
-          date,
-          time,
-          serviceId: selectedServiceId,
-          serviceName: currentService.name,
-          paymentMethod,
-          auditLogs: [...(b.auditLogs || []), logEntry]
-        };
+    const updates = {
+      paxCount: parseInt(paxCount),
+      pricePerPax: activePricePerPax,
+      pricePaidLAK: totalPriceLAK,
+      discountLAK: computedDiscountLAK,
+      netPriceLAK: totalPriceLAK - computedDiscountLAK,
+      debtLAK: debtAmount,
+      paidLAK: (totalPriceLAK - computedDiscountLAK) - debtAmount,
+      date,
+      time,
+      serviceId: selectedServiceId,
+      serviceName: currentService.name,
+      paymentMethod,
+      auditLogs: [...(loadedBooking.auditLogs || []), logEntry]
+    };
 
-        setLoadedBooking(updated);
-        return updated;
-      }
-      return b;
-    });
-
-    saveDb(currentDb);
-    setDb(currentDb);
-    setIsEditingPaidBill(false);
-    alert("ບัນทึกการแก้ไขแลະບัນทึกปรະวัตິการตรวจสອບสำเร็จ! / Bill updated & logged!");
+    try {
+      await updateBookingInFirebase(loadedBooking.id, updates);
+      setIsEditingPaidBill(false);
+      alert("ບัນทึกการแก้ไขแลະບัນทึกปรະวัตິการตรวจสອບสำเร็จ! / Bill updated & logged!");
+    } catch (err) {
+      alert("Failed to update bill in cloud");
+    }
   };
 
   // Cancel Booking
-  const handleCancelBooking = (bookingId) => {
+  const handleCancelBooking = async (bookingId) => {
     if (!window.confirm("คุณต้ອงการยกเลิกບິลນີ้ใช่หรืອไม่? / Are you sure you want to cancel this bill?")) return;
-    const currentDb = getDb();
-    currentDb.bookings = currentDb.bookings.map(b => 
-      b.id === bookingId ? { ...b, status: "ยกเลิก" } : b
-    );
-    saveDb(currentDb);
-    setDb(currentDb);
-    if (loadedBooking?.id === bookingId) {
-      setLoadedBooking(null);
+    
+    try {
+      await updateBookingInFirebase(bookingId, { status: "cancelled" });
+      if (loadedBooking?.id === bookingId) {
+        setLoadedBooking(null);
+      }
+    } catch (err) {
+      alert("Failed to cancel booking in cloud");
     }
   };
 
@@ -1145,33 +1137,21 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   };
 
   // Dispatch Boat
-  const handleDispatchBoat = (bookingId) => {
-    const currentDb = getDb();
-    currentDb.bookings = currentDb.bookings.map(b => {
-      if (b.id === bookingId) {
-        const updated = { ...b, status: "ออกเรือแล้ว" };
-        setLoadedBooking(updated);
-        return updated;
-      }
-      return b;
-    });
-    saveDb(currentDb);
-    setDb(currentDb);
+  const handleDispatchBoat = async (bookingId) => {
+    try {
+      await updateBookingInFirebase(bookingId, { status: "dispatched" });
+    } catch (err) {
+      alert("Failed to update status in cloud");
+    }
   };
 
   // Complete Trip
-  const handleCompleteTrip = (bookingId) => {
-    const currentDb = getDb();
-    currentDb.bookings = currentDb.bookings.map(b => {
-      if (b.id === bookingId) {
-        const updated = { ...b, status: "เสร็จสิ้น" };
-        setLoadedBooking(updated);
-        return updated;
-      }
-      return b;
-    });
-    saveDb(currentDb);
-    setDb(currentDb);
+  const handleCompleteTrip = async (bookingId) => {
+    try {
+      await updateBookingInFirebase(bookingId, { status: "completed" });
+    } catch (err) {
+      alert("Failed to update status in cloud");
+    }
   };
 
   // Reset form
@@ -1205,43 +1185,31 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     } catch (e) {}
   };
 
-  // Filter list of bookings for queues
-  const bookings = db.bookings || [];
-
-  const registeringBookings = bookings.filter(b => 
-    b.status === "รอลูกค้ากรอกข้อมูล" || 
-    b.status === "กำลังกรอกข้อมูล" || 
-    b.status === "ยังไม่กรอกข้อมูล" || 
-    b.status === "กำลังลงทะเบียน"
-  );
+  // Filter list of bookings for queues from Firebase
+  const registeringBookings = firebaseBookings.filter(b => b.status === "registering");
   
-  const readyBookings = bookings.filter(b => 
-    b.status === "พร้อมชำระเงิน / พร้อมพิมพ์" || 
-    b.status === "รอชำระเงิน" || 
-    b.status === "พร้อมชำระเงิน" || 
-    b.status === "รອຊຳລະເງິນ" ||
-    b.status === "กรอกข้อมูลเรียบร้อย"
-  );
+  const readyBookings = firebaseBookings.filter(b => b.status === "ready_to_checkout");
 
-  const completedBookings = bookings.filter(b => 
-    b.status === "ชำระเงินแล้ว / ออกบิลแล้ว" || 
-    b.status === "ชำระแล้ว" || 
-    b.status === "ออกบิลแล้ว" || 
-    b.status === "ออกเรือแล้ว" || 
-    b.status === "เสร็จสิ้น"
+  const completedBookings = firebaseBookings.filter(b => 
+    b.status === "completed" || 
+    b.status === "dispatched" || 
+    b.status === "เสร็จสิ้น" ||
+    b.status === "cancelled"
   );
   
   // Queue 1: กำลังลงทะเบียน
   // Lock status check
   const isLocked = loadedBooking && 
-                   (loadedBooking.status === "พร้อมชำระเงิน / พร้อมพิมพ์" || loadedBooking.status === "พร้อมชำระเงิน" || loadedBooking.status === "ชำระเงินแล้ว / ออกบิลแล้ว" || loadedBooking.status === "ชำระแล้ว" || loadedBooking.status === "ออกบิลแล้ว" || loadedBooking.status === "ออกเรือแล้ว" || loadedBooking.status === "เสร็จสิ้น") && 
+                   (loadedBooking.status === "ready_to_checkout" || 
+                    loadedBooking.status === "completed" || 
+                    loadedBooking.status === "dispatched" || 
+                    loadedBooking.status === "cancelled" ||
+                    loadedBooking.status === "เสร็จสิ้น") && 
                    !isEditingPaidBill;
 
   const isPaidStatus = loadedBooking && (
-    loadedBooking.status === "ชำระเงินแล้ว / ออกบิลแล้ว" ||
-    loadedBooking.status === "ชำระแล้ว" ||
-    loadedBooking.status === "ออกบิลแล้ว" ||
-    loadedBooking.status === "ออกเรือแล้ว" ||
+    loadedBooking.status === "completed" ||
+    loadedBooking.status === "dispatched" ||
     loadedBooking.status === "เสร็จสิ้น"
   );
 
@@ -1942,12 +1910,36 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                         {t("passengers_label", "ຜູ້ໂດຍສານ / Passengers")}: {bk.passengers?.map(p => p?.name || "").filter(Boolean).join(", ")}
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleLoadBooking(bk)}
-                      style={queueActionBtnStyle("#10b981")}
-                    >
-                      {t("open_bill", "ເປີດບິນ / POS")}
-                    </button>
+                    <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <button
+                        onClick={() => handleLoadBooking(bk)}
+                        style={queueActionBtnStyle("var(--primary)")}
+                      >
+                        {t("open_details", "ເປີດລາຍລະອຽດ / Details")}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLoadedBooking(bk);
+                          setTimeout(() => {
+                            triggerReceiptPrint();
+                          }, 200);
+                        }}
+                        style={queueActionBtnStyle("#3b82f6")}
+                      >
+                        <Printer size={14} style={{ marginRight: "4px" }} />
+                        {t("print_bill", "ພິມບິນ / Print")}
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleLoadBooking(bk);
+                          // Scroll to payment or just let them checkout via the loaded view
+                        }}
+                        style={queueActionBtnStyle("#15803d")}
+                      >
+                        <Banknote size={14} style={{ marginRight: "4px" }} />
+                        {t("pay_btn", "ຊຳລະເງິນ / Pay")}
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

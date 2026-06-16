@@ -1,7 +1,7 @@
 // SelfRegisterPortal.jsx - Customer Self-Service Online Registration & Waiver Portal
 import React, { useState, useEffect, useRef } from "react";
 import { getDb, saveDb } from "../db/mockDb";
-import { getBookingFromFirebase, saveRegistrationToFirebase, isFirebaseConfigured } from "../db/firebaseSync";
+import { getBookingFromFirebase, addPassengerToFirebaseBooking, updateBookingInFirebase, isFirebaseConfigured } from "../db/firebaseSync";
 import { ShieldCheck, User, Globe2, Phone, CalendarRange, CheckCircle2, AlertTriangle, ArrowRight, Ship, Camera, RefreshCw, X } from "lucide-react";
 
 const calculateAge = (dobString) => {
@@ -1130,11 +1130,16 @@ export default function SelfRegisterPortal() {
       // ===== STRATEGY 1: Firebase Cloud (Primary - works on Vercel) =====
       if (!saved && isFirebaseConfigured()) {
         try {
-          const docId = await saveRegistrationToFirebase(booking.groupId, booking.id, newPassenger);
-          if (docId) {
-            saved = true;
-            console.log("[Firebase] Customer registration saved. Document ID:", docId);
+          const success = await addPassengerToFirebaseBooking(booking.id, newPassenger);
+          console.log("Registered via pure Firebase:", success);
+
+          // Check if pax is fulfilled and transition status
+          const updatedPassengersCount = (booking.passengers?.length || 0) + 1;
+          if (updatedPassengersCount >= booking.paxCount && booking.status === "registering") {
+            await updateBookingInFirebase(booking.id, { status: "ready_to_checkout" });
+            console.log("Pax full, auto-transitioned to ready_to_checkout");
           }
+          saved = true;
         } catch (error) {
           console.error("Firebase submit error:", error);
           // Don't return yet, try server fallback

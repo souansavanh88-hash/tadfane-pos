@@ -16,7 +16,7 @@ import LiveStatusBoard from "./components/LiveStatusBoard";
 import { migrateDb, getDb, saveDb } from "./db/mockDb";
 import { useLanguage } from "./utils/LanguageContext";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { isFirebaseConfigured, listenToRegistrations, markRegistrationProcessed } from "./db/firebaseSync";
+import { isFirebaseConfigured } from "./db/firebaseSync";
 
 
 export default function App() {
@@ -227,50 +227,7 @@ export default function App() {
   }, []);
 
   // ---------------------------------------------------
-  // CASHIER SIDE: Real-time listener for unprocessed registrations
-  // ---------------------------------------------------
-  useEffect(() => {
-    if (!isFirebaseConfigured()) return;
-    const unsubscribe = listenToRegistrations(async (regs) => {
-      const db = getDb();
-      let updated = false;
-      regs.forEach((reg) => {
-        const bookingIdx = (db.bookings || []).findIndex(
-          (b) => b.groupId === reg.groupId && b.status !== "ยกเลิก"
-        );
-        if (bookingIdx === -1) return;
-        const booking = db.bookings[bookingIdx];
-        const existingIds = (booking.passengers || []).map((p) => p.id);
-        if (existingIds.includes(reg.id)) return;
-        const passenger = {
-          id: reg.id,
-          name:
-            reg.passenger.name || `${reg.passenger.firstName || ""} ${reg.passenger.lastName || ""}`.trim(),
-          ...reg.passenger,
-          status: reg.status,
-          paymentStatus: reg.paymentStatus,
-          registeredAt: reg.registeredAt,
-          groupId: reg.groupId,
-          bookingId: reg.bookingId,
-        };
-        booking.passengers = [...(booking.passengers || []), passenger];
-        if (booking.passengers.length >= booking.paxCount) {
-          booking.status = "กรอกข้อมูลเรียบร้อย";
-        } else {
-          booking.status = "กำลังกรอกข้อมูล";
-        }
-        db.bookings[bookingIdx] = booking;
-        updated = true;
-        markRegistrationProcessed(reg.id).catch((e) => console.warn("Mark processed error", e));
-      });
-      if (updated) {
-        saveDb(db);
-        localStorage.setItem("pos_boat_db", JSON.stringify(db));
-        window.dispatchEvent(new Event("db-update"));
-      }
-    });
-    return () => unsubscribe && unsubscribe();
-  }, []);
+  // (Obsolete) listenToRegistrations removed because we now use real-time listeners in QRBooking.jsx
 
 
   
