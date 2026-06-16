@@ -12,7 +12,8 @@ import {
   query, 
   where, 
   getDocs,
-  serverTimestamp 
+  serverTimestamp,
+  updateDoc
 } from "firebase/firestore";
 
 const DB_DOC_ID = "main_database";
@@ -77,59 +78,29 @@ export const getBookingFromFirebase = async (groupId) => {
 // CUSTOMER SIDE: Save registration to Firebase
 // ============================================================
 export const saveRegistrationToFirebase = async (groupId, bookingId, passengerData) => {
-  if (!isFirebaseConfigured()) return false;
+  if (!isFirebaseConfigured()) return null;
   try {
     // Save to registrations collection
     const regData = {
-      groupId: groupId,
+      groupId: groupId.trim().toUpperCase(),
       bookingId: bookingId,
       passenger: {
         ...passengerData,
         facePhoto: passengerData.facePhoto ? "[photo]" : ""
       },
       registeredAt: new Date().toISOString(),
+      status: "waiting_payment",
+      paymentStatus: "pending",
+      processed: false,
       _serverTimestamp: serverTimestamp()
     };
     
-    await addDoc(collection(fireDb, REG_COLLECTION), regData);
-    console.log("[Firebase] Registration saved to cloud successfully");
-
-    // Also update the booking in the main DB
-    const docRef = doc(fireDb, DB_COLLECTION, DB_DOC_ID);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      const cleanCode = groupId.trim().toUpperCase();
-      const bookingIndex = (data.bookings || []).findIndex(
-        b => b.groupId === cleanCode && b.status !== "ยกเลิก"
-      );
-      
-      if (bookingIndex !== -1) {
-        const booking = data.bookings[bookingIndex];
-        const currentPassengers = booking.passengers || [];
-        const updatedPassengers = [...currentPassengers, {
-          ...passengerData,
-          facePhoto: passengerData.facePhoto ? "[photo]" : ""
-        }];
-        const isFull = updatedPassengers.length >= booking.paxCount;
-        
-        data.bookings[bookingIndex] = {
-          ...booking,
-          status: isFull ? "กรอกข้อมูลเรียบร้อย" : "กำลังกรอกข้อมูล",
-          passengers: updatedPassengers
-        };
-        data._updatedAt = new Date().toISOString();
-        
-        await setDoc(docRef, data);
-        console.log("[Firebase] Booking updated in cloud DB");
-      }
-    }
-    
-    return true;
+    const docRef = await addDoc(collection(fireDb, REG_COLLECTION), regData);
+    console.log("[Firebase] Customer saved with ID:", docRef.id);
+    return docRef.id;
   } catch (err) {
-    console.warn("[Firebase] Failed to save registration:", err);
-    return false;
+    console.error("[Firebase] Failed to save registration:", err);
+    throw err;
   }
 };
 
@@ -164,6 +135,47 @@ export const isFirebaseConfigured = () => {
     // If the fireDb was created without errors, Firebase is configured
     return fireDb !== null && fireDb !== undefined;
   } catch (err) {
+    return false;
+  }
+};
+
+// ============================================================
+// CASHIER SIDE: Listen to real-time unprocessed registrations
+// ============================================================
+export const listenToRegistrations = (callback) => {
+  if (!isFirebaseConfigured()) return null;
+  try {
+    const q = query(
+      collection(fireDb, REG_COLLECTION),
+      where("processed", "==", false)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const regs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      callback(regs);
+    }, (err) => {
+      console.warn("[Firebase] Registrations listener error:", err);
+    });
+    return unsubscribe;
+  } catch (err) {
+    console.warn("[Firebase] Failed to set up registrations listener:", err);
+    return null;
+  }
+};
+
+// ============================================================
+// CASHIER SIDE: Mark registration as processed
+// ============================================================
+export const markRegistrationProcessed = async (regId) => {
+  if (!isFirebaseConfigured()) return false;
+  try {
+    const docRef = doc(fireDb, REG_COLLECTION, regId);
+    await updateDoc(docRef, { processed: true });
+    return true;
+  } catch (err) {
+    console.warn("[Firebase] Failed to mark registration processed:", err);
     return false;
   }
 };

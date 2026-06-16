@@ -2,6 +2,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLanguage } from "../utils/LanguageContext";
 import { getDb, addBooking, saveDb, purgeTestData } from "../db/mockDb";
+import { fireDb } from "../db/firebaseConfig";
+import { isFirebaseConfigured } from "../db/firebaseSync";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { formatLAK, formatTHB, formatUSD, generateBillId, getStatusLabel } from "../utils/helpers";
 import { 
   Printer, Ticket, CreditCard, Wallet, Banknote, Clock, Users, Plus, Minus, 
@@ -1028,7 +1031,21 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
     saveDb(currentDb);
     setDb(currentDb);
-
+    // Sync passengers to Firestore
+    if (isFirebaseConfigured()) {
+      (loadedBooking.passengers || []).forEach(async (p) => {
+        try {
+          const passengerDoc = doc(fireDb, "registrations", p.id);
+          await updateDoc(passengerDoc, {
+            status: "completed",
+            paymentStatus: "paid",
+            paidAt: serverTimestamp(),
+          });
+        } catch (e) {
+          console.warn("Failed to update passenger in Firestore", e);
+        }
+      });
+    }
     setTimeout(() => {
       triggerReceiptPrint();
     }, 200);

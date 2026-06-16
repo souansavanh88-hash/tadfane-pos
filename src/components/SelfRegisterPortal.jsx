@@ -1,7 +1,7 @@
 // SelfRegisterPortal.jsx - Customer Self-Service Online Registration & Waiver Portal
 import React, { useState, useEffect, useRef } from "react";
 import { getDb, saveDb } from "../db/mockDb";
-import { getBookingFromFirebase, saveRegistrationToFirebase } from "../db/firebaseSync";
+import { getBookingFromFirebase, saveRegistrationToFirebase, isFirebaseConfigured } from "../db/firebaseSync";
 import { ShieldCheck, User, Globe2, Phone, CalendarRange, CheckCircle2, AlertTriangle, ArrowRight, Ship, Camera, RefreshCw, X } from "lucide-react";
 
 const calculateAge = (dobString) => {
@@ -1174,7 +1174,20 @@ export default function SelfRegisterPortal() {
       // Fallback 1: Try saving to Firebase Cloud
       let firebaseSaved = false;
       if (!serverSaved) {
-        firebaseSaved = await saveRegistrationToFirebase(booking.groupId, booking.id, newPassenger);
+        if (isFirebaseConfigured()) {
+          try {
+            const docId = await saveRegistrationToFirebase(booking.groupId, booking.id, newPassenger);
+            if (docId) {
+              firebaseSaved = true;
+              console.log("[Firebase] Customer registration successfully synced. Document ID:", docId);
+            }
+          } catch (error) {
+            console.error("Firebase submit error:", error);
+            alert("ส่งข้อมูลไม่สำเร็จ (Firebase Error): " + error.message);
+            setIsLoading(false);
+            return; // Stop and display the exact error instead of hiding it!
+          }
+        }
       }
 
       // Fallback 2: Save registration data to localStorage on the customer's phone
@@ -1200,7 +1213,7 @@ export default function SelfRegisterPortal() {
       setRegSuccess(true);
     } catch (err) {
       console.error("Error during registration submit:", err);
-      alert("Registration failed! Please try again.");
+      alert("การลงทะเบียนล้มเหลว! กรุณาลองใหม่อีกครั้ง / Registration failed: " + err.message);
     } finally {
       setIsLoading(false);
     }
