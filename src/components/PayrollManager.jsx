@@ -26,6 +26,7 @@ export default function PayrollManager() {
   const [specialRate, setSpecialRate] = useState(50000);
 
   const [editingEmpId, setEditingEmpId] = useState("");
+  const [empBankAccount, setEmpBankAccount] = useState("");
   const [selectedEmpDetails, setSelectedEmpDetails] = useState(null);
   const [editBonusEmpId, setEditBonusEmpId] = useState("");
   const [bonusValue, setBonusValue] = useState(0);
@@ -46,6 +47,7 @@ export default function PayrollManager() {
     setBaseSalary(2500000);
     setTripRate(50000);
     setEmpPhone("");
+    setEmpBankAccount("");
     setEmpHireDate(new Date().toISOString().split("T")[0]);
     setEmpStatus("active");
     setEmpDailyWage(0);
@@ -84,6 +86,7 @@ export default function PayrollManager() {
               salary: finalSalary,
               tripRate: finalTripRate,
               phone: empPhone,
+              bankAccount: empBankAccount,
               hireDate: empHireDate,
               status: empStatus,
               dailyWage: finalDailyWage,
@@ -116,6 +119,7 @@ export default function PayrollManager() {
         salary: finalSalary,
         tripRate: finalTripRate,
         phone: empPhone,
+        bankAccount: empBankAccount,
         hireDate: empHireDate,
         dailyWage: finalDailyWage,
         commission: finalCommission,
@@ -262,6 +266,9 @@ export default function PayrollManager() {
   let grandTripPay = 0;
   let grandBonus = 0;
   let grandTotal = 0;
+  let grandDailyWagePay = 0;
+  let grandOTPay = 0;
+  let grandCommission = 0;
 
   db.employees.forEach(emp => {
     const calc = calculatePayout(emp);
@@ -270,6 +277,11 @@ export default function PayrollManager() {
     grandTripPay += calc.tripPay;
     grandBonus += emp.bonus || 0;
     grandTotal += calc.totalPayout;
+    
+    // Add additional grand totals computation
+    grandDailyWagePay += (emp.dailyWage || 0) * (emp.daysWorked !== undefined ? emp.daysWorked : 26);
+    grandOTPay += emp.ot || 0;
+    grandCommission += emp.commission || 0;
   });
 
   return (
@@ -387,6 +399,7 @@ export default function PayrollManager() {
                               setBaseSalary(emp.salary || 0);
                               setTripRate(emp.tripRate || 0);
                               setEmpPhone(emp.phone || "");
+                              setEmpBankAccount(emp.bankAccount || "");
                               setEmpHireDate(emp.hireDate || "2025-01-01");
                               setEmpStatus(emp.status || "active");
                               setEmpDailyWage(emp.dailyWage || 0);
@@ -465,6 +478,17 @@ export default function PayrollManager() {
                 </div>
               </div>
 
+              <div className="form-group">
+                <label>{t("bank_account_label", "ເລກບັນຊີ / Bank Account")}</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={empBankAccount} 
+                  onChange={(e) => setEmpBankAccount(e.target.value)} 
+                  placeholder={t("bank_account_placeholder", "ທະນາຄານ ແລະ ເລກບັນຊີ (e.g. BCEL: 160-12-00-123456-001)")} 
+                />
+              </div>
+
               <div className="form-row">
                 <div className="form-group">
                   <label>{t("role_label", "ບົດບາດໜ້າທີ່ / Role")}</label>
@@ -514,6 +538,26 @@ export default function PayrollManager() {
                 <div className="form-group">
                   <label>ຄ່າຄອມມິດຊັນສະສົມ / Commission (LAK)</label>
                   <input type="number" className="form-control" value={empCommission} onChange={(e) => setEmpCommission(e.target.value)} min="0" step="10000" />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>ຄ່າແຮງງານລາຍວັນ / Daily Wage (LAK/Day)</label>
+                  <input type="number" className="form-control" value={empDailyWage} onChange={(e) => setEmpDailyWage(e.target.value)} min="0" step="10000" />
+                </div>
+                <div className="form-group">
+                  <label>ຈຳນວນວັນເຮັດວຽກ / Days Worked</label>
+                  <input type="number" className="form-control" value={empDaysWorked} onChange={(e) => setEmpDaysWorked(e.target.value)} min="0" max="31" />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>ຄ່າລ່ວງເວລາ (OT) / Overtime Pay (LAK)</label>
+                  <input type="number" className="form-control" value={empOT} onChange={(e) => setEmpOT(e.target.value)} min="0" step="10000" />
+                </div>
+                <div className="form-group">
                 </div>
               </div>
 
@@ -590,6 +634,7 @@ export default function PayrollManager() {
                   <div><strong>ຕຳແໜ່ງ / Role:</strong> {roleLabel}</div>
                   <div><strong>ປະເພດ / Type:</strong> {emp.type === "freelance" ? "ພະນັກງານອິດສະຫຼະ (Freelance)" : "ພະນັກງານປະຈຳ (Permanent)"}</div>
                   <div><strong>ອັດຕາຄ່າທ່ຽວ / Trip Rate:</strong> {formatLAK(emp.tripRate)} / ທ່ຽວ</div>
+                  <div style={{ gridColumn: "span 2" }}><strong>ເລກບັນຊີ / Bank Account:</strong> {emp.bankAccount || "-"}</div>
                 </div>
 
                 <div style={{ background: "var(--primary-light)", padding: "15px", borderRadius: "12px", border: "1px solid var(--border-color-glow)", marginBottom: "20px" }}>
@@ -721,9 +766,23 @@ export default function PayrollManager() {
                     <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>{emp.name}</td>
                     <td style={{ border: "1px solid #000", padding: "6px" }}>{roleLabel}</td>
                     <td style={{ border: "1px solid #000", padding: "6px" }}>{emp.type === "freelance" ? "ອິດສະຫຼະ (OT)" : "ປະຈຳ"}</td>
-                    <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{emp.type === "freelance" ? "0 ₭" : formatLAK(emp.salary)}</td>
+                    <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>
+                      {emp.type === "freelance" ? "0 ₭" : formatLAK(emp.salary)}
+                      {emp.dailyWage > 0 && (
+                        <div style={{ fontSize: "8px", color: "#64748b", marginTop: "2px" }}>
+                          {formatLAK(emp.dailyWage)}/ວັນ ({emp.daysWorked || 26} ວັນ)
+                        </div>
+                      )}
+                    </td>
                     <td style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>{calc.tripCount}</td>
-                    <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(calc.tripPay)}</td>
+                    <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>
+                      {formatLAK(calc.tripPay)}
+                      {(emp.ot > 0 || emp.commission > 0) && (
+                        <div style={{ fontSize: "8px", color: "#64748b", marginTop: "2px" }}>
+                          {emp.ot > 0 && `OT: +${formatLAK(emp.ot)}`} {emp.commission > 0 && `Comm: +${formatLAK(emp.commission)}`}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(emp.bonus || 0)}</td>
                     <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>{formatLAK(calc.totalPayout)}</td>
                   </tr>
@@ -731,9 +790,23 @@ export default function PayrollManager() {
               })}
               <tr style={{ background: "#e2e8f0", fontWeight: "bold" }}>
                 <td colSpan="4" style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>ຍອດລວມທັງໝົດ (Grand Total)</td>
-                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(grandBaseSalary)}</td>
+                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>
+                  {formatLAK(grandBaseSalary)}
+                  {grandDailyWagePay > 0 && (
+                    <div style={{ fontSize: "8px", color: "#64748b", marginTop: "2px" }}>
+                      ລາຍວັນ: {formatLAK(grandDailyWagePay)}
+                    </div>
+                  )}
+                </td>
                 <td style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>{grandTripCount}</td>
-                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(grandTripPay)}</td>
+                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>
+                  {formatLAK(grandTripPay)}
+                  {(grandOTPay > 0 || grandCommission > 0) && (
+                    <div style={{ fontSize: "8px", color: "#64748b", marginTop: "2px" }}>
+                      {grandOTPay > 0 && `OT: +${formatLAK(grandOTPay)}`} {grandCommission > 0 && ` Comm: +${formatLAK(grandCommission)}`}
+                    </div>
+                  )}
+                </td>
                 <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(grandBonus)}</td>
                 <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", color: "var(--primary)" }}>{formatLAK(grandTotal)}</td>
               </tr>
@@ -771,6 +844,10 @@ export default function PayrollManager() {
                     <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold", background: "#f8fafc" }}>ປະເພດພະນັກງານ / Type:</td>
                     <td style={{ border: "1px solid #000", padding: "6px" }}>{emp.type === "freelance" ? "ອິດສະຫຼະ (OT)" : "ປະຈຳ"}</td>
                   </tr>
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold", background: "#f8fafc" }}>ເລກບັນຊີ / Bank Account:</td>
+                    <td colSpan="3" style={{ border: "1px solid #000", padding: "6px" }}>{emp.bankAccount || "-"}</td>
+                  </tr>
                 </tbody>
               </table>
 
@@ -778,13 +855,31 @@ export default function PayrollManager() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px", marginBottom: "30px" }}>
                 <tbody>
                   <tr>
-                    <td style={{ border: "1px solid #000", padding: "6px", width: "75%" }}>ເງິນເດືອນພື້ນຖານ / Base Salary:</td>
+                    <td style={{ border: "1px solid #000", padding: "6px", width: "75%" }}>{t("base_salary_label", "ເງິນເດືອນພື້ນຖານ / Base Salary")}:</td>
                     <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{emp.type === "freelance" ? "0 ₭" : formatLAK(emp.salary)}</td>
                   </tr>
+                  {emp.dailyWage > 0 && (
+                    <tr>
+                      <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າແຮງງານລາຍວັນ / Daily Wage Pay ({emp.daysWorked || 26} ວັນ):</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK((emp.dailyWage || 0) * (emp.daysWorked || 26))}</td>
+                    </tr>
+                  )}
                   <tr>
                     <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າທ່ຽວສະຫຼຸບ ({calc.tripCount} ທ່ຽວ) / Total Trip Fee:</td>
                     <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(calc.tripPay)}</td>
                   </tr>
+                  {emp.ot > 0 && (
+                    <tr>
+                      <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າລ່ວງເວລາ (OT) / Overtime Pay:</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(emp.ot)}</td>
+                    </tr>
+                  )}
+                  {emp.commission > 0 && (
+                    <tr>
+                      <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າຄອມມິດຊັນ / Commission:</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(emp.commission)}</td>
+                    </tr>
+                  )}
                   <tr>
                     <td style={{ border: "1px solid #000", padding: "6px" }}>ໂບນັດພິເສດ / Special Bonus:</td>
                     <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(emp.bonus || 0)}</td>

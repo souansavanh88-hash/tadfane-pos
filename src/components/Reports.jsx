@@ -23,6 +23,64 @@ export default function Reports() {
     }, 100);
   };
 
+  const handleExportCSV = () => {
+    const plData = calculatePL();
+    let csvContent = "\uFEFF";
+    
+    // Title
+    csvContent += `Report Type,${reportType.toUpperCase()}\n`;
+    if (reportType === "daily") {
+      csvContent += `Selected Date,${selectedDate}\n`;
+    } else if (reportType === "monthly") {
+      csvContent += `Selected Month,${selectedMonth}\n`;
+    } else if (reportType === "yearly") {
+      csvContent += `Selected Year,${selectedYear}\n`;
+    }
+    csvContent += "\n";
+
+    // Summary Section
+    csvContent += "Financial Summary Metric,Amount (LAK)\n";
+    csvContent += `Gross Revenue,${plData.grossRevenue}\n`;
+    csvContent += `Total Commissions (Agent/Partner),${plData.totalCommissions}\n`;
+    csvContent += `Total Employee Payroll & Wages,${plData.totalEmployeePayroll}\n`;
+    csvContent += `Fuel Cost,${plData.totalFuelCost}\n`;
+    csvContent += `Maintenance Cost,${plData.totalMaintCost}\n`;
+    csvContent += `Office Rent / Fixed Costs,${plData.fixedCosts}\n`;
+    csvContent += `Custom/Manual Approved Expenses,${plData.totalCustomExpenses}\n`;
+    csvContent += `Total Expenses,${plData.totalExpenses}\n`;
+    csvContent += `Net Profit,${plData.netProfit}\n`;
+    csvContent += "\n";
+
+    // Demographics Breakdown: Nationalities
+    csvContent += "Demographics: Nationality,Count\n";
+    plData.demographics.nationalities.forEach(n => {
+      csvContent += `"${n.name}",${n.count}\n`;
+    });
+    csvContent += "\n";
+
+    // Demographics Breakdown: Activities
+    csvContent += "Demographics: Activity/Service,Count\n";
+    plData.demographics.activities.forEach(a => {
+      csvContent += `"${a.name}",${a.count}\n`;
+    });
+    csvContent += "\n";
+
+    // Demographics Breakdown: Sources
+    csvContent += "Demographics: Booking Source (Agent/Direct),Count\n";
+    plData.demographics.sources.forEach(s => {
+      csvContent += `"${s.name}",${s.count}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `financial_report_${reportType}_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Simulated operational rates (can be managed in settings later)
   const FUEL_COST_PER_TRIP = 150000; // 150,000 LAK for fuel per boat trip
   const MAINT_COST_PER_TRIP = 30000; // 30,000 LAK boat wear & tear per trip
@@ -45,15 +103,20 @@ export default function Reports() {
     const monthStr = selectedMonth;
     const yearStr = selectedYear;
 
+    const filterValidCustomer = (c) => {
+      const bk = db.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
+      return bk ? bk.status !== "ยกเลิก" : true;
+    };
+
     if (reportType === "daily") {
       trips = db.trips.filter(t => t.date === todayStr && (t.status === "completed" || t.status === "dispatched"));
-      customers = db.customers.filter(c => c.checkInDate === todayStr);
+      customers = db.customers.filter(c => c.checkInDate === todayStr && filterValidCustomer(c));
     } else if (reportType === "monthly") {
       trips = db.trips.filter(t => t.date && t.date.startsWith(monthStr) && (t.status === "completed" || t.status === "dispatched"));
-      customers = db.customers.filter(c => c.checkInDate && c.checkInDate.startsWith(monthStr));
+      customers = db.customers.filter(c => c.checkInDate && c.checkInDate.startsWith(monthStr) && filterValidCustomer(c));
     } else if (reportType === "yearly") {
       trips = db.trips.filter(t => t.date && t.date.startsWith(yearStr) && (t.status === "completed" || t.status === "dispatched"));
-      customers = db.customers.filter(c => c.checkInDate && c.checkInDate.startsWith(yearStr));
+      customers = db.customers.filter(c => c.checkInDate && c.checkInDate.startsWith(yearStr) && filterValidCustomer(c));
     }
 
     return { trips, customers };
@@ -203,6 +266,73 @@ export default function Reports() {
     const totalExpenses = totalCommissions + totalEmployeePayroll + totalFuelCost + totalMaintCost + fixedCosts + totalCustomExpenses;
     const netProfit = grossRevenue - totalExpenses;
 
+    // Demographics Breakdown
+    const nationalities = {};
+    const activities = {};
+    const sources = {};
+
+    customers.forEach(c => {
+      // 1. Nationality
+      const nat = (c.nationality || "ບໍ່ລະບຸ / Unspecified").trim();
+      nationalities[nat] = (nationalities[nat] || 0) + 1;
+
+      // 2. Activity / Service
+      const bk = db.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
+      let act = "ລ່ອງເຮືອ / Adult Boat Ride"; // default
+      if (bk) {
+        const srv = db.services?.find(s => s.id === bk.serviceId);
+        if (srv) {
+          act = srv.name;
+        } else if (bk.serviceName) {
+          act = bk.serviceName;
+        }
+      }
+      activities[act] = (activities[act] || 0) + 1;
+
+      // 3. Source (Agent or Walk-in)
+      let src = "มาเอง / Direct (Walk-in)";
+      if (bk && bk.partnerId && bk.partnerId !== "PTN-000") {
+        src = bk.partnerName || "Agent (ເອເຈນ)";
+      }
+      sources[src] = (sources[src] || 0) + 1;
+    });
+
+    const sortedNationalities = Object.keys(nationalities)
+      .map(name => ({ name, count: nationalities[name] }))
+      .sort((a, b) => b.count - a.count);
+
+    const sortedActivities = Object.keys(activities)
+      .map(name => ({ name, count: activities[name] }))
+      .sort((a, b) => b.count - a.count);
+
+    const sortedSources = Object.keys(sources)
+      .map(name => ({ name, count: sources[name] }))
+      .sort((a, b) => b.count - a.count);
+
+    // Payment Method Breakdown
+    let cashRevenue = 0, transferRevenue = 0, cardRevenue = 0;
+    let cashBills = 0, transferBills = 0, cardBills = 0;
+    let totalDiscount = 0, totalDebt = 0;
+
+    const activePeriodBookings = periodBookings.filter(bk => bk.status !== "cancelled");
+    activePeriodBookings.forEach(bk => {
+      const rev = bk.netPriceLAK !== undefined ? bk.netPriceLAK : bk.pricePaidLAK;
+      const pm = bk.paymentMethod || "";
+      if (pm === "card") {
+        cardRevenue += rev || 0;
+        cardBills += 1;
+      } else if (pm === "transfer" || pm === "qr" || pm === "bank") {
+        transferRevenue += rev || 0;
+        transferBills += 1;
+      } else {
+        // cash or unspecified
+        cashRevenue += rev || 0;
+        cashBills += 1;
+      }
+      totalDiscount += bk.discountLAK || 0;
+      totalDebt += bk.debtLAK || 0;
+    });
+
     return {
       tripsCount: trips.length,
       paxCount: customers.length,
@@ -217,7 +347,20 @@ export default function Reports() {
       netProfit,
       partnerDisbursements,
       employeeDisbursements,
-      periodCustomExpenses
+      periodCustomExpenses,
+      cashRevenue,
+      transferRevenue,
+      cardRevenue,
+      cashBills,
+      transferBills,
+      cardBills,
+      totalDiscount,
+      totalDebt,
+      demographics: {
+        nationalities: sortedNationalities,
+        activities: sortedActivities,
+        sources: sortedSources
+      }
     };
   };
 
@@ -234,9 +377,14 @@ export default function Reports() {
           <h1>Business Reports & Profit & Loss (ລາຍງານ ແລະ ກໍາໄລ-ຂາດທຶນ)</h1>
           <p>ກວດສອບລາຍຮັບ, ລາຍຈ່າຍ, ແລະ ກໍາໄລສຸດທິ ປະຈຳວັນ, ປະຈຳເດືອນ ຫຼື ປະຈຳປີ</p>
         </div>
-        <button className="btn btn-primary" onClick={triggerPrintReports}>
-          ພິມລາຍງານກຳໄລ-ຂາດທຶນ (Print P&L Report)
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button className="btn btn-secondary" onClick={handleExportCSV}>
+            Export to CSV
+          </button>
+          <button className="btn btn-primary" onClick={triggerPrintReports}>
+            ພິມລາຍງານກຳໄລ-ຂາດທຶນ (Print P&L Report)
+          </button>
+        </div>
       </div>
 
       {/* Filter Options */}
@@ -387,6 +535,56 @@ export default function Reports() {
           </div>
         </div>
 
+        {/* Payment Method Breakdown Table */}
+        <div className="card" style={{ marginTop: "20px" }}>
+          <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "8px" }}>
+            💳 {t("payment_breakdown_title", "ສະຫຼຸບຊ່ອງທາງຊຳລະ / Payment Breakdown")}
+          </h3>
+          <table className="data-table" style={{ width: "100%" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left" }}>{t("payment_method_col", "ຊ່ອງທາງ / Method")}</th>
+                <th style={{ textAlign: "center" }}>{t("bill_count_label", "ບິນ / Bills")}</th>
+                <th style={{ textAlign: "right" }}>{t("revenue_label", "ລາຍຮັບ / Revenue")} (LAK)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>💵 {t("cash_label", "ເງິນສົດ / Cash")}</td>
+                <td style={{ textAlign: "center" }}>{pl.cashBills}</td>
+                <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.cashRevenue)}</td>
+              </tr>
+              <tr>
+                <td>📱 {t("transfer_label", "ໂອນ / Transfer")}</td>
+                <td style={{ textAlign: "center" }}>{pl.transferBills}</td>
+                <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.transferRevenue)}</td>
+              </tr>
+              <tr>
+                <td>💳 {t("card_label", "ບັດ / Card")}</td>
+                <td style={{ textAlign: "center" }}>{pl.cardBills}</td>
+                <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.cardRevenue)}</td>
+              </tr>
+              <tr style={{ borderTop: "2px solid var(--border-color)", fontWeight: "900" }}>
+                <td>{t("total_label", "ລວມ / Total")}</td>
+                <td style={{ textAlign: "center" }}>{pl.cashBills + pl.transferBills + pl.cardBills}</td>
+                <td style={{ textAlign: "right" }}>{formatLAK(pl.cashRevenue + pl.transferRevenue + pl.cardRevenue)}</td>
+              </tr>
+              {pl.totalDiscount > 0 && (
+                <tr style={{ color: "#e11d48" }}>
+                  <td colSpan="2">🏷️ {t("total_discount_label", "ສ່ວນຫຼຸດລວມ / Total Discounts")}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700" }}>-{formatLAK(pl.totalDiscount)}</td>
+                </tr>
+              )}
+              {pl.totalDebt > 0 && (
+                <tr style={{ color: "#ea580c" }}>
+                  <td colSpan="2">⚠️ {t("total_debt_label", "ຄ້າງຊຳລະລວມ / Outstanding Debt")}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.totalDebt)}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
         {/* Operating metrics side pane */}
         <div className="card">
           <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", marginBottom: "1rem" }}>{t("operational_kpis", "ຕົວຊີ້ວັດການດຳເນີນງານ / Operational KPIs")}</h2>
@@ -427,7 +625,7 @@ export default function Reports() {
           ສະຫຼຸບລາຍຈ່າຍແຍກຕາມບຸກຄົນ / Disbursements Breakdown Details
         </h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: "2rem" }}>
+        <div className="disbursements-grid">
           
           {/* Partner Commissions Summary */}
           <div>
@@ -511,7 +709,7 @@ export default function Reports() {
           </div>
 
           {/* Custom/Other Expenses Summary */}
-          <div style={{ flex: "1 1 100%", marginTop: "1.5rem" }}>
+          <div className="full-width-grid-col" style={{ marginTop: "1.5rem" }}>
             <h3 style={{ fontSize: "1rem", color: "var(--primary)", marginBottom: "0.75rem" }}>
               3. ລາຍຈ່າຍທົ່ວໄປ/ອື່ນໆ (Other Custom Expenses Details)
             </h3>
@@ -545,10 +743,113 @@ export default function Reports() {
             </div>
           </div>
 
-          {/* 4. Passenger Register List (Step 12, part 6) */}
+          {/* 4. Passenger Demographics Breakdown */}
+          <div style={{ flex: "1 1 100%", marginTop: "2rem" }}>
+            <h3 style={{ fontSize: "1.1rem", color: "var(--primary)", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "8px" }}>
+              📊 4. ສະຖິຕິຜູ້ໂດຍສານ / Passenger Demographics Breakdown
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem" }}>
+              
+              {/* Nationality Breakdown */}
+              <div style={{ border: "1px solid var(--border-color)", borderRadius: "8px", background: "var(--card-bg, #ffffff)", padding: "1rem" }}>
+                <h4 style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "var(--text-primary)", borderBottom: "1.5px solid var(--border-color)", paddingBottom: "6px" }}>
+                  🗺️ ແຍກຕາມສັນຊາດ (By Nationality)
+                </h4>
+                <table style={{ margin: 0, fontSize: "0.8rem", width: "100%" }}>
+                  <thead>
+                    <tr style={{ background: "#f8fafc" }}>
+                      <th style={{ padding: "6px" }}>ສັນຊາດ / Nationality</th>
+                      <th style={{ padding: "6px", textAlign: "right" }}>ຈຳນວນ / Pax</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pl.demographics.nationalities.length === 0 ? (
+                      <tr><td colSpan="2" style={{ textAlign: "center", color: "var(--text-muted)", padding: "8px" }}>ບໍ່ມີຂໍ້ມູນ / No data</td></tr>
+                    ) : (
+                      pl.demographics.nationalities.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ padding: "6px", fontWeight: "600" }}>{item.name}</td>
+                          <td style={{ padding: "6px", textAlign: "right", fontWeight: "700" }}>{item.count}</td>
+                        </tr>
+                      ))
+                    )}
+                    <tr style={{ background: "#f1f5f9", fontWeight: "bold" }}>
+                      <td style={{ padding: "6px" }}>ຍອດລວມທັງໝົດ / Total</td>
+                      <td style={{ padding: "6px", textAlign: "right", color: "var(--primary)" }}>{pl.paxCount}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Activity Breakdown */}
+              <div style={{ border: "1px solid var(--border-color)", borderRadius: "8px", background: "var(--card-bg, #ffffff)", padding: "1rem" }}>
+                <h4 style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "var(--text-primary)", borderBottom: "1.5px solid var(--border-color)", paddingBottom: "6px" }}>
+                  🛶 ແຍກຕາມກິດຈະກຳ (By Activity/Service)
+                </h4>
+                <table style={{ margin: 0, fontSize: "0.8rem", width: "100%" }}>
+                  <thead>
+                    <tr style={{ background: "#f8fafc" }}>
+                      <th style={{ padding: "6px" }}>ກິດຈະກຳ / Service</th>
+                      <th style={{ padding: "6px", textAlign: "right" }}>ຈຳນວນ / Pax</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pl.demographics.activities.length === 0 ? (
+                      <tr><td colSpan="2" style={{ textAlign: "center", color: "var(--text-muted)", padding: "8px" }}>ບໍ່ມີຂໍ້ມູນ / No data</td></tr>
+                    ) : (
+                      pl.demographics.activities.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ padding: "6px", fontWeight: "600" }}>{item.name.split(" / ")[0]}</td>
+                          <td style={{ padding: "6px", textAlign: "right", fontWeight: "700" }}>{item.count}</td>
+                        </tr>
+                      ))
+                    )}
+                    <tr style={{ background: "#f1f5f9", fontWeight: "bold" }}>
+                      <td style={{ padding: "6px" }}>ຍອດລວມທັງໝົດ / Total</td>
+                      <td style={{ padding: "6px", textAlign: "right", color: "var(--primary)" }}>{pl.paxCount}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Source Breakdown */}
+              <div style={{ border: "1px solid var(--border-color)", borderRadius: "8px", background: "var(--card-bg, #ffffff)", padding: "1rem" }}>
+                <h4 style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "var(--text-primary)", borderBottom: "1.5px solid var(--border-color)", paddingBottom: "6px" }}>
+                  🔌 ແຍกຕາມແຫຼ່ງທີ່ມາ (By Referral Source)
+                </h4>
+                <table style={{ margin: 0, fontSize: "0.8rem", width: "100%" }}>
+                  <thead>
+                    <tr style={{ background: "#f8fafc" }}>
+                      <th style={{ padding: "6px" }}>ແຫຼ່ງທີ່ມາ / Agent</th>
+                      <th style={{ padding: "6px", textAlign: "right" }}>ຈຳນວນ / Pax</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pl.demographics.sources.length === 0 ? (
+                      <tr><td colSpan="2" style={{ textAlign: "center", color: "var(--text-muted)", padding: "8px" }}>ບໍ່ມີຂໍ້ມູນ / No data</td></tr>
+                    ) : (
+                      pl.demographics.sources.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ padding: "6px", fontWeight: "600" }}>{item.name}</td>
+                          <td style={{ padding: "6px", textAlign: "right", fontWeight: "700" }}>{item.count}</td>
+                        </tr>
+                      ))
+                    )}
+                    <tr style={{ background: "#f1f5f9", fontWeight: "bold" }}>
+                      <td style={{ padding: "6px" }}>ຍອດລວມທັງໝົດ / Total</td>
+                      <td style={{ padding: "6px", textAlign: "right", color: "var(--primary)" }}>{pl.paxCount}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+
+          {/* 5. Passenger Register List (Step 12, part 6) */}
           <div style={{ flex: "1 1 100%", marginTop: "1.5rem" }}>
             <h3 style={{ fontSize: "1rem", color: "var(--primary)", marginBottom: "0.75rem" }}>
-              4. ລາຍຊື່ລູກຄ້າທັງໝົດ / Passenger Details Audit List
+              5. ລາຍຊື່ລູກຄ້າທັງໝົດ / Passenger Details Audit List
             </h3>
             <div style={{ overflowX: "auto", border: "1px solid var(--border-color)", borderRadius: "8px" }}>
               <table style={{ margin: 0, fontSize: "0.85rem" }}>
@@ -757,9 +1058,72 @@ export default function Reports() {
                 )}
               </tbody>
             </table>
+
+            {/* Printable Demographics Breakdown */}
+            <h3 style={{ fontSize: "12px", fontWeight: "bold", borderBottom: "1px solid #000", paddingBottom: "5px", marginBottom: "10px", marginTop: "20px" }}>
+              ສະຖິຕິຜູ້ໂດຍສານແຍກປະເພດ / Passenger Demographics Breakdown
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+              {/* Nationalities */}
+              <div style={{ border: "1px solid #000", padding: "5px" }}>
+                <div style={{ fontWeight: "bold", fontSize: "9px", borderBottom: "1px solid #000", marginBottom: "5px" }}>ສັນຊາດ / Nationalities</div>
+                <table style={{ width: "100%", fontSize: "8px", borderCollapse: "collapse" }}>
+                  <tbody>
+                    {pl.demographics.nationalities.map((item, idx) => (
+                      <tr key={idx}>
+                        <td>{item.name}</td>
+                        <td style={{ textAlign: "right", fontWeight: "bold" }}>{item.count}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ fontWeight: "bold", borderTop: "1px solid #000" }}>
+                      <td>ລວມ / Total</td>
+                      <td style={{ textAlign: "right" }}>{pl.paxCount}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Activities */}
+              <div style={{ border: "1px solid #000", padding: "5px" }}>
+                <div style={{ fontWeight: "bold", fontSize: "9px", borderBottom: "1px solid #000", marginBottom: "5px" }}>ກິດຈະກຳ / Activities</div>
+                <table style={{ width: "100%", fontSize: "8px", borderCollapse: "collapse" }}>
+                  <tbody>
+                    {pl.demographics.activities.map((item, idx) => (
+                      <tr key={idx}>
+                        <td>{item.name.split(" / ")[0]}</td>
+                        <td style={{ textAlign: "right", fontWeight: "bold" }}>{item.count}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ fontWeight: "bold", borderTop: "1px solid #000" }}>
+                      <td>ລວມ / Total</td>
+                      <td style={{ textAlign: "right" }}>{pl.paxCount}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Sources */}
+              <div style={{ border: "1px solid #000", padding: "5px" }}>
+                <div style={{ fontWeight: "bold", fontSize: "9px", borderBottom: "1px solid #000", marginBottom: "5px" }}>ແຫຼ່ງທີ່ມາ / Sources</div>
+                <table style={{ width: "100%", fontSize: "8px", borderCollapse: "collapse" }}>
+                  <tbody>
+                    {pl.demographics.sources.map((item, idx) => (
+                      <tr key={idx}>
+                        <td>{item.name}</td>
+                        <td style={{ textAlign: "right", fontWeight: "bold" }}>{item.count}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ fontWeight: "bold", borderTop: "1px solid #000" }}>
+                      <td>ລວມ / Total</td>
+                      <td style={{ textAlign: "right" }}>{pl.paxCount}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
-          <div style={{ marginTop: "50px", display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
+          <div style={{ marginTop: "40px", display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
             <div>
               Prepared by: _______________________<br />
               Accountant / ເຈົ້າໜ້າທີ່ບັນຊີ

@@ -27,19 +27,6 @@ export default function LoginScreen({ onLoginSuccess }) {
     }
   };
 
-  const handleQuickLogin = (testUser) => {
-    setEmail(testUser.email);
-    setPassword(testUser.password);
-    
-    // Auto submit
-    const matchedUser = db.users.find(
-      (u) => u.email === testUser.email && u.password === testUser.password
-    );
-    if (matchedUser) {
-      onLoginSuccess(matchedUser);
-    }
-  };
-
   return (
     <div style={containerStyle}>
       <div style={loginCardStyle}>
@@ -80,6 +67,24 @@ export default function LoginScreen({ onLoginSuccess }) {
             }}
           >
             ລາວ
+          </button>
+          <span style={{ color: "rgba(255,255,255,0.15)", fontSize: "0.75rem" }}>/</span>
+          <button 
+            type="button" 
+            onClick={() => setLang("th")} 
+            style={{
+              background: lang === "th" ? "#10b981" : "rgba(255,255,255,0.08)",
+              color: lang === "th" ? "#ffffff" : "#94a3b8",
+              border: "none",
+              borderRadius: "4px",
+              padding: "4px 8px",
+              fontSize: "0.75rem",
+              fontWeight: "bold",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            ไทย
           </button>
         </div>
 
@@ -150,34 +155,7 @@ export default function LoginScreen({ onLoginSuccess }) {
           </button>
         </form>
 
-        {/* Divider */}
-        <div style={dividerStyle}>
-          <span style={dividerTextStyle}>{t("demo_accounts", "ບັນຊີທົດລອງໃຊ້ງານ / Quick Test Accounts")}</span>
-        </div>
 
-        {/* Quick select buttons */}
-        <div style={quickDeckStyle}>
-          {db.users.map((usr) => (
-            <button 
-              key={usr.id} 
-              type="button" 
-              onClick={() => handleQuickLogin(usr)}
-              style={quickBtnStyle}
-              title={`Email: ${usr.email} / PW: ${usr.password}`}
-            >
-              <div style={{ fontWeight: "700", color: "#10b981" }}>
-                {(usr.role === "owner" || usr.role === "admin") && `👑 ${lang === "en" ? "Owner / Admin" : "ເຈົ້າຂອງ / ຜູ້ດູແລ"}`}
-                {(usr.role === "cashier" || usr.role === "sales") && `💰 ${lang === "en" ? "Cashier" : "ແຄຊເຊຍ (ຂາຍປີ້)"}`}
-                {usr.role === "accounting" && `📊 ${lang === "en" ? "Accountant" : "ນັກບັນຊີ"}`}
-                {(usr.role === "tour_operation" || usr.role === "dispatcher") && `⚓ ${lang === "en" ? "Dispatcher" : "ຜູ້ປ່ອຍເຮືອ"}`}
-                {usr.role === "manager" && `💼 ${lang === "en" ? "Manager" : "ຜູ້ຈັດการ"}`}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "#94a3b8", marginTop: "2px" }}>
-                {usr.email}
-              </div>
-            </button>
-          ))}
-        </div>
 
 
       </div>
@@ -279,32 +257,3 @@ const submitButtonStyle = {
   marginTop: "0.5rem"
 };
 
-const dividerStyle = {
-  position: "relative",
-  textAlign: "center",
-  margin: "2rem 0 1.5rem 0"
-};
-
-const dividerTextStyle = {
-  background: "#0c1916", // match background color blend
-  padding: "0 10px",
-  fontSize: "0.75rem",
-  color: "#94a3b8",
-  fontWeight: "600"
-};
-
-const quickDeckStyle = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: "0.75rem"
-};
-
-const quickBtnStyle = {
-  background: "rgba(255, 255, 255, 0.03)",
-  border: "1px solid rgba(255, 255, 255, 0.05)",
-  borderRadius: "12px",
-  padding: "10px",
-  textAlign: "left",
-  cursor: "pointer",
-  transition: "all 0.2s ease"
-};

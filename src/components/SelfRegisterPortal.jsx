@@ -1,6 +1,7 @@
 // SelfRegisterPortal.jsx - Customer Self-Service Online Registration & Waiver Portal
 import React, { useState, useEffect, useRef } from "react";
 import { getDb, saveDb } from "../db/mockDb";
+import { ShieldCheck, User, Globe2, Phone, CalendarRange, CheckCircle2, AlertTriangle, ArrowRight, Ship, Camera, RefreshCw, X } from "lucide-react";
 
 const calculateAge = (dobString) => {
   if (!dobString) return "";
@@ -23,7 +24,6 @@ const getDobInputVal = (dob) => {
   }
   return dob;
 };
-import { ShieldCheck, User, Globe2, Phone, CalendarRange, CheckCircle2, AlertTriangle, ArrowRight, Ship, Camera, RefreshCw, X } from "lucide-react";
 
 // Translations matching the requested fields
 const TRANSLATIONS = {
@@ -168,6 +168,78 @@ const TRANSLATIONS = {
     alertCameraError: "Cannot open camera. Please allow camera permissions in your browser.",
     alertMrzNotFound: "Could not detect MRZ or photo is blurry. Please check guide or enter details manually.",
     alertOcrError: "OCR Engine is temporarily unavailable. Please enter details manually."
+  },
+  th: {
+    welcome: "ยินดีต้อนรับสู่ ตาดฟาน ล่องแก่ง",
+    title: "ลงทะเบียนลูกค้า & ใบยินยอม",
+    sub: "กรุณากรอกข้อมูลและยอมรับเงื่อนไขก่อนขึ้นเรือ",
+    enterCode: "ป้อนรหัสกลุ่ม (Group Code)",
+    search: "ค้นหา",
+    invalidCode: "รหัสกลุ่มไม่ถูกต้องหรือไม่พบข้อมูล กรุณาถามแคชเชียร์",
+    acceptTerms: "ฉันได้อ่านและยอมรับข้อกำหนดและเงื่อนไขการใช้บริการ",
+    acceptCheckbox: "ฉันได้อ่านและยอมรับข้อกำหนดและเงื่อนไขการใช้บริการ",
+    termsTitle: "ข้อกำหนดและเงื่อนไขการใช้บริการ",
+    termsText1: "ข้าพเจ้าได้รับทราบและยอมรับว่ากิจกรรมท่องเที่ยวทางน้ำและกิจกรรมผจญภัยอาจมีความเสี่ยงจากสภาพอากาศ, การเดินทาง, อุบัติเหตุ, การบาดเจ็บ หรือเหตุสุดวิสัยอื่นๆ ที่อาจเกิดขึ้นได้",
+    termsText2: "ข้าพเจ้ายินยอมปฏิบัติตามคำแนะนำของพนักงาน, ไกด์ และเจ้าหน้าที่ทุกประการ เพื่อความปลอดภัยตลอดระยะเวลาการใช้บริการ",
+    termsText3: "ข้าพเจ้ารับทราบและยอมรับความเสี่ยงที่อาจเกิดขึ้นจากกิจกรรม และจะไม่เรียกร้องค่าเสียหายใดๆ จากบริษัท, พนักงาน หรือผู้เกี่ยวข้อง ในกรณีที่เกิดเหตุสุดวิสัย, อุบัติเหตุ หรือเหตุการณ์ที่อยู่นอกเหนือการควบคุมของบริษัท",
+    cancelPolicyTitle: "นโยบายการยกเลิก",
+    cancelText1: "• เมื่อเริ่มกิจกรรมแล้ว ไม่มีคืนเงินทุกกรณี",
+    cancelText2: "• ลูกค้าที่ไม่มาตามเวลานัดหมาย ไม่คืนเงิน",
+    cancelText3: "• การยกเลิกหลังจากยืนยันการจองแล้ว ไม่คืนเงิน",
+    passengerTitle: "ผู้โดยสารคนที่",
+    pFirstName: "ชื่อจริง (First Name)",
+    pFirstNamePlh: "ชื่อจริงภาษาอังกฤษ (เช่น Somchai)",
+    pLastName: "นามสกุล (Last Name)",
+    pLastNamePlh: "นามสกุลภาษาอังกฤษ (เช่น Saetang)",
+    pNation: "สัญชาติ",
+    pNationPlh: "สัญชาติ (เช่น Thai, Lao, American)",
+    pGender: "เพศ",
+    pGenderPlh: "เลือกเพศ",
+    gMale: "ชาย",
+    gFemale: "หญิง",
+    gOther: "อื่นๆ",
+    pPhone: "เบอร์โทรติดต่อ",
+    pPhonePlh: "เบอร์โทรศัพท์",
+    pAge: "อายุ",
+    pAgePlh: "อายุ (ปี)",
+    pDob: "วันเดือนปีเกิด (DOB)",
+    pEmergencyName: "ชื่อผู้ติดต่อฉุกเฉิน",
+    pEmergencyNamePlh: "ชื่อและนามสกุล (เช่น Somphone Lao)",
+    pEmergencyRelation: "ความสัมพันธ์",
+    pEmergencyRelationPlh: "พ่อ, แม่, เพื่อน, แฟน...",
+    pEmergencyPhone: "เบอร์โทรฉุกเฉิน",
+    pEmergencyPhonePlh: "เบอร์โทรฉุกเฉิน",
+    submit: "ส่งข้อมูลลงทะเบียน",
+    successTitle: "ลงทะเบียนสำเร็จแล้ว!",
+    successSub: "ข้อมูลของคุณได้ถูกส่งเข้าระบบแล้ว สถานะเปลี่ยนเป็น 'พร้อมชำระเงิน' กรุณาแจ้งแคชเชียร์เพื่อดำเนินการต่อ ขอขอบพระคุณ!",
+    groupCode: "รหัสกลุ่ม:",
+    paxCount: "จำนวนลูกค้า:",
+    alertMissing: "กรุณากรอกข้อมูลให้ครบถ้วนทุกคน (ชื่อ, นามสกุล, สัญชาติ, วันเกิด, เพศ, เบอร์โทรศัพท์ และข้อมูลติดต่อฉุกเฉิน)",
+    ocrProcessing: "กำลังประมวลผล OCR...",
+    ocrReviewTitle: "ตรวจสอบข้อมูลจากเอกสาร",
+    ocrReviewSub: "กรุณาตรวจสอบและปรับปรุงข้อมูลให้ถูกต้องก่อนดำเนินการต่อ",
+    confirmAndSelfie: "ยืนยันข้อมูล & ไปถ่ายภาพต่อ ➔",
+    captureDocBtn: "📷 ถ่ายภาพเอกสาร",
+    captureFaceBtn: "📷 ถ่ายภาพใบหน้า",
+    ocrProfileSelectLabel: "💡 ทดลองป้อนข้อมูลตัวอย่าง (Demo Profile):",
+    unscanned: "ยังไม่ได้สแกนเอกสาร / Unscanned",
+    idCard: "บัตรประชาชน / National ID",
+    dayPlh: "วัน / Day",
+    monthPlh: "เดือน / Mo",
+    yearPlh: "ปี / Year",
+    ocrReadSuccess: "🟢 อ่านข้อมูลสำเร็จ / Read Successful",
+    ocrReadFail: "🔴 อ่านข้อมูลไม่สำเร็จ / Read Unsuccessful",
+    scanTitleDocId: "สแกนบัตรประชาชน / Scan ID Card",
+    scanTitleDocPassport: "สแกนพาสปอร์ต / Scan Passport",
+    scanTitleProcessing: "⚙️ กำลังประมวลผล OCR... / Processing OCR...",
+    scanTitleFace: "📷 ถ่ายภาพใบหน้า / Take Selfie",
+    scanDescDoc: "วางเอกสารให้อยู่ในกรอบและปรับแสงสว่างให้เหมาะสม / Place document inside frame",
+    scanDescProcessing: "กำลังสแกนและประมวลผลข้อมูลเอกสารด้วยระบบ OCR...",
+    scanDescFace: "มองตรงมายังหน้าจอเพื่อบันทึกภาพถ่ายยืนยันตัวตน",
+    cameraAccessing: "กำลังเปิดกล้อง... / Accessing Camera...",
+    alertCameraError: "ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตสิทธิ์การใช้งานกล้องในบราวเซอร์ของคุณ / Cannot open camera. Please allow camera permissions.",
+    alertMrzNotFound: "ไม่พบข้อมูล MRZ หรือภาพถ่ายไม่ชัดเจน กรุณาปรับมุมถ่ายภาพให้ตรงตามคำแนะนำ หรือป้อนข้อมูลด้วยตนเอง / Could not detect MRZ or photo is blurry.",
+    alertOcrError: "ระบบ OCR ไม่พร้อมใช้งานชั่วคราว กรุณาป้อนข้อมูลด้วยตนเอง / OCR Engine is temporarily unavailable. Please enter details manually."
   }
 };
 
@@ -363,7 +435,7 @@ export function parseMRZ(text) {
 }
 
 export default function SelfRegisterPortal() {
-  const handleDobInputChange = (index, val) => {
+  const handleDobInputChange = (val) => {
     let clean = val.replace(/[^0-9]/g, "");
     if (clean.length > 8) clean = clean.slice(0, 8);
     
@@ -374,62 +446,52 @@ export default function SelfRegisterPortal() {
       formatted = clean.slice(0, 2) + "/" + clean.slice(2, 4) + "/" + clean.slice(4);
     }
     
-    setPassengers(prev =>
-      prev.map((p, idx) => {
-        if (idx === index) {
-          const updated = { ...p, dobInput: formatted };
-          if (clean.length === 8) {
-            const dd = clean.slice(0, 2);
-            const mm = clean.slice(2, 4);
-            const yyyy = clean.slice(4, 8);
-            
-            const dateStr = `${yyyy}-${mm}-${dd}`;
-            const testDate = new Date(dateStr);
-            if (!isNaN(testDate.getTime()) && testDate.getFullYear() === parseInt(yyyy)) {
-              updated.dob = dateStr;
-              updated.age = calculateAge(dateStr);
-            }
-          }
-          return updated;
+    setPassenger(prev => {
+      const updated = { ...prev, dobInput: formatted };
+      if (clean.length === 8) {
+        const dd = clean.slice(0, 2);
+        const mm = clean.slice(2, 4);
+        const yyyy = clean.slice(4, 8);
+        
+        const dateStr = `${yyyy}-${mm}-${dd}`;
+        const testDate = new Date(dateStr);
+        if (!isNaN(testDate.getTime()) && testDate.getFullYear() === parseInt(yyyy)) {
+          updated.dob = dateStr;
+          updated.age = calculateAge(dateStr);
         }
-        return p;
-      })
-    );
+      }
+      return updated;
+    });
   };
 
-  const handleDobSelectChange = (index, part, val) => {
-    setPassengers(prev =>
-      prev.map((p, idx) => {
-        if (idx === index) {
-          let currentDob = p.dob || "";
-          let parts = currentDob.split("-");
-          if (parts.length !== 3) {
-            parts = ["", "", ""];
-          }
-          
-          if (part === "year") parts[0] = val;
-          if (part === "month") parts[1] = val;
-          if (part === "day") parts[2] = val;
-          
-          const newDob = parts.join("-");
-          const updated = { ...p };
-          
-          if (parts[0] && parts[1] && parts[2]) {
-            updated.dob = newDob;
-            updated.dobInput = `${parts[2]}/${parts[1]}/${parts[0]}`;
-            updated.age = calculateAge(newDob);
-          } else {
-            updated.dob = newDob;
-            const dStr = parts[2] || "__";
-            const mStr = parts[1] || "__";
-            const yStr = parts[0] || "____";
-            updated.dobInput = `${dStr}/${mStr}/${yStr}`;
-          }
-          return updated;
-        }
-        return p;
-      })
-    );
+  const handleDobSelectChange = (part, val) => {
+    setPassenger(prev => {
+      let currentDob = prev.dob || "";
+      let parts = currentDob.split("-");
+      if (parts.length !== 3) {
+        parts = ["", "", ""];
+      }
+      
+      if (part === "year") parts[0] = val;
+      if (part === "month") parts[1] = val;
+      if (part === "day") parts[2] = val;
+      
+      const newDob = parts.join("-");
+      const updated = { ...prev };
+      
+      if (parts[0] && parts[1] && parts[2]) {
+        updated.dob = newDob;
+        updated.dobInput = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        updated.age = calculateAge(newDob);
+      } else {
+        updated.dob = newDob;
+        const dStr = parts[2] || "__";
+        const mStr = parts[1] || "__";
+        const yStr = parts[0] || "____";
+        updated.dobInput = `${dStr}/${mStr}/${yStr}`;
+      }
+      return updated;
+    });
   };
 
   const handleOcrDobInputChange = (val) => {
@@ -498,9 +560,25 @@ export default function SelfRegisterPortal() {
   const [groupIdInput, setGroupIdInput] = useState(initialGroupId);
   const [activeGroupId, setActiveGroupId] = useState(initialGroupId);
   const [booking, setBooking] = useState(null);
+  const isTripDeparted = booking && (booking.status === "ออกเรือแล้ว" || booking.status === "เสร็จสิ้น");
   const [lookupError, setLookupError] = useState(false);
   const [hasAcceptedWaiver, setHasAcceptedWaiver] = useState(false);
-  const [passengers, setPassengers] = useState([]);
+  const [passenger, setPassenger] = useState({
+    firstName: "",
+    lastName: "",
+    docNumber: "",
+    nationality: "",
+    gender: "",
+    dob: "",
+    dobInput: "",
+    docExpiry: "",
+    phone: "",
+    age: "",
+    emergencyName: "",
+    emergencyRelation: "",
+    emergencyPhone: "",
+    facePhoto: ""
+  });
   const [regSuccess, setRegSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -537,12 +615,7 @@ export default function SelfRegisterPortal() {
     return () => window.removeEventListener("db-update", handleDbUpdate);
   }, []);
 
-  // Auto-save passengers draft to localStorage when changed
-  useEffect(() => {
-    if (activeGroupId && passengers && passengers.length > 0) {
-      localStorage.setItem(`pos_self_reg_draft_${activeGroupId.trim().toUpperCase()}`, JSON.stringify(passengers));
-    }
-  }, [passengers, activeGroupId]);
+  // Auto-save draft effect removed in single passenger registration mode
 
   // Lookup booking in the local database (proactive server sync + 3-attempt retry loop)
   useEffect(() => {
@@ -562,7 +635,12 @@ export default function SelfRegisterPortal() {
 
       // Proactively sync database from server to get the latest created bookings
       try {
-        const response = await fetch("/api/db");
+        const response = await fetch("/api/db?t=" + Date.now(), {
+          headers: {
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
+          }
+        });
         if (response.ok && isMounted) {
           const data = await response.json();
           if (data && data.bookings) {
@@ -597,43 +675,24 @@ export default function SelfRegisterPortal() {
           setLookupError(false);
           setIsLoading(false);
           
-          const draftStr = localStorage.getItem(`pos_self_reg_draft_${foundBooking.groupId}`);
-          let loadedDraft = false;
-          if (draftStr) {
-            try {
-              const parsedDraft = JSON.parse(draftStr);
-              if (Array.isArray(parsedDraft) && parsedDraft.length === foundBooking.paxCount) {
-                setPassengers(parsedDraft);
-                loadedDraft = true;
-              }
-            } catch (err) {
-              console.warn("Failed to load passenger registration draft", err);
-            }
-          }
-
-          if (!loadedDraft) {
-            if (foundBooking.passengers && foundBooking.passengers.length === foundBooking.paxCount) {
-              setPassengers(foundBooking.passengers);
-            } else {
-            setPassengers(
-              Array.from({ length: foundBooking.paxCount }, () => ({
-                firstName: "",
-                lastName: "",
-                docNumber: "",
-                nationality: "",
-                gender: "",
-                dob: "",
-                docExpiry: "",
-                phone: "",
-                age: "",
-                emergencyName: "",
-                emergencyRelation: "",
-                emergencyPhone: "",
-                facePhoto: ""
-              }))
-            );
-          }
-        }
+          // Draft and array logic removed for single passenger registration mode
+          // Just reset passenger state when a new booking is loaded
+          setPassenger({
+            firstName: "",
+            lastName: "",
+            docNumber: "",
+            nationality: "",
+            gender: "",
+            dob: "",
+            dobInput: "",
+            docExpiry: "",
+            phone: "",
+            age: "",
+            emergencyName: "",
+            emergencyRelation: "",
+            emergencyPhone: "",
+            facePhoto: ""
+          });
       }
     } else {
         if (attempt < 3) {
@@ -662,10 +721,8 @@ export default function SelfRegisterPortal() {
     setActiveGroupId(groupIdInput.trim().toUpperCase());
   };
 
-  const handlePassengerFieldChange = (index, field, value) => {
-    setPassengers(prev =>
-      prev.map((p, idx) => (idx === index ? { ...p, [field]: value } : p))
-    );
+  const handlePassengerFieldChange = (field, value) => {
+    setPassenger(prev => ({ ...prev, [field]: value }));
   };
 
   // Scanner controls
@@ -853,26 +910,20 @@ export default function SelfRegisterPortal() {
   };
 
   const handleConfirmOcrDetails = () => {
-    // Save the reviewed fields into the passenger details list
-    setPassengers(prev =>
-      prev.map((p, idx) => {
-        if (idx === scannerPaxIndex) {
-          return {
-            ...p,
-            firstName: ocrReviewData.firstName,
-            lastName: ocrReviewData.lastName,
-            docNumber: "",
-            nationality: ocrReviewData.nationality,
-            dob: ocrReviewData.dob,
-            docExpiry: "",
-            gender: ocrReviewData.gender,
-            phone: ocrReviewData.phone,
-            age: ocrReviewData.age
-          };
-        }
-        return p;
-      })
-    );
+    // Save reviewed fields to the passenger state
+    setPassenger(prev => ({
+      ...prev,
+      firstName: ocrReviewData.firstName,
+      lastName: ocrReviewData.lastName,
+      docNumber: "",
+      nationality: ocrReviewData.nationality,
+      dob: ocrReviewData.dob,
+      dobInput: ocrReviewData.dobInput || (ocrReviewData.dob ? `${ocrReviewData.dob.split("-")[2]}/${ocrReviewData.dob.split("-")[1]}/${ocrReviewData.dob.split("-")[0]}` : ""),
+      docExpiry: "",
+      gender: ocrReviewData.gender,
+      phone: ocrReviewData.phone,
+      age: ocrReviewData.age
+    }));
     
     // Switch to face selfie capture step
     setScannerStep("face");
@@ -905,17 +956,10 @@ export default function SelfRegisterPortal() {
       }
     }
 
-    setPassengers(prev =>
-      prev.map((p, idx) => {
-        if (idx === scannerPaxIndex) {
-          return {
-            ...p,
-            facePhoto: capturedImg
-          };
-        }
-        return p;
-      })
-    );
+    setPassenger(prev => ({
+      ...prev,
+      facePhoto: capturedImg
+    }));
 
     stopCamera();
     setIsScannerOpen(false);
@@ -926,40 +970,181 @@ export default function SelfRegisterPortal() {
     setIsScannerOpen(false);
   };
 
-  const handleSubmitRegistration = (e) => {
+  const handleFileUploadDoc = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target.result;
+      setCapturedDocPhoto(dataUrl);
+      stopCamera();
+      setScannerStep("ocr_processing");
+      
+      try {
+        const Tesseract = (await import("tesseract.js")).default;
+        const result = await Tesseract.recognize(dataUrl, "eng");
+        const text = result?.data?.text || "";
+        console.log("OCR Extracted text (Uploaded File):", text);
+        
+        const parsedData = parseMRZ(text);
+        if (parsedData) {
+          setOcrStatus("success");
+          setOcrReviewData({
+            firstName: parsedData.firstName,
+            lastName: parsedData.lastName,
+            docNumber: parsedData.docNumber,
+            nationality: parsedData.nationality,
+            dob: parsedData.dob,
+            docExpiry: parsedData.expiry || "",
+            gender: parsedData.gender,
+            phone: "",
+            age: parsedData.age || ""
+          });
+        } else {
+          console.warn("MRZ not found in uploaded file OCR");
+          setOcrStatus("fail");
+          alert(t.alertMrzNotFound || "MRZ not detected. Please check or enter details manually.");
+          setOcrReviewData({
+            firstName: "",
+            lastName: "",
+            docNumber: "",
+            nationality: "",
+            dob: "",
+            docExpiry: "",
+            gender: "male",
+            phone: "",
+            age: ""
+          });
+        }
+      } catch (err) {
+        console.error("OCR upload error:", err);
+        setOcrStatus("fail");
+        alert(t.alertOcrError || "OCR Error. Please enter details manually.");
+        setOcrReviewData({
+          firstName: "",
+          lastName: "",
+          docNumber: "",
+          nationality: "",
+          dob: "",
+          docExpiry: "",
+          gender: "male",
+          phone: "",
+          age: ""
+        });
+      } finally {
+        setScannerStep("ocr_review");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileUploadFace = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      
+      setPassenger(prev => ({
+        ...prev,
+        facePhoto: dataUrl
+      }));
+      
+      stopCamera();
+      setIsScannerOpen(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmitRegistration = async (e) => {
     e.preventDefault();
 
-    // Validate: All passengers must have name, nationality, gender, phone, age, docNumber, dob
-    const hasIncomplete = passengers.some(
-      p => !p.firstName?.trim() || !p.lastName?.trim() || !p.nationality?.trim() || !p.gender || !p.phone?.trim() || !p.dob || !p.emergencyName?.trim() || !p.emergencyRelation?.trim() || !p.emergencyPhone?.trim()
-    );
-    if (hasIncomplete) {
+    // Validate: Single passenger details
+    const p = passenger;
+    if (!p.firstName?.trim() || !p.lastName?.trim() || !p.nationality?.trim() || !p.gender || !p.phone?.trim() || !p.dob || !p.emergencyName?.trim() || !p.emergencyRelation?.trim() || !p.emergencyPhone?.trim()) {
       alert(t.alertMissing);
       return;
     }
 
-    const currentDb = getDb();
-    
-    // Save passenger registrations directly inside the booking object
-    // Map full names for backwards compatibility
-    const mappedPassengers = passengers.map(p => ({
-      ...p,
-      name: `${p.firstName} ${p.lastName}`.trim()
-    }));
+    setIsLoading(true);
 
-    currentDb.bookings = currentDb.bookings.map(b =>
-      b.id === booking.id
-        ? { ...b, status: "กรอกข้อมูลเรียบร้อย", passengers: mappedPassengers }
-        : b
-    );
-
-    // Save DB
-    saveDb(currentDb);
-    setDb(currentDb);
     try {
-      localStorage.removeItem(`pos_self_reg_draft_${booking.groupId}`);
-    } catch (e) {}
-    setRegSuccess(true);
+      // Fetch the absolute latest DB state from `/api/db` to avoid overwrite race-conditions
+      const response = await fetch("/api/db?t=" + Date.now(), {
+        headers: {
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache"
+        }
+      });
+      if (!response.ok) throw new Error("Failed to fetch latest DB");
+      const currentDb = await response.json();
+
+      // Find booking in the latest database
+      const cleanCode = booking.groupId.trim().toUpperCase();
+      const latestBookingIndex = (currentDb.bookings || []).findIndex(
+        b => b.groupId === cleanCode && b.status !== "ยกเลิก"
+      );
+
+      if (latestBookingIndex === -1) {
+        alert("Booking not found on server!");
+        setIsLoading(false);
+        return;
+      }
+
+      const latestBooking = currentDb.bookings[latestBookingIndex];
+      const currentPassengers = latestBooking.passengers || [];
+
+      // Check registration quota in real-time
+      if (currentPassengers.length >= latestBooking.paxCount) {
+        alert(lang === "en" 
+          ? "This group registration is already full!" 
+          : lang === "la" 
+          ? "ກຸ່ມນີ້ລົງທະບຽນຄົບຈຳນວນແລ້ວ!" 
+          : "กลุ่มนี้ลงทะเบียนครบจำนวนแล้ว!");
+        setIsLoading(false);
+        setBooking(latestBooking);
+        return;
+      }
+
+      const newPassenger = {
+        ...passenger,
+        name: `${p.firstName} ${p.lastName}`.trim()
+      };
+      
+      const updatedPassengers = [...currentPassengers, newPassenger];
+      const isFull = updatedPassengers.length >= latestBooking.paxCount;
+
+      currentDb.bookings[latestBookingIndex] = {
+        ...latestBooking,
+        status: isFull ? "กรอกข้อมูลเรียบร้อย" : "กำลังกรอกข้อมูล",
+        passengers: updatedPassengers
+      };
+
+      // Save database back to server
+      const saveResponse = await fetch("/api/db", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(currentDb)
+      });
+
+      if (!saveResponse.ok) throw new Error("Failed to save DB");
+
+      // Save locally
+      localStorage.setItem("pos_boat_db", JSON.stringify(currentDb));
+      window.dispatchEvent(new Event("db-update"));
+
+      setBooking(currentDb.bookings[latestBookingIndex]);
+      setRegSuccess(true);
+    } catch (err) {
+      console.error("Error during registration submit:", err);
+      alert("Registration failed! Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Success view
@@ -1012,6 +1197,7 @@ export default function SelfRegisterPortal() {
         <div style={{ display: "flex", gap: "6px" }}>
           <button onClick={() => setLang("la")} style={langBtnStyle(lang === "la")}>🇱🇦 ລາວ</button>
           <button onClick={() => setLang("en")} style={langBtnStyle(lang === "en")}>🇬🇧 EN</button>
+          <button onClick={() => setLang("th")} style={langBtnStyle(lang === "th")}>🇹🇭 ไทย</button>
         </div>
       </div>
 
@@ -1027,7 +1213,7 @@ export default function SelfRegisterPortal() {
               <Ship size={28} color="#0f766e" />
             )}
             <h1 style={{ fontSize: "1.5rem", fontWeight: "800", color: "#0f172a", margin: 0 }}>
-              {lang === "en" ? "TADFANE RAFTING" : "ຕາດຟານ ລ່ອງແກ່ງ"}
+              {lang === "en" ? "TADFANE RAFTING" : lang === "th" ? "ตาดฟาน ล่องแก่ง" : "ຕາດຟານ ລ່ອງແກ່ງ"}
             </h1>
 
           </div>
@@ -1057,7 +1243,8 @@ export default function SelfRegisterPortal() {
               `}</style>
               <div style={{ fontSize: "0.9rem", color: "#475569", fontWeight: "700" }}>
                 {lang === "la" && "ກຳລັງກວດສອບ ແລະ ຊິ້ງຂໍ້ມູນ... / Connecting..."}
-                                {lang === "en" && "Searching and syncing details... / Connecting..."}
+                {lang === "en" && "Searching and syncing details... / Connecting..."}
+                {lang === "th" && "กำลังตรวจสอบและซิงค์ข้อมูล... / Connecting..."}
               </div>
             </div>
           ) : (
@@ -1071,7 +1258,7 @@ export default function SelfRegisterPortal() {
                   <input
                     type="text"
                     className="form-control"
-                    style={{ flex: 1, textTransform: "uppercase", textAlign: "center", fontWeight: "800", height: "42px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none" }}
+                    style={{ flex: 1, textTransform: "uppercase", textAlign: "center", fontWeight: "800", height: "42px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", fontSize: "16px" }}
                     value={groupIdInput}
                     onChange={(e) => setGroupIdInput(e.target.value)}
                     placeholder="e.g. REG-3244"
@@ -1096,13 +1283,73 @@ export default function SelfRegisterPortal() {
         ) : (
           /* Booking Found! Proceed to Registration Flow */
           <div>
-            {/* Group details header */}
-            <div style={{ background: "#f1f5f9", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "1.25rem", fontSize: "0.85rem", color: "#475569" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+            {/* Group details header with registration progress */}
+            <div style={{ background: "#f1f5f9", padding: "12px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", marginBottom: "1.25rem", fontSize: "0.85rem", color: "#475569" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                 <span>{t.groupCode} <strong>{activeGroupId.toUpperCase()}</strong></span>
                 <span>{t.paxCount} <strong>{booking.paxCount} Pax</strong></span>
               </div>
+              <div style={{ borderTop: "1px solid #cbd5e1", paddingTop: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: "bold" }}>
+                <span style={{ color: "#0f766e" }}>
+                  {lang === "en" && "Registration Progress:"}
+                  {lang === "la" && "ຄວາມຄືບໜ້າການລົງທະບຽນ:"}
+                  {lang === "th" && "ความคืบหน้าการลงทะเบียน:"}
+                </span>
+                <span style={{ color: "#0f766e" }}>
+                  {(booking.passengers || []).length} / {booking.paxCount} {lang === "en" ? "Registered" : lang === "la" ? "ຄົນ" : "คน"}
+                </span>
+              </div>
             </div>
+
+            {isTripDeparted ? (
+              <div style={{
+                padding: "2.5rem 1.5rem",
+                textAlign: "center",
+                background: "#fef2f2",
+                borderRadius: "14px",
+                border: "2px solid #fee2e2",
+                color: "#be123c",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "12px",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)"
+              }}>
+                <AlertTriangle size={48} color="#be123c" />
+                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: "800" }}>
+                  {lang === "en" ? "Registration Locked" : lang === "la" ? "ປິດການລົງທະບຽນ" : "ปิดการลงทะเบียน"}
+                </h3>
+                <p style={{ margin: 0, fontSize: "0.9rem", lineHeight: "1.5", fontWeight: "600" }}>
+                  {lang === "en" 
+                    ? "This trip has already departed or completed. Customer self-registration is closed." 
+                    : lang === "la" 
+                    ? "ທ່ຽວນີ້ໄດ້ອອກເດີນທາງ ຫຼື ສຳເລັດແລ້ວ. ປິດການລົງທະບຽນລູກຄ້າໃໝ່." 
+                    : "เที่ยวนี้ได้ออกเดินทางหรือเสร็จสิ้นแล้ว ระบบปิดการลงทะเบียนลูกค้าใหม่"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasAcceptedWaiver(false);
+                    setBooking(null);
+                    setActiveGroupId("");
+                    setGroupIdInput("");
+                  }}
+                  style={{
+                    marginTop: "12px",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    background: "#be123c",
+                    border: "none",
+                    color: "#ffffff",
+                    fontWeight: "bold",
+                    cursor: "pointer"
+                  }}
+                >
+                  {lang === "en" ? "Back" : lang === "la" ? "ກັບຄືນ" : "ย้อนกลับ"}
+                </button>
+              </div>
+            ) : (
+              <>
 
             {/* Step 3: Waiver Agreement Conditions */}
             <div style={{ border: "1px solid #cbd5e1", borderRadius: "14px", padding: "16px", background: "#ffffff", marginBottom: "1.25rem", boxShadow: "0 2px 5px rgba(0,0,0,0.02)" }}>
@@ -1142,6 +1389,7 @@ export default function SelfRegisterPortal() {
                 <input
                   type="checkbox"
                   id="accept-terms-checkbox"
+                  disabled={(booking.passengers || []).length >= booking.paxCount}
                   checked={hasAcceptedWaiver}
                   onChange={(e) => setHasAcceptedWaiver(e.target.checked)}
                   style={{ width: "20px", height: "20px", accentColor: "#0f766e", cursor: "pointer" }}
@@ -1150,26 +1398,55 @@ export default function SelfRegisterPortal() {
               </label>
             </div>
 
-            {/* Step 4: Passenger Dynamic Form Input List (Visible only when accepted terms) */}
+            {/* Step 4: Single Passenger Form Input (Visible only when accepted terms) */}
             {!hasAcceptedWaiver ? (
               <div style={{ padding: "2rem 1rem", textAlign: "center", background: "#f8fafc", borderRadius: "12px", border: "2px dashed #cbd5e1", color: "#64748b", fontSize: "0.85rem", fontWeight: "600" }}>
                 🔒 {lang === "la" && "ກະລຸນາຍອມຮັບເງື່ອນໄຂການໃຊ້ບໍລິການເພື່ອປົດລັອກການກອກຂໍ້ມູນ"}
-                                {lang === "en" && "Please accept the safety terms above to unlock details form."}
+                {lang === "en" && "Please accept the safety terms above to unlock details form."}
+                {lang === "th" && "กรุณายอมรับเงื่อนไขการใช้บริการเพื่อปลดล็อกการกรอกข้อมูล"}
               </div>
-            ) : (
-              <form onSubmit={handleSubmitRegistration} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem", maxHeight: "420px", overflowY: "auto", paddingRight: "4px" }}>
-                  {passengers.map((p, idx) => (
+            ) : (() => {
+              const isGroupFull = (booking.passengers || []).length >= booking.paxCount;
+              return (
+                <form 
+                  onSubmit={handleSubmitRegistration} 
+                  style={{ 
+                    display: "flex", 
+                    flexDirection: "column", 
+                    gap: "1.25rem", 
+                    touchAction: "manipulation", 
+                    overflowX: "hidden" 
+                  }}
+                >
+                  {isGroupFull && (
+                    <div style={{
+                      padding: "1rem",
+                      background: "#fef2f2",
+                      border: "1px solid #fee2e2",
+                      borderRadius: "8px",
+                      color: "#be123c",
+                      fontWeight: "bold",
+                      fontSize: "0.85rem",
+                      textAlign: "center"
+                    }}>
+                      {lang === "en" 
+                        ? `⚠️ This group registration is already full (${booking.paxCount} pax).`
+                        : lang === "la" 
+                        ? `⚠️ ກຸ່ມນີ້ໄດ້ລົງທະບຽນຄົບຈຳນວນແລ້ວ (${booking.paxCount} ຄົນ).`
+                        : `⚠️ กลุ่มนี้ได้ลงทะเบียนครบจำนวนแล้ว (${booking.paxCount} คน)`}
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", paddingBottom: "1rem" }}>
                     <div
-                      key={idx}
                       style={{
                         border: "1px solid #cbd5e1",
                         borderRadius: "12px",
-                        padding: "14px",
+                        padding: "16px",
                         background: "#ffffff",
                         display: "flex",
                         flexDirection: "column",
-                        gap: "10px",
+                        gap: "12px",
                         boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
                       }}
                     >
@@ -1177,33 +1454,35 @@ export default function SelfRegisterPortal() {
                       <div style={{ display: "flex", alignItems: "center", gap: "10px", borderBottom: "1px dashed #cbd5e1", paddingBottom: "10px" }}>
                         <div style={{ position: "relative" }}>
                           <img 
-                            src={p.facePhoto || MOCK_FACE_SVG} 
+                            src={passenger.facePhoto || MOCK_FACE_SVG} 
                             alt="Face" 
                             style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover", border: "2px solid #0f766e", background: "#f1f5f9" }} 
                           />
                         </div>
                         <div style={{ flex: 1 }}>
                           <span style={{ fontSize: "0.85rem", fontWeight: "800", color: "#0f766e" }}>
-                            👤 {t.passengerTitle} {idx + 1}
+                            👤 {lang === "en" ? "Passenger Details" : lang === "la" ? "ຂໍ້ມູນຜູ້ໂດຍສານ" : "ข้อมูลผู้โดยสาร"}
                           </span>
                           <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
-                            {p.firstName ? `${p.firstName} ${p.lastName}` : t.unscanned}
+                            {passenger.firstName ? `${passenger.firstName} ${passenger.lastName}` : t.unscanned}
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: "4px" }}>
                           <button 
                             type="button" 
+                            disabled={isGroupFull}
                             className="btn btn-secondary" 
                             style={{ padding: "4px 8px", fontSize: "0.7rem", display: "flex", alignItems: "center", gap: "4px", height: "30px", border: "1px solid #cbd5e1", borderRadius: "6px", cursor: "pointer", background: "#f8fafc" }}
-                            onClick={() => openScanner(idx, "passport")}
+                            onClick={() => openScanner(0, "passport")}
                           >
                             📷 Passport
                           </button>
                           <button 
                             type="button" 
+                            disabled={isGroupFull}
                             className="btn btn-secondary" 
                             style={{ padding: "4px 8px", fontSize: "0.7rem", display: "flex", alignItems: "center", gap: "4px", height: "30px", border: "1px solid #cbd5e1", borderRadius: "6px", cursor: "pointer", background: "#f8fafc" }}
-                            onClick={() => openScanner(idx, "idcard")}
+                            onClick={() => openScanner(0, "idcard")}
                           >
                             📷 {t.idCard}
                           </button>
@@ -1219,11 +1498,12 @@ export default function SelfRegisterPortal() {
                           <input
                             type="text"
                             required
+                            disabled={isGroupFull}
                             className="form-control"
-                            style={{ height: "36px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "0.85rem", outline: "none" }}
+                            style={{ height: "42px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "16px", outline: "none" }}
                             placeholder={t.pFirstNamePlh}
-                            value={p.firstName || ""}
-                            onChange={(e) => handlePassengerFieldChange(idx, "firstName", e.target.value)}
+                            value={passenger.firstName || ""}
+                            onChange={(e) => handlePassengerFieldChange("firstName", e.target.value)}
                           />
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -1233,11 +1513,12 @@ export default function SelfRegisterPortal() {
                           <input
                             type="text"
                             required
+                            disabled={isGroupFull}
                             className="form-control"
-                            style={{ height: "36px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "0.85rem", outline: "none" }}
+                            style={{ height: "42px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "16px", outline: "none" }}
                             placeholder={t.pLastNamePlh}
-                            value={p.lastName || ""}
-                            onChange={(e) => handlePassengerFieldChange(idx, "lastName", e.target.value)}
+                            value={passenger.lastName || ""}
+                            onChange={(e) => handlePassengerFieldChange("lastName", e.target.value)}
                           />
                         </div>
                       </div>
@@ -1250,11 +1531,12 @@ export default function SelfRegisterPortal() {
                         <input
                           type="text"
                           required
+                          disabled={isGroupFull}
                           className="form-control"
-                          style={{ height: "36px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "0.85rem", outline: "none" }}
+                          style={{ height: "42px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "16px", outline: "none" }}
                           placeholder={t.pNationPlh}
-                          value={p.nationality || ""}
-                          onChange={(e) => handlePassengerFieldChange(idx, "nationality", e.target.value)}
+                          value={passenger.nationality || ""}
+                          onChange={(e) => handlePassengerFieldChange("nationality", e.target.value)}
                         />
                       </div>
 
@@ -1267,19 +1549,21 @@ export default function SelfRegisterPortal() {
                           <input
                             type="text"
                             required
+                            disabled={isGroupFull}
                             className="form-control"
-                            style={{ height: "36px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "0.85rem", outline: "none" }}
+                            style={{ height: "42px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "16px", outline: "none" }}
                             placeholder="DD/MM/YYYY"
-                            value={p.dobInput || getDobInputVal(p.dob)}
-                            onChange={(e) => handleDobInputChange(idx, e.target.value)}
+                            value={passenger.dobInput || getDobInputVal(passenger.dob)}
+                            onChange={(e) => handleDobInputChange(e.target.value)}
                           />
                           
                           {/* Dropdowns selector helper */}
                           <div style={{ display: "flex", gap: "4px", marginTop: "4px" }}>
                             <select
-                              style={{ flex: 1, height: "26px", fontSize: "0.7rem", borderRadius: "4px", border: "1px solid #cbd5e1", padding: 0 }}
-                              value={p.dob ? p.dob.split("-")[2] : ""}
-                              onChange={(e) => handleDobSelectChange(idx, "day", e.target.value)}
+                              disabled={isGroupFull}
+                              style={{ flex: 1, height: "30px", fontSize: "16px", borderRadius: "4px", border: "1px solid #cbd5e1", padding: 0 }}
+                              value={passenger.dob ? passenger.dob.split("-")[2] : ""}
+                              onChange={(e) => handleDobSelectChange("day", e.target.value)}
                             >
                               <option value="">{t.dayPlh}</option>
                               {Array.from({ length: 31 }, (_, i) => {
@@ -1289,9 +1573,10 @@ export default function SelfRegisterPortal() {
                             </select>
                             
                             <select
-                              style={{ flex: 1.2, height: "26px", fontSize: "0.7rem", borderRadius: "4px", border: "1px solid #cbd5e1", padding: 0 }}
-                              value={p.dob ? p.dob.split("-")[1] : ""}
-                              onChange={(e) => handleDobSelectChange(idx, "month", e.target.value)}
+                              disabled={isGroupFull}
+                              style={{ flex: 1.2, height: "30px", fontSize: "16px", borderRadius: "4px", border: "1px solid #cbd5e1", padding: 0 }}
+                              value={passenger.dob ? passenger.dob.split("-")[1] : ""}
+                              onChange={(e) => handleDobSelectChange("month", e.target.value)}
                             >
                               <option value="">{t.monthPlh}</option>
                               {Array.from({ length: 12 }, (_, i) => {
@@ -1301,9 +1586,10 @@ export default function SelfRegisterPortal() {
                             </select>
                             
                             <select
-                              style={{ flex: 1.5, height: "26px", fontSize: "0.7rem", borderRadius: "4px", border: "1px solid #cbd5e1", padding: 0 }}
-                              value={p.dob ? p.dob.split("-")[0] : ""}
-                              onChange={(e) => handleDobSelectChange(idx, "year", e.target.value)}
+                              disabled={isGroupFull}
+                              style={{ flex: 1.5, height: "30px", fontSize: "16px", borderRadius: "4px", border: "1px solid #cbd5e1", padding: 0 }}
+                              value={passenger.dob ? passenger.dob.split("-")[0] : ""}
+                              onChange={(e) => handleDobSelectChange("year", e.target.value)}
                             >
                               <option value="">{t.yearPlh}</option>
                               {Array.from({ length: 100 }, (_, i) => {
@@ -1319,9 +1605,10 @@ export default function SelfRegisterPortal() {
                           </label>
                           <select
                             required
-                            style={{ height: "36px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 6px", fontSize: "0.85rem", outline: "none", background: "#ffffff" }}
-                            value={p.gender || ""}
-                            onChange={(e) => handlePassengerFieldChange(idx, "gender", e.target.value)}
+                            disabled={isGroupFull}
+                            style={{ height: "42px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 6px", fontSize: "16px", outline: "none", background: "#ffffff" }}
+                            value={passenger.gender || ""}
+                            onChange={(e) => handlePassengerFieldChange("gender", e.target.value)}
                           >
                             <option value="">-- {t.pGenderPlh} --</option>
                             <option value="male">{t.gMale}</option>
@@ -1340,11 +1627,12 @@ export default function SelfRegisterPortal() {
                           <input
                             type="text"
                             required
+                            disabled={isGroupFull}
                             className="form-control"
-                            style={{ height: "36px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "0.85rem", outline: "none" }}
+                            style={{ height: "42px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "16px", outline: "none" }}
                             placeholder={t.pPhonePlh}
-                            value={p.phone || ""}
-                            onChange={(e) => handlePassengerFieldChange(idx, "phone", e.target.value)}
+                            value={passenger.phone || ""}
+                            onChange={(e) => handlePassengerFieldChange("phone", e.target.value)}
                           />
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -1354,13 +1642,14 @@ export default function SelfRegisterPortal() {
                           <input
                             type="number"
                             required
+                            disabled={isGroupFull}
                             min="1"
                             max="120"
                             className="form-control"
-                            style={{ height: "36px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "0.85rem", outline: "none" }}
+                            style={{ height: "42px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "16px", outline: "none" }}
                             placeholder="Age"
-                            value={p.age || ""}
-                            onChange={(e) => handlePassengerFieldChange(idx, "age", e.target.value)}
+                            value={passenger.age || ""}
+                            onChange={(e) => handlePassengerFieldChange("age", e.target.value)}
                           />
                         </div>
                       </div>
@@ -1374,11 +1663,12 @@ export default function SelfRegisterPortal() {
                           <input
                             type="text"
                             required
+                            disabled={isGroupFull}
                             className="form-control"
-                            style={{ height: "36px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "0.85rem", outline: "none" }}
+                            style={{ height: "42px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "16px", outline: "none" }}
                             placeholder={t.pEmergencyNamePlh}
-                            value={p.emergencyName || ""}
-                            onChange={(e) => handlePassengerFieldChange(idx, "emergencyName", e.target.value)}
+                            value={passenger.emergencyName || ""}
+                            onChange={(e) => handlePassengerFieldChange("emergencyName", e.target.value)}
                           />
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -1388,11 +1678,12 @@ export default function SelfRegisterPortal() {
                           <input
                             type="text"
                             required
+                            disabled={isGroupFull}
                             className="form-control"
-                            style={{ height: "36px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "0.85rem", outline: "none" }}
+                            style={{ height: "42px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "16px", outline: "none" }}
                             placeholder={t.pEmergencyRelationPlh}
-                            value={p.emergencyRelation || ""}
-                            onChange={(e) => handlePassengerFieldChange(idx, "emergencyRelation", e.target.value)}
+                            value={passenger.emergencyRelation || ""}
+                            onChange={(e) => handlePassengerFieldChange("emergencyRelation", e.target.value)}
                           />
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -1402,28 +1693,32 @@ export default function SelfRegisterPortal() {
                           <input
                             type="text"
                             required
+                            disabled={isGroupFull}
                             className="form-control"
-                            style={{ height: "36px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "0.85rem", outline: "none" }}
+                            style={{ height: "42px", borderRadius: "6px", border: "1px solid #cbd5e1", padding: "0 10px", fontSize: "16px", outline: "none" }}
                             placeholder={t.pEmergencyPhonePlh}
-                            value={p.emergencyPhone || ""}
-                            onChange={(e) => handlePassengerFieldChange(idx, "emergencyPhone", e.target.value)}
+                            value={passenger.emergencyPhone || ""}
+                            onChange={(e) => handlePassengerFieldChange("emergencyPhone", e.target.value)}
                           />
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
 
-                {/* Submit button */}
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "#0f766e", border: "none", color: "#fff", fontWeight: "bold", fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", marginTop: "6px" }}
-                >
-                  <CheckCircle2 size={16} />
-                  <span>{t.submit}</span>
-                </button>
-              </form>
+                  {/* Submit button */}
+                  <button
+                    type="submit"
+                    disabled={isGroupFull}
+                    className="btn btn-primary"
+                    style={{ width: "100%", padding: "12px", borderRadius: "8px", background: "#0f766e", border: "none", color: "#fff", fontWeight: "bold", fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", marginTop: "6px" }}
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>{t.submit}</span>
+                  </button>
+                </form>
+              );
+            })()}
+            </>
             )}
           </div>
         )}
@@ -1801,14 +2096,45 @@ export default function SelfRegisterPortal() {
               )}
 
               {scannerStep === "doc" && (
-                <button 
-                  type="button" 
-                  className="btn btn-primary" 
-                  style={{ flex: 1.5, padding: "10px", borderRadius: "8px", background: "#0f766e", border: "none", color: "#fff", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                  onClick={handleCaptureDocPhoto}
-                >
-                  {t.captureDocBtn}
-                </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1.5 }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "#0f766e", border: "none", color: "#fff", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                    onClick={handleCaptureDocPhoto}
+                    disabled={!cameraStream}
+                  >
+                    {t.captureDocBtn}
+                  </button>
+                  <label 
+                    className="btn btn-secondary" 
+                    style={{ 
+                      width: "100%", 
+                      padding: "8px", 
+                      borderRadius: "8px", 
+                      border: "1px dashed #0f766e", 
+                      background: "rgba(15, 118, 110, 0.05)", 
+                      color: "#0f766e", 
+                      fontWeight: "bold", 
+                      cursor: "pointer", 
+                      textAlign: "center", 
+                      fontSize: "0.85rem",
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      gap: "4px",
+                      boxSizing: "border-box"
+                    }}
+                  >
+                    📂 {lang === "en" ? "Upload/Take Photo" : lang === "la" ? "ອັບໂຫລດ/ຖ່າຍຮູບ" : "อัปโหลด/ถ่ายรูป"}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileUploadDoc} 
+                      style={{ display: "none" }} 
+                    />
+                  </label>
+                </div>
               )}
 
               {scannerStep === "ocr_processing" && (
@@ -1829,14 +2155,45 @@ export default function SelfRegisterPortal() {
               )}
 
               {scannerStep === "face" && (
-                <button 
-                  type="button" 
-                  className="btn btn-primary" 
-                  style={{ flex: 1.5, padding: "14px", borderRadius: "10px", background: "#0ea5e9", border: "none", color: "#fff", fontWeight: "bold", fontSize: "1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                  onClick={handleCaptureFace}
-                >
-                  {t.captureFaceBtn}
-                </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1.5 }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    style={{ width: "100%", padding: "14px", borderRadius: "10px", background: "#0ea5e9", border: "none", color: "#fff", fontWeight: "bold", fontSize: "1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                    onClick={handleCaptureFace}
+                    disabled={!cameraStream}
+                  >
+                    {t.captureFaceBtn}
+                  </button>
+                  <label 
+                    className="btn btn-secondary" 
+                    style={{ 
+                      width: "100%", 
+                      padding: "8px", 
+                      borderRadius: "8px", 
+                      border: "1px dashed #0ea5e9", 
+                      background: "rgba(14, 165, 233, 0.05)", 
+                      color: "#0ea5e9", 
+                      fontWeight: "bold", 
+                      cursor: "pointer", 
+                      textAlign: "center", 
+                      fontSize: "0.85rem",
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      gap: "4px",
+                      boxSizing: "border-box"
+                    }}
+                  >
+                    📂 {lang === "en" ? "Upload/Take Selfie" : lang === "la" ? "ອັບໂຫລດ/ຖ່າຍຮູບຕົນເອງ" : "อัปโหลด/ถ่ายเซลฟี่"}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileUploadFace} 
+                      style={{ display: "none" }} 
+                    />
+                  </label>
+                </div>
               )}
             </div>
 

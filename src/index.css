@@ -771,7 +771,8 @@ tr:hover td {
   .reports-print,
   .dashboard-print,
   .qr-sign-print,
-  .qr-slip-print {
+  .qr-slip-print,
+  .monthly-summary-print {
     display: none !important;
   }
 
@@ -812,6 +813,10 @@ tr:hover td {
   }
 
   body.print-dashboard-mode .dashboard-print {
+    display: block !important;
+  }
+
+  body.print-monthly-summary-mode .monthly-summary-print {
     display: block !important;
   }
 
@@ -1651,5 +1656,40 @@ tr:hover td {
 .qr-slip-print .step-row strong {
   font-weight: bold !important;
 }
+
+/* Responsive visibility utilities */
+@media (max-width: 768px) {
+  .desktop-only-view {
+    display: none !important;
+  }
+}
+@media (min-width: 769px) {
+  .mobile-only-view {
+    display: none !important;
+  }
+}
+
+/* Disbursements Breakdown Details Responsive Grid */
+.disbursements-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 2rem;
+}
+
+.disbursements-grid > div.full-width-grid-col {
+  grid-column: span 2;
+}
+
+@media (max-width: 1350px) {
+  .disbursements-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .disbursements-grid > div.full-width-grid-col {
+    grid-column: span 1;
+  }
+}
+
 
 

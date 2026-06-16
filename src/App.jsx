@@ -15,6 +15,7 @@ import Reports from "./components/Reports";
 import LiveStatusBoard from "./components/LiveStatusBoard";
 import { migrateDb } from "./db/mockDb";
 import { useLanguage } from "./utils/LanguageContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 
 export default function App() {
@@ -138,6 +139,44 @@ export default function App() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  // Periodically fetch database from server to keep POS cashier in sync with customer registrations
+  useEffect(() => {
+    let active = true;
+    const pollServerDb = async () => {
+      try {
+        const response = await fetch("/api/db?t=" + Date.now(), {
+          headers: {
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
+          }
+        });
+        if (response.ok && active) {
+          const data = await response.json();
+          if (data && data.bookings) {
+            const currentLocalRaw = localStorage.getItem("pos_boat_db");
+            if (currentLocalRaw !== JSON.stringify(data)) {
+              localStorage.setItem("pos_boat_db", JSON.stringify(data));
+              window.dispatchEvent(new Event("db-update"));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Background server DB sync failed:", err);
+      }
+    };
+
+    // Initial sync
+    pollServerDb();
+
+    // Poll every 3000ms
+    const interval = setInterval(pollServerDb, 3000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   
   // Route helper to jump to details
   const handleSelectTrip = (tripId) => {
@@ -192,12 +231,20 @@ export default function App() {
 
 
   if (isSelfRegister) {
-    return <SelfRegisterPortal initialPartnerId={partnerIdParam} />;
+    return (
+      <ErrorBoundary>
+        <SelfRegisterPortal initialPartnerId={partnerIdParam} />
+      </ErrorBoundary>
+    );
   }
 
   // If not logged in, render the login screen
   if (!currentUser) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <ErrorBoundary>
+        <LoginScreen onLoginSuccess={handleLoginSuccess} />
+      </ErrorBoundary>
+    );
   }
 
   // Render active module
@@ -259,79 +306,81 @@ export default function App() {
   };
 
   return (
-    <div className="app-container">
-      {/* Navigation Sidebar */}
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        currentUser={currentUser} 
-        onLogout={handleLogout} 
-      />
+    <ErrorBoundary>
+      <div className="app-container">
+        {/* Navigation Sidebar */}
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          currentUser={currentUser} 
+          onLogout={handleLogout} 
+        />
 
-      {/* Main Viewport */}
-      <main className="main-content">
-        {renderTabContent()}
-      </main>
+        {/* Main Viewport */}
+        <main className="main-content">
+          {renderTabContent()}
+        </main>
 
-      {/* Inactivity Warning Banner Overlay */}
-      {showTimeoutWarning && (
-        <div style={{
-          position: "fixed",
-          bottom: "24px",
-          right: "24px",
-          background: "#ffffff",
-          border: "2px solid #e11d48",
-          borderRadius: "16px",
-          padding: "20px 24px",
-          boxShadow: "0 20px 40px -10px rgba(15, 23, 42, 0.3)",
-          zIndex: 10000,
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-          maxWidth: "360px",
-          color: "#0f172a",
-          animation: "scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: "700", fontSize: "1.1rem", color: "#e11d48" }}>
-            <span style={{ fontSize: "1.35rem" }}>⏳</span>
-            <span>{t("inactivity_warning_title", "ແຈ້ງເຕືອນໝົດເວລາໃຊ້ງານ")}</span>
+        {/* Inactivity Warning Banner Overlay */}
+        {showTimeoutWarning && (
+          <div style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            background: "#ffffff",
+            border: "2px solid #e11d48",
+            borderRadius: "16px",
+            padding: "20px 24px",
+            boxShadow: "0 20px 40px -10px rgba(15, 23, 42, 0.3)",
+            zIndex: 10000,
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+            maxWidth: "360px",
+            color: "#0f172a",
+            animation: "scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: "700", fontSize: "1.1rem", color: "#e11d48" }}>
+              <span style={{ fontSize: "1.35rem" }}>⏳</span>
+              <span>{t("inactivity_warning_title", "ແຈ້ງເຕືອນໝົດເວລາໃຊ້ງານ")}</span>
+            </div>
+            <p style={{ margin: 0, fontSize: "0.95rem", lineHeight: "1.5", color: "#475569" }}>
+              {lang === "en" 
+                ? "You have been inactive for 29 minutes. You will be logged out in " 
+                : "ທ່ານບໍ່ມີການເຄື່ອນໄຫວເປັນເວລາ 29 ນາທີ. ລະບົບຈະອອກຈາກລະບົບໃນອີກ "}
+              <strong style={{ color: "#e11d48", fontSize: "1.1rem" }}>{warningTimeLeft}</strong>
+              {lang === "en" ? " seconds." : " ວິນາທີ."}
+            </p>
+            <button 
+              onClick={() => {
+                // Trigger click event on window to reset the timer
+                window.dispatchEvent(new Event("click"));
+              }}
+              style={{
+                background: "linear-gradient(135deg, #0f766e 0%, #0d9488 100%)",
+                color: "#ffffff",
+                border: "none",
+                padding: "10px 16px",
+                borderRadius: "10px",
+                cursor: "pointer",
+                fontWeight: "700",
+                fontSize: "0.95rem",
+                boxShadow: "0 4px 12px rgba(15, 118, 110, 0.2)",
+                transition: "transform 0.15s ease, box-shadow 0.15s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow = "0 6px 16px rgba(15, 118, 110, 0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(15, 118, 110, 0.2)";
+              }}>
+              {lang === "en" ? "Stay Logged In" : "ສືບຕໍ່ໃຊ້ງານ"}
+            </button>
           </div>
-          <p style={{ margin: 0, fontSize: "0.95rem", lineHeight: "1.5", color: "#475569" }}>
-            {lang === "en" 
-              ? "You have been inactive for 29 minutes. You will be logged out in " 
-              : "ທ່ານບໍ່ມີການເຄື່ອນໄຫວເປັນເວລາ 29 ນາທີ. ລະບົບຈະອອກຈາກລະບົບໃນອີກ "}
-            <strong style={{ color: "#e11d48", fontSize: "1.1rem" }}>{warningTimeLeft}</strong>
-            {lang === "en" ? " seconds." : " ວິນາທີ."}
-          </p>
-          <button 
-            onClick={() => {
-              // Trigger click event on window to reset the timer
-              window.dispatchEvent(new Event("click"));
-            }}
-            style={{
-              background: "linear-gradient(135deg, #0f766e 0%, #0d9488 100%)",
-              color: "#ffffff",
-              border: "none",
-              padding: "10px 16px",
-              borderRadius: "10px",
-              cursor: "pointer",
-              fontWeight: "700",
-              fontSize: "0.95rem",
-              boxShadow: "0 4px 12px rgba(15, 118, 110, 0.2)",
-              transition: "transform 0.15s ease, box-shadow 0.15s ease"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-1px)";
-              e.currentTarget.style.boxShadow = "0 6px 16px rgba(15, 118, 110, 0.3)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "none";
-              e.currentTarget.style.boxShadow = "0 4px 12px rgba(15, 118, 110, 0.2)";
-            }}>
-            {lang === "en" ? "Stay Logged In" : "ສືບຕໍ່ໃຊ້ງານ"}
-          </button>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }

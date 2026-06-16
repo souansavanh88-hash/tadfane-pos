@@ -57,6 +57,15 @@ export default function SettingsPanel({ currentUser }) {
   const [customHostUrl, setCustomHostUrl] = useState(localStorage.getItem("pos_custom_host_url") || "");
   const [logo, setLogo] = useState(null);
 
+  // Shop / Receipt info
+  const [shopName, setShopName] = useState("");
+  const [shopNameLao, setShopNameLao] = useState("");
+  const [shopAddress, setShopAddress] = useState("");
+  const [shopAddressLao, setShopAddressLao] = useState("");
+  const [shopTel, setShopTel] = useState("");
+  const [shopTaxId, setShopTaxId] = useState("");
+  const [shopExtra, setShopExtra] = useState("");
+
   const [users, setUsers] = useState([]);
   const [services, setServices] = useState([]);
   
@@ -87,6 +96,13 @@ export default function SettingsPanel({ currentUser }) {
     setRateUSD(data.settings.rateUSD);
     setExpenseApprovalLimit(data.settings.expenseApprovalLimit || 500000);
     setLogo(data.settings.logo || null);
+    setShopName(data.settings.shopName || "");
+    setShopNameLao(data.settings.shopNameLao || "");
+    setShopAddress(data.settings.shopAddress || "");
+    setShopAddressLao(data.settings.shopAddressLao || "");
+    setShopTel(data.settings.shopTel || "");
+    setShopTaxId(data.settings.shopTaxId || "");
+    setShopExtra(data.settings.shopExtra || "");
     setUsers(data.users || []);
     setServices(data.services || []);
   }, []);
@@ -305,7 +321,14 @@ export default function SettingsPanel({ currentUser }) {
       basePriceLAK: parseInt(basePrice),
       rateTHB: parseFloat(rateTHB),
       rateUSD: parseFloat(rateUSD),
-      expenseApprovalLimit: parseInt(expenseApprovalLimit) || 500000
+      expenseApprovalLimit: parseInt(expenseApprovalLimit) || 500000,
+      shopName: shopName.trim() || "TADFANE RAFTING",
+      shopNameLao: shopNameLao.trim(),
+      shopAddress: shopAddress.trim(),
+      shopAddressLao: shopAddressLao.trim(),
+      shopTel: shopTel.trim(),
+      shopTaxId: shopTaxId.trim(),
+      shopExtra: shopExtra.trim()
     };
 
     saveDb(updatedDb);
@@ -485,6 +508,124 @@ export default function SettingsPanel({ currentUser }) {
           </form>
         </div>
 
+        {/* Receipt / Bill Settings */}
+        <div className="card" style={{ padding: "1.5rem" }}>
+          <h2 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "5px" }}>
+            🧾 {t("receipt_settings_title", "ຕັ້ງຄ່າໃບບິນ / Receipt & Bill Settings")}
+          </h2>
+          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>
+            {t("receipt_settings_desc", "ຂໍ້ມູນເຫຼົ່ານີ້ຈະແສດງໃນໃບບິນ/ໃບເສັດທຸກໃບ / This info appears on every bill & receipt")}
+          </p>
+
+          <form onSubmit={handleSaveSettings}>
+            <div className="form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="form-group">
+                <label>{t("shop_name_en", "ຊື່ຮ້ານ (EN) / Shop Name (English)")} *</label>
+                <input 
+                  type="text"
+                  className="form-control"
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  placeholder="TADFANE RAFTING"
+                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                />
+              </div>
+              <div className="form-group">
+                <label>{t("shop_name_lao", "ຊື່ຮ້ານ (ລາວ) / Shop Name (Lao)")}</label>
+                <input 
+                  type="text"
+                  className="form-control"
+                  value={shopNameLao}
+                  onChange={(e) => setShopNameLao(e.target.value)}
+                  placeholder="ຕາດຟານ ລ່ອງແກ່ງ"
+                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                />
+              </div>
+            </div>
+
+            <div className="form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1rem" }}>
+              <div className="form-group">
+                <label>{t("shop_address_en", "ທີ່ຢູ່ (EN) / Address (English)")}</label>
+                <input 
+                  type="text"
+                  className="form-control"
+                  value={shopAddress}
+                  onChange={(e) => setShopAddress(e.target.value)}
+                  placeholder="Vang Vieng, Laos"
+                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                />
+              </div>
+              <div className="form-group">
+                <label>{t("shop_address_lao", "ທີ່ຢູ່ (ລາວ) / Address (Lao)")}</label>
+                <input 
+                  type="text"
+                  className="form-control"
+                  value={shopAddressLao}
+                  onChange={(e) => setShopAddressLao(e.target.value)}
+                  placeholder="ວັງວຽງ, ປະເທດລາວ"
+                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                />
+              </div>
+            </div>
+
+            <div className="form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1rem" }}>
+              <div className="form-group">
+                <label>{t("shop_tel", "ເບີໂທລະສັບ / Phone Number")}</label>
+                <input 
+                  type="text"
+                  className="form-control"
+                  value={shopTel}
+                  onChange={(e) => setShopTel(e.target.value)}
+                  placeholder="+856 20 555-9000"
+                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                />
+              </div>
+              <div className="form-group">
+                <label>{t("shop_tax_id", "ເລກປະຈຳຕົວຜູ້ເສຍອາກອນ / Tax ID")}</label>
+                <input 
+                  type="text"
+                  className="form-control"
+                  value={shopTaxId}
+                  onChange={(e) => setShopTaxId(e.target.value)}
+                  placeholder="(Optional)"
+                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                />
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: "1rem" }}>
+              <label>{t("shop_extra_info", "ຂໍ້ມູນເພີ່ມເຕີມ / Extra Info (shown on receipt)")}</label>
+              <input 
+                type="text"
+                className="form-control"
+                value={shopExtra}
+                onChange={(e) => setShopExtra(e.target.value)}
+                placeholder={t("shop_extra_placeholder", "ເຊັ່ນ: ເປີດ 8:00-17:00 / e.g. Open 8AM-5PM")}
+                disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+              />
+            </div>
+
+            {/* Receipt Preview */}
+            <div style={{ marginTop: "1.5rem", padding: "16px", background: "#fff", border: "2px dashed #cbd5e1", borderRadius: "10px", textAlign: "center", fontFamily: "monospace", color: "#000" }}>
+              <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginBottom: "8px", fontFamily: "inherit" }}>👁️ {t("receipt_preview", "ຕົວຢ່າງໃບບິນ / Receipt Preview")}</div>
+              {logo && <img src={logo} alt="Logo" style={{ maxHeight: "50px", maxWidth: "140px", objectFit: "contain", marginBottom: "6px" }} />}
+              <div style={{ fontWeight: "900", fontSize: "1.1rem" }}>{shopName || "SHOP NAME"}</div>
+              {shopNameLao && <div style={{ fontWeight: "900", fontSize: "0.95rem" }}>{shopNameLao}</div>}
+              {(shopAddress || shopAddressLao) && <div style={{ fontSize: "0.75rem", marginTop: "2px" }}>{lang === "en" ? shopAddress : shopAddressLao || shopAddress}</div>}
+              {shopTel && <div style={{ fontSize: "0.75rem" }}>Tel: {shopTel}</div>}
+              {shopTaxId && <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Tax ID: {shopTaxId}</div>}
+              {shopExtra && <div style={{ fontSize: "0.7rem", color: "#64748b" }}>{shopExtra}</div>}
+              <div style={{ borderTop: "2px dashed #000", marginTop: "8px", paddingTop: "4px", fontSize: "0.7rem" }}>- - - - - - -</div>
+            </div>
+
+            {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
+              <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: "1rem" }}>
+                <Save size={16} /> {t("save_receipt_settings", "ບັນທຶກຂໍ້ມູນໃບບິນ / Save Receipt Settings")}
+              </button>
+            )}
+          </form>
+        </div>
+
         {/* Database Roster Info & System Reset */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           
@@ -569,7 +710,7 @@ export default function SettingsPanel({ currentUser }) {
               <RefreshCw size={16} /> {t("reset_db_btn", "ຣີເຊັດລະບົບທັງໝົດ (Reset Database)")}
             </button>
 
-            {currentUser?.role === "admin" && (
+            {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
               <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "1rem" }}>
                 <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: "1.4" }}>
                   {t("purge_bookings_desc", "ລຶບສະເພາະບິນ ແລະ ການລົງທະບຽນລູກຄ້າທົດລອງທັງໝົດ ແຕ່ຍັງຄົງຂໍ້ມູນພື້ນຖານອື່ນໆໄວ້")}

@@ -39,7 +39,10 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
     expensesMonth: 0,
     monthlySalaries: 0,
     cashToday: 0,
-    qrToday: 0,
+    transferToday: 0,
+    cardToday: 0,
+    debtToday: 0,
+    discountToday: 0,
     billsToday: 0,
     guideCommissionsMonth: 0,
     driverWagesMonth: 0
@@ -60,8 +63,13 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
     const todayStr = new Date().toISOString().split("T")[0];
     const monthStr = todayStr.slice(0, 7); // YYYY-MM
     
+    const filterValidCustomer = (c) => {
+      const bk = database.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
+      return bk ? bk.status !== "ยกเลิก" : true;
+    };
+
     // 1. Today's customers
-    const todayCusts = database.customers.filter(c => c.checkInDate === todayStr);
+    const todayCusts = database.customers.filter(c => c.checkInDate === todayStr && filterValidCustomer(c));
     const paxToday = todayCusts.length;
 
     // 2. Revenue (Assuming basePriceLAK for walk-ins, and specific paid price for bookings)
@@ -78,7 +86,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
 
     const revToday = todayCusts.reduce((sum, c) => sum + calculateCustomerRev(c), 0);
     
-    const monthCusts = database.customers.filter(c => c.checkInDate && c.checkInDate.startsWith(monthStr));
+    const monthCusts = database.customers.filter(c => c.checkInDate && c.checkInDate.startsWith(monthStr) && filterValidCustomer(c));
     const revMonth = monthCusts.reduce((sum, c) => sum + calculateCustomerRev(c), 0);
 
     // 3. Trips today
@@ -89,26 +97,44 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
     const todayBookings = database.bookings.filter(b => b.date === todayStr && b.status !== "ยกเลิก" && b.status !== "ຍົກເລີກ");
     const billsToday = todayBookings.length;
 
-    // 5. Cash vs QR Payment breakdown today
+    // 5. Cash vs Transfer vs Card Payment breakdown today + Debt tracking
+    const getBookingNetRevPerPax = (bk) => {
+      const net = bk.netPriceLAK !== undefined ? bk.netPriceLAK : bk.pricePaidLAK;
+      return net / (bk.paxCount || 1);
+    };
+
     const cashToday = todayCusts.reduce((sum, c) => {
       if (c.bookingId) {
         const bk = database.bookings.find(b => b.id === c.bookingId);
         if (bk && (bk.paymentMethod === "cash" || !bk.paymentMethod)) {
-          return sum + (bk.pricePaidLAK / (bk.paxCount || 1));
+          return sum + getBookingNetRevPerPax(bk);
         }
       }
       return sum;
     }, 0);
 
-    const qrToday = todayCusts.reduce((sum, c) => {
+    const transferToday = todayCusts.reduce((sum, c) => {
       if (c.bookingId) {
         const bk = database.bookings.find(b => b.id === c.bookingId);
-        if (bk && (bk.paymentMethod === "qr" || bk.paymentMethod === "bank")) {
-          return sum + (bk.pricePaidLAK / (bk.paxCount || 1));
+        if (bk && (bk.paymentMethod === "transfer" || bk.paymentMethod === "qr" || bk.paymentMethod === "bank")) {
+          return sum + getBookingNetRevPerPax(bk);
         }
       }
       return sum;
     }, 0);
+
+    const cardToday = todayCusts.reduce((sum, c) => {
+      if (c.bookingId) {
+        const bk = database.bookings.find(b => b.id === c.bookingId);
+        if (bk && bk.paymentMethod === "card") {
+          return sum + getBookingNetRevPerPax(bk);
+        }
+      }
+      return sum;
+    }, 0);
+
+    const debtToday = todayBookings.reduce((sum, bk) => sum + (bk.debtLAK || 0), 0);
+    const discountToday = todayBookings.reduce((sum, bk) => sum + (bk.discountLAK || 0), 0);
 
     // 6. Partner commissions today vs month
     let commissionsDue = 0;
@@ -223,8 +249,16 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
       }
     });
 
-    // 8. Monthly Salaries
-    const monthlySalaries = database.employees.filter(e => e.type === "permanent").reduce((sum, e) => sum + e.salary, 0);
+    // 8. Monthly Salaries (including daily wages, OT, commissions, and bonuses)
+    const monthlySalaries = database.employees.reduce((sum, e) => {
+      const isFreelance = e.type === "freelance";
+      const salaryAmt = isFreelance ? 0 : (e.salary || 0);
+      const dailyWagePay = (e.dailyWage || 0) * (e.daysWorked !== undefined ? e.daysWorked : 26);
+      const otPay = e.ot || 0;
+      const commissionPay = e.commission || 0;
+      const bonusPay = e.bonus || 0;
+      return sum + salaryAmt + dailyWagePay + otPay + commissionPay + bonusPay;
+    }, 0);
 
     // 9. Rent & Salaries (Today prorated)
     const todayFuelMaint = completedOrDispatchedTripsToday.length * (150000 + 30000);
@@ -254,7 +288,10 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
       expensesToday,
       expensesMonth,
       cashToday,
-      qrToday,
+      transferToday,
+      cardToday,
+      debtToday,
+      discountToday,
       billsToday,
       guideCommissionsMonth,
       driverWagesMonth
@@ -281,7 +318,11 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
       const dateStr = current.toISOString().split("T")[0];
 
       // Pax and Revenue
-      const dayCusts = db.customers.filter(c => c.checkInDate === dateStr);
+      const dayCusts = db.customers.filter(c => {
+        if (c.checkInDate !== dateStr) return false;
+        const bk = db.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
+        return bk ? bk.status !== "ยกเลิก" : true;
+      });
       const pax = dayCusts.length;
 
       const revenue = dayCusts.reduce((sum, c) => {
@@ -471,7 +512,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
             </span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
             {/* Today's Stats */}
             <div style={{ background: "rgba(255, 255, 255, 0.08)", padding: "16px", borderRadius: "12px", border: "1px solid rgba(255, 255, 255, 0.1)" }}>
               <h3 style={{ fontSize: "0.85rem", fontWeight: "700", color: "rgba(255, 255, 255, 0.8)", marginBottom: "12px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "4px" }}>
@@ -602,13 +643,31 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
             {isFinanceVisible ? (
               <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "2px", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                  <span>💵 <strong>ເງິນສົດ (Cash):</strong></span>
+                  <span>💵 <strong>{t("cash_label", "ເງິນສົດ")} (Cash):</strong></span>
                   <span>{formatLAK(stats.cashToday)}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                  <span>📱 <strong>ໂອນ / QR Pay:</strong></span>
-                  <span>{formatLAK(stats.qrToday)}</span>
+                  <span>📱 <strong>{t("transfer_label", "ໂອນ")} (Transfer):</strong></span>
+                  <span>{formatLAK(stats.transferToday)}</span>
                 </div>
+                {stats.cardToday > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span>💳 <strong>{t("card_label", "ບັດ")} (Card):</strong></span>
+                    <span>{formatLAK(stats.cardToday)}</span>
+                  </div>
+                )}
+                {stats.discountToday > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#e11d48" }}>
+                    <span>🏷️ <strong>{t("discount_label", "ສ່ວນຫຼຸດ")}:</strong></span>
+                    <span>-{formatLAK(stats.discountToday)}</span>
+                  </div>
+                )}
+                {stats.debtToday > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#ea580c" }}>
+                    <span>⚠️ <strong>{t("debt_label", "ຄ້າງຊຳລະ")}:</strong></span>
+                    <span>{formatLAK(stats.debtToday)}</span>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="metric-subvalue">Restricted</div>
@@ -858,7 +917,11 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
               <th>ສະຖານະ / Status</th>
             </tr>
           );
-          const todayCusts = db.customers.filter(c => c.checkInDate === modalDate);
+          const todayCusts = db.customers.filter(c => {
+            if (c.checkInDate !== modalDate) return false;
+            const bk = db.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
+            return bk ? bk.status !== "ยกเลิก" : true;
+          });
           rows = todayCusts.map(c => {
             const partner = db.partners.find(p => p.id === c.partnerId);
             return (
@@ -888,7 +951,11 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
               <th style={{ textAlign: "right" }}>ຍອດເງິນ / Amount</th>
             </tr>
           );
-          const todayCusts = db.customers.filter(c => c.checkInDate === modalDate);
+          const todayCusts = db.customers.filter(c => {
+            if (c.checkInDate !== modalDate) return false;
+            const bk = db.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
+            return bk ? bk.status !== "ยกเลิก" : true;
+          });
           rows = todayCusts.map(c => (
             <tr key={c.id}>
               <td style={{ fontWeight: "600" }}>{c.name}</td>
@@ -909,7 +976,11 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
               <th style={{ textAlign: "right" }}>ຍອດເງິນ / Amount</th>
             </tr>
           );
-          const monthCusts = db.customers.filter(c => c.checkInDate && c.checkInDate.startsWith(modalMonth));
+          const monthCusts = db.customers.filter(c => {
+            if (!c.checkInDate || !c.checkInDate.startsWith(modalMonth)) return false;
+            const bk = db.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
+            return bk ? bk.status !== "ยกเลิก" : true;
+          });
           rows = monthCusts.map(c => (
             <tr key={c.id}>
               <td>{formatDate(c.checkInDate)}</td>
@@ -996,7 +1067,11 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
               <th style={{ textAlign: "right" }}>ຄ່າຄອມ / Rate</th>
             </tr>
           );
-          const referrals = db.customers.filter(c => c.partnerId && c.checkInDate && c.checkInDate.startsWith(modalMonth));
+          const referrals = db.customers.filter(c => {
+            if (!c.partnerId || !c.checkInDate || !c.checkInDate.startsWith(modalMonth)) return false;
+            const bk = db.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
+            return bk ? bk.status !== "ยกเลิก" : true;
+          });
           rows = referrals.map(c => {
             const partner = db.partners.find(p => p.id === c.partnerId);
             return (
@@ -1135,7 +1210,11 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
           );
 
           let todayCom = 0;
-          const todayCusts = db.customers.filter(c => c.checkInDate === modalDate);
+          const todayCusts = db.customers.filter(c => {
+            if (c.checkInDate !== modalDate) return false;
+            const bk = db.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
+            return bk ? bk.status !== "ยกเลิก" : true;
+          });
           todayCusts.forEach(c => {
             if (c.partnerId) {
               const partner = db.partners.find(p => p.id === c.partnerId);

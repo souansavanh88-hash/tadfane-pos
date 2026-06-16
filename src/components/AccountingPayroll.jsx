@@ -19,6 +19,7 @@ export default function AccountingPayroll({ currentUser }) {
   // Date & Period Filter States
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [summaryMonth, setSummaryMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [incomeFilterType, setIncomeFilterType] = useState("month"); // day, month, year
   const [plFilterType, setPlFilterType] = useState("month"); // day, month, year
@@ -344,27 +345,134 @@ export default function AccountingPayroll({ currentUser }) {
     display: "block"
   };
 
-  if (activeTab === "payroll_manager") {
-    return (
-      <div className="fade-in">
-        <button className="btn btn-secondary" onClick={() => setActiveTab("expenses")} style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "6px" }}>
-          <ArrowLeft size={16} /> {t("back_to_expenses", "ກັບຄືນສູ່ໜ້າລາຍຈ່າຍ")}
-        </button>
-        <PayrollManager />
-      </div>
-    );
-  }
+  const getAvailableSummaryMonths = () => {
+    const months = new Set();
+    
+    // Add months from trips
+    if (db.trips) {
+      db.trips.forEach(t => {
+        if (t.date) {
+          months.add(t.date.substring(0, 7));
+        }
+      });
+    }
+    
+    // Add months from customer checkins
+    if (db.customers) {
+      db.customers.forEach(c => {
+        if (c.checkInDate) {
+          months.add(c.checkInDate.substring(0, 7));
+        }
+      });
+    }
+    
+    // Add current month in case DB is empty
+    months.add(new Date().toISOString().substring(0, 7));
+    
+    // Sort descending (latest months first)
+    return Array.from(months).sort().reverse();
+  };
 
-  if (activeTab === "commission_manager") {
-    return (
-      <div className="fade-in">
-        <button className="btn btn-secondary" onClick={() => setActiveTab("income")} style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "6px" }}>
-          <ArrowLeft size={16} /> {t("back_to_income", "ກັບຄືນສູ່ໜ້າລາຍຮັບ")}
-        </button>
-        <CommissionTracker />
-      </div>
-    );
-  }
+  const calculateMonthlySummaryData = (month) => {
+    // 1. Employees calculations
+    const employeeDetails = (db.employees || []).map(emp => {
+      // Find matching trips for this employee in this month
+      const monthlyTrips = (db.trips || []).filter(trip => {
+        const isCompleted = trip.status === "completed" || trip.status === "dispatched";
+        const matchesMonth = trip.date && trip.date.substring(0, 7) === month;
+        if (!isCompleted || !matchesMonth) return false;
+
+        const isGuide = trip.guideIds && trip.guideIds.includes(emp.id);
+        const isCaptain = (trip.captainIds && trip.captainIds.includes(emp.id)) || (trip.captainId === emp.id);
+        const isDriver = trip.driverIds && trip.driverIds.includes(emp.id);
+
+        return isGuide || isCaptain || isDriver;
+      });
+
+      let tripPay = 0;
+      monthlyTrips.forEach(trip => {
+        const isGuide = trip.guideIds && trip.guideIds.includes(emp.id);
+        const isCaptain = (trip.captainIds && trip.captainIds.includes(emp.id)) || (trip.captainId === emp.id);
+        const isDriver = trip.driverIds && trip.driverIds.includes(emp.id);
+
+        let payout = emp.tripRate || 50000;
+        if (emp.role === "guide") {
+          let baseRate = emp.tourRate !== undefined ? emp.tourRate : 100000;
+          if (trip.bookingId) {
+            const bk = db.bookings.find(b => b.id === trip.bookingId);
+            if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
+              baseRate = emp.raftingRate !== undefined ? emp.raftingRate : 150000;
+            }
+          }
+          payout = baseRate + (emp.specialRate || 0);
+        } else if (emp.role === "driver") {
+          payout = emp.tripRate !== undefined ? emp.tripRate : 100000;
+        }
+        tripPay += payout;
+      });
+
+      const isFreelance = emp.type === "freelance";
+      const baseSalary = isFreelance ? 0 : (emp.salary || 0);
+      const dailyWagePay = (emp.dailyWage || 0) * (emp.daysWorked !== undefined ? emp.daysWorked : 26);
+      const otherPay = (emp.bonus || 0) + (emp.commission || 0) + (emp.ot || 0);
+      const totalPayout = baseSalary + dailyWagePay + tripPay + otherPay;
+
+      return {
+        ...emp,
+        tripCount: monthlyTrips.length,
+        tripPay,
+        baseSalary,
+        dailyWagePay,
+        otherPay,
+        totalPayout
+      };
+    });
+
+    const totalEmployeePayout = employeeDetails.reduce((sum, emp) => sum + emp.totalPayout, 0);
+
+    // 2. Agents calculations (Referrals)
+    const agentDetails = (db.partners || []).map(partner => {
+      // Find matching customers referred in this month
+      const monthlyCustomers = (db.customers || []).filter(c => {
+        const matchesPartner = c.partnerId === partner.id;
+        const matchesMonth = c.checkInDate && c.checkInDate.substring(0, 7) === month;
+        // Filter out cancelled bookings
+        if (c.bookingId) {
+          const bk = db.bookings.find(b => b.id === c.bookingId);
+          if (bk && bk.status === "ยกเลิก") return false;
+        }
+        return matchesPartner && matchesMonth;
+      });
+
+      const paxCount = monthlyCustomers.length;
+      const totalCommission = paxCount * (partner.commissionRate || 0);
+
+      return {
+        ...partner,
+        paxCount,
+        totalCommission
+      };
+    });
+
+    const totalAgentCommissions = agentDetails.reduce((sum, partner) => sum + partner.totalCommission, 0);
+
+    return {
+      employeeDetails,
+      totalEmployeePayout,
+      agentDetails,
+      totalAgentCommissions,
+      grandTotal: totalEmployeePayout + totalAgentCommissions
+    };
+  };
+
+  const triggerPrintMonthlySummary = () => {
+    const originalClass = document.body.className;
+    document.body.classList.add("print-monthly-summary-mode");
+    setTimeout(() => {
+      window.print();
+      document.body.className = originalClass;
+    }, 100);
+  };
 
   return (
     <div className="fade-in">
@@ -372,7 +480,7 @@ export default function AccountingPayroll({ currentUser }) {
       <div className="page-header no-print" style={{ marginBottom: "1.5rem" }}>
         <div className="page-title">
           <h1>📊 ລະບົບບັນຊີ ແລະ ລາຍຈ່າຍ / Accounting & Expenses Portal</h1>
-          <p>{t("accounting_sub", "ລວມລະບົບບັນທຶກລາຍຮັບ-ລາຍຈ່າຍ, ຈັດການເງິນເດືອນ ແລະ ການອະນຸມັດວົງເງิน")}</p>
+          <p>{t("accounting_sub", "ລວມລະບົບບັນທຶກລາຍຮັບ-ລາຍຈ່າຍ, ຈັດການເງິນເດືອນ ແລະ ການອະນຸມັດວົງເງິນ")}</p>
         </div>
       </div>
 
@@ -396,7 +504,17 @@ export default function AccountingPayroll({ currentUser }) {
       </div>
 
       {/* Sub tabs selector menu */}
-      <div className="no-print" style={{ display: "flex", gap: "10px", borderBottom: "1px solid var(--border-color)", paddingBottom: "1px", marginBottom: "1.5rem" }}>
+      <div className="no-print" style={{ 
+        display: "flex", 
+        gap: "10px", 
+        borderBottom: "1px solid var(--border-color)", 
+        paddingBottom: "1px", 
+        marginBottom: "1.5rem",
+        overflowX: "auto",
+        whiteSpace: "nowrap",
+        flexShrink: 0,
+        scrollbarWidth: "thin"
+      }}>
         <button 
           onClick={() => setActiveTab("income")}
           style={{
@@ -407,7 +525,8 @@ export default function AccountingPayroll({ currentUser }) {
             color: activeTab === "income" ? "var(--primary)" : "var(--text-muted)",
             fontWeight: "700",
             fontSize: "0.9rem",
-            cursor: "pointer"
+            cursor: "pointer",
+            flexShrink: 0
           }}
         >
           💰 {t("tab_income", "ລາຍຮັບ / Income")}
@@ -422,7 +541,8 @@ export default function AccountingPayroll({ currentUser }) {
             color: activeTab === "expenses" ? "var(--primary)" : "var(--text-muted)",
             fontWeight: "700",
             fontSize: "0.9rem",
-            cursor: "pointer"
+            cursor: "pointer",
+            flexShrink: 0
           }}
         >
           💸 {t("tab_expenses", "ລາຍຈ່າຍ / Expenses")}
@@ -437,7 +557,8 @@ export default function AccountingPayroll({ currentUser }) {
             color: activeTab === "pl" ? "var(--primary)" : "var(--text-muted)",
             fontWeight: "700",
             fontSize: "0.9rem",
-            cursor: "pointer"
+            cursor: "pointer",
+            flexShrink: 0
           }}
         >
           📈 {t("tab_pl", "ກຳໄລ-ຂາດທຶນ / Profit & Loss")}
@@ -452,10 +573,59 @@ export default function AccountingPayroll({ currentUser }) {
             color: activeTab === "reports" ? "var(--primary)" : "var(--text-muted)",
             fontWeight: "700",
             fontSize: "0.9rem",
-            cursor: "pointer"
+            cursor: "pointer",
+            flexShrink: 0
           }}
         >
           📊 {t("tab_reports", "ລາຍງານ / Reports")}
+        </button>
+        <button 
+          onClick={() => setActiveTab("monthly_summary")}
+          style={{
+            padding: "10px 16px",
+            border: "none",
+            background: "none",
+            borderBottom: activeTab === "monthly_summary" ? "3px solid var(--primary)" : "3px solid transparent",
+            color: activeTab === "monthly_summary" ? "var(--primary)" : "var(--text-muted)",
+            fontWeight: "700",
+            fontSize: "0.9rem",
+            cursor: "pointer",
+            flexShrink: 0
+          }}
+        >
+          📅 {t("tab_monthly_summary", "ສະຫຼຸບລາຍເດືອນ / Monthly Summary")}
+        </button>
+        <button 
+          onClick={() => setActiveTab("payroll_manager")}
+          style={{
+            padding: "10px 16px",
+            border: "none",
+            background: "none",
+            borderBottom: activeTab === "payroll_manager" ? "3px solid var(--primary)" : "3px solid transparent",
+            color: activeTab === "payroll_manager" ? "var(--primary)" : "var(--text-muted)",
+            fontWeight: "700",
+            fontSize: "0.9rem",
+            cursor: "pointer",
+            flexShrink: 0
+          }}
+        >
+          👥 {t("tab_payroll_manager", "ເງິນເດືອນພະນັກງານ / Staff & Payroll")}
+        </button>
+        <button 
+          onClick={() => setActiveTab("commission_manager")}
+          style={{
+            padding: "10px 16px",
+            border: "none",
+            background: "none",
+            borderBottom: activeTab === "commission_manager" ? "3px solid var(--primary)" : "3px solid transparent",
+            color: activeTab === "commission_manager" ? "var(--primary)" : "var(--text-muted)",
+            fontWeight: "700",
+            fontSize: "0.9rem",
+            cursor: "pointer",
+            flexShrink: 0
+          }}
+        >
+          🪙 {t("tab_commission_manager", "ຄ່າຄອມເອເຈນ / Agent Commissions")}
         </button>
       </div>
 
@@ -1000,6 +1170,384 @@ export default function AccountingPayroll({ currentUser }) {
         </div>
       )}
 
+      {/* --- TAB 5: MONTHLY SUMMARY --- */}
+      {activeTab === "monthly_summary" && (() => {
+        const months = getAvailableSummaryMonths();
+        const data = calculateMonthlySummaryData(summaryMonth);
+
+        return (
+          <div className="fade-in no-print">
+            {/* Filters and Print Button */}
+            <div style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center", 
+              gap: "10px", 
+              marginBottom: "1.5rem", 
+              background: "var(--bg-secondary)", 
+              padding: "12px 16px", 
+              borderRadius: "10px", 
+              border: "1px solid var(--border-color)",
+              flexWrap: "wrap"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-primary)" }}>
+                  📅 {t("select_month_label", "ເລືອກເດືອນ / Select Month")}:
+                </label>
+                <select
+                  value={summaryMonth}
+                  onChange={(e) => setSummaryMonth(e.target.value)}
+                  style={{ ...inputStyle, width: "180px", cursor: "pointer" }}
+                >
+                  {months.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button 
+                className="btn btn-primary" 
+                onClick={triggerPrintMonthlySummary} 
+                style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem" }}
+              >
+                <Printer size={16} /> {t("print_monthly_summary", "ພິມສະຫຼຸບປະຈຳເດືອນ / Print")}
+              </button>
+            </div>
+
+            {/* Metrics cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "15px", marginBottom: "1.5rem" }}>
+              <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #ef4444" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>
+                  💵 {t("total_employee_payout", "ລວມຈ່າຍພະນັກງານທັງໝົດ / Total Employee Payout")}
+                </div>
+                <strong style={{ fontSize: "1.3rem", color: "#ef4444", display: "block", marginTop: "4px" }}>
+                  {formatLAK(data.totalEmployeePayout)} LAK
+                </strong>
+              </div>
+              <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #f59e0b" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>
+                  🪙 {t("total_agent_commissions", "ລວມຄ່າຄອມເອເຈນທັງໝົດ / Total Agent Commissions")}
+                </div>
+                <strong style={{ fontSize: "1.3rem", color: "#f59e0b", display: "block", marginTop: "4px" }}>
+                  {formatLAK(data.totalAgentCommissions)} LAK
+                </strong>
+              </div>
+              <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #10b981" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>
+                  💼 {t("monthly_grand_total", "ລວມລາຍຈ່າຍທັງໝົດປະຈຳເດືອນ / Monthly Grand Total")}
+                </div>
+                <strong style={{ fontSize: "1.4rem", color: "#10b981", display: "block", marginTop: "4px" }}>
+                  {formatLAK(data.grandTotal)} LAK
+                </strong>
+              </div>
+            </div>
+
+            {/* Employee Earnings Table */}
+            <div className="card" style={{ marginBottom: "1.5rem" }}>
+              <h2 style={{ fontSize: "1.1rem", color: "var(--text-primary)", marginBottom: "1rem" }}>
+                👥 {t("employee_earnings_section", "ລາຍຮັບພະນັກງານປະຈຳເດືອນ / Employee Monthly Earnings")}
+              </h2>
+              <div style={{ overflowX: "auto" }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t("employee_name_header", "ຊື່ພະນັກງານ / Employee Name")}</th>
+                      <th>{t("role", "ບົດບາດ / Role")}</th>
+                      <th>{t("type", "ປະເພດ / Type")}</th>
+                      <th style={{ textAlign: "right" }}>{t("base_salary_col", "ເງິນເດືອນ / Base Salary")}</th>
+                      <th style={{ textAlign: "center" }}>{t("days_worked_col", "ວັນເຮັດວຽກ / Days")}</th>
+                      <th style={{ textAlign: "right" }}>{t("daily_wages_col", "ຄ່າແຮງລາຍວັນ / Daily Wage")}</th>
+                      <th style={{ textAlign: "center" }}>{t("trips", "ຈຳນວນທ່ຽວ / Trips")}</th>
+                      <th style={{ textAlign: "right" }}>{t("trip_wages_col", "ຄ່າທ່ຽວ / Trip wages")}</th>
+                      <th style={{ textAlign: "right" }}>{t("bonus_ot_comm_col", "ໂບນັດ/OT/ຄອມ / Other Pay")}</th>
+                      <th style={{ textAlign: "right" }}>{t("total_earnings_col", "ລາຍຮັບທັງໝົດ / Total")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.employeeDetails.length === 0 ? (
+                      <tr>
+                        <td colSpan="10" style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                          No employee payroll records.
+                        </td>
+                      </tr>
+                    ) : (
+                      data.employeeDetails.map(emp => (
+                        <tr key={emp.id}>
+                          <td style={{ fontWeight: "700" }}>{emp.name}</td>
+                          <td>
+                            <span className="badge badge-secondary">
+                              {emp.role === "guide" ? "🧭 Guide" : emp.role === "captain" ? "⚓ Captain" : emp.role === "driver" ? "🚗 Driver" : emp.role}
+                            </span>
+                          </td>
+                          <td>{emp.type === "permanent" ? "💼 Staff" : "⏳ Temporary"}</td>
+                          <td style={{ textAlign: "right" }}>{formatLAK(emp.baseSalary)}</td>
+                          <td style={{ textAlign: "center" }}>{emp.daysWorked || 0}</td>
+                          <td style={{ textAlign: "right" }}>{formatLAK(emp.dailyWagePay)}</td>
+                          <td style={{ textAlign: "center", fontWeight: "700" }}>{emp.tripCount}</td>
+                          <td style={{ textAlign: "right" }}>{formatLAK(emp.tripPay)}</td>
+                          <td style={{ textAlign: "right" }}>{formatLAK(emp.otherPay)}</td>
+                          <td style={{ textAlign: "right", fontWeight: "800", color: "var(--primary)" }}>
+                            {formatLAK(emp.totalPayout)} LAK
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Agent Commissions Table */}
+            <div className="card">
+              <h2 style={{ fontSize: "1.1rem", color: "var(--text-primary)", marginBottom: "1rem" }}>
+                🪙 {t("agent_commissions_section", "ຄ່າຄອมມິດຊັນເອເຈນປະຈຳເດືອນ / Agent Referral Commissions")}
+              </h2>
+              <div style={{ overflowX: "auto" }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t("partner_name", "ຊື່ອີເຈນ / Partner Name")}</th>
+                      <th>{t("partner_type", "ປະເພດ / Type")}</th>
+                      <th style={{ textAlign: "right" }}>{t("commission_rate", "ເລດຄ່າຄອມ / Rate")}</th>
+                      <th style={{ textAlign: "center" }}>{t("referred_pax", "ຈຳນວນຄົນ / Pax")}</th>
+                      <th style={{ textAlign: "right" }}>{t("total_commission", "ยອດເງິນຄອມ / Total Commission")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.agentDetails.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                          No agent referral records.
+                        </td>
+                      </tr>
+                    ) : (
+                      data.agentDetails.map(partner => (
+                        <tr key={partner.id}>
+                          <td style={{ fontWeight: "700" }}>{partner.name}</td>
+                          <td>
+                            <span className="badge badge-primary">
+                              {partner.type === "agent" ? "💼 Agent" : partner.type === "company" ? "🏢 Company" : "🧭 Guide"}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "right" }}>{formatLAK(partner.commissionRate)} / pax</td>
+                          <td style={{ textAlign: "center", fontWeight: "700" }}>{partner.paxCount}</td>
+                          <td style={{ textAlign: "right", fontWeight: "800", color: "var(--secondary)" }}>
+                            {formatLAK(partner.totalCommission)} LAK
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* --- TAB 6: STAFF PAYROLL MANAGER --- */}
+      {activeTab === "payroll_manager" && (
+        <div className="fade-in no-print">
+          <PayrollManager />
+        </div>
+      )}
+
+      {/* --- TAB 7: COMMISSION TRACKER --- */}
+      {activeTab === "commission_manager" && (
+        <div className="fade-in no-print">
+          <CommissionTracker />
+        </div>
+      )}
+
+      {/* --- TAB 5: MONTHLY SUMMARY --- */}
+      {activeTab === "monthly_summary" && (() => {
+        const months = getAvailableSummaryMonths();
+        const data = calculateMonthlySummaryData(summaryMonth);
+
+        return (
+          <div className="fade-in no-print">
+            {/* Filters and Print Button */}
+            <div style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center", 
+              gap: "10px", 
+              marginBottom: "1.5rem", 
+              background: "var(--bg-secondary)", 
+              padding: "12px 16px", 
+              borderRadius: "10px", 
+              border: "1px solid var(--border-color)",
+              flexWrap: "wrap"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-primary)" }}>
+                  📅 {t("select_month_label", "ເລືອກເດືອນ / Select Month")}:
+                </label>
+                <select
+                  value={summaryMonth}
+                  onChange={(e) => setSummaryMonth(e.target.value)}
+                  style={{ ...inputStyle, width: "180px", cursor: "pointer" }}
+                >
+                  {months.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button 
+                className="btn btn-primary" 
+                onClick={triggerPrintMonthlySummary} 
+                style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem" }}
+              >
+                <Printer size={16} /> {t("print_monthly_summary", "ພິມສະຫຼຸບປະຈຳເດືອນ / Print")}
+              </button>
+            </div>
+
+            {/* Metrics cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "15px", marginBottom: "1.5rem" }}>
+              <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #ef4444" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>
+                  💵 {t("total_employee_payout", "ລວມຈ່າຍພະນັກງານທັງໝົດ / Total Employee Payout")}
+                </div>
+                <strong style={{ fontSize: "1.3rem", color: "#ef4444", display: "block", marginTop: "4px" }}>
+                  {formatLAK(data.totalEmployeePayout)} LAK
+                </strong>
+              </div>
+              <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #f59e0b" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>
+                  🪙 {t("total_agent_commissions", "ລວມຄ່າຄອມເອເຈນທັງໝົດ / Total Agent Commissions")}
+                </div>
+                <strong style={{ fontSize: "1.3rem", color: "#f59e0b", display: "block", marginTop: "4px" }}>
+                  {formatLAK(data.totalAgentCommissions)} LAK
+                </strong>
+              </div>
+              <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #10b981" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>
+                  💼 {t("monthly_grand_total", "ລວມລາຍຈ່າຍທັງໝົດປະຈຳເດືອນ / Monthly Grand Total")}
+                </div>
+                <strong style={{ fontSize: "1.4rem", color: "#10b981", display: "block", marginTop: "4px" }}>
+                  {formatLAK(data.grandTotal)} LAK
+                </strong>
+              </div>
+            </div>
+
+            {/* Employee Earnings Table */}
+            <div className="card" style={{ marginBottom: "1.5rem" }}>
+              <h2 style={{ fontSize: "1.1rem", color: "var(--text-primary)", marginBottom: "1rem" }}>
+                👥 {t("employee_earnings_section", "ລາຍຮັບພະນັກງານປະຈຳເດືອນ / Employee Monthly Earnings")}
+              </h2>
+              <div style={{ overflowX: "auto" }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t("employee_name_header", "ชື່ພະນັກງານ / Employee Name")}</th>
+                      <th>{t("role", "ບົດບາດ / Role")}</th>
+                      <th>{t("type", "ປະເພດ / Type")}</th>
+                      <th style={{ textAlign: "right" }}>{t("base_salary_col", "ເງິນເດືອນ / Base Salary")}</th>
+                      <th style={{ textAlign: "center" }}>{t("days_worked_col", "ວັນເຮັດວຽກ / Days")}</th>
+                      <th style={{ textAlign: "right" }}>{t("daily_wages_col", "ຄ່າແຮງລາຍວັນ / Daily Wage")}</th>
+                      <th style={{ textAlign: "center" }}>{t("trips", "ຈຳນວນທ່ຽວ / Trips")}</th>
+                      <th style={{ textAlign: "right" }}>{t("trip_wages_col", "ຄ່າທ່ຽວ / Trip wages")}</th>
+                      <th style={{ textAlign: "right" }}>{t("bonus_ot_comm_col", "ໂບນັດ/OT/ຄອມ / Other Pay")}</th>
+                      <th style={{ textAlign: "right" }}>{t("total_earnings_col", "ລາຍຮັບທັງໝົດ / Total")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.employeeDetails.length === 0 ? (
+                      <tr>
+                        <td colSpan="10" style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                          No employee payroll records.
+                        </td>
+                      </tr>
+                    ) : (
+                      data.employeeDetails.map(emp => (
+                        <tr key={emp.id}>
+                          <td style={{ fontWeight: "700" }}>{emp.name}</td>
+                          <td>
+                            <span className="badge badge-secondary">
+                              {emp.role === "guide" ? "🧭 Guide" : emp.role === "captain" ? "⚓ Captain" : emp.role === "driver" ? "🚗 Driver" : emp.role}
+                            </span>
+                          </td>
+                          <td>{emp.type === "permanent" ? "💼 Staff" : "⏳ Temporary"}</td>
+                          <td style={{ textAlign: "right" }}>{formatLAK(emp.baseSalary)}</td>
+                          <td style={{ textAlign: "center" }}>{emp.daysWorked || 0}</td>
+                          <td style={{ textAlign: "right" }}>{formatLAK(emp.dailyWagePay)}</td>
+                          <td style={{ textAlign: "center", fontWeight: "700" }}>{emp.tripCount}</td>
+                          <td style={{ textAlign: "right" }}>{formatLAK(emp.tripPay)}</td>
+                          <td style={{ textAlign: "right" }}>{formatLAK(emp.otherPay)}</td>
+                          <td style={{ textAlign: "right", fontWeight: "800", color: "var(--primary)" }}>
+                            {formatLAK(emp.totalPayout)} LAK
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Agent Commissions Table */}
+            <div className="card">
+              <h2 style={{ fontSize: "1.1rem", color: "var(--text-primary)", marginBottom: "1rem" }}>
+                🪙 {t("agent_commissions_section", "ຄ່າຄອມມິດຊັນເອເຈນປະຈຳເດືອນ / Agent Referral Commissions")}
+              </h2>
+              <div style={{ overflowX: "auto" }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t("partner_name", "ຊື່ອີເຈນ / Partner Name")}</th>
+                      <th>{t("partner_type", "ປະເພດ / Type")}</th>
+                      <th style={{ textAlign: "right" }}>{t("commission_rate", "ເລດຄ່າຄອມ / Rate")}</th>
+                      <th style={{ textAlign: "center" }}>{t("referred_pax", "ຈຳນວນຄົນ / Pax")}</th>
+                      <th style={{ textAlign: "right" }}>{t("total_commission", "ຍອດເງິນຄອມ / Total Commission")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.agentDetails.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                          No agent referral records.
+                        </td>
+                      </tr>
+                    ) : (
+                      data.agentDetails.map(partner => (
+                        <tr key={partner.id}>
+                          <td style={{ fontWeight: "700" }}>{partner.name}</td>
+                          <td>
+                            <span className="badge badge-primary">
+                              {partner.type === "agent" ? "💼 Agent" : partner.type === "company" ? "🏢 Company" : "🧭 Guide"}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "right" }}>{formatLAK(partner.commissionRate)} / pax</td>
+                          <td style={{ textAlign: "center", fontWeight: "700" }}>{partner.paxCount}</td>
+                          <td style={{ textAlign: "right", fontWeight: "800", color: "var(--secondary)" }}>
+                            {formatLAK(partner.totalCommission)} LAK
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* --- TAB 6: STAFF PAYROLL MANAGER --- */}
+      {activeTab === "payroll_manager" && (
+        <div className="fade-in no-print">
+          <PayrollManager />
+        </div>
+      )}
+
+      {/* --- TAB 7: COMMISSION TRACKER --- */}
+      {activeTab === "commission_manager" && (
+        <div className="fade-in no-print">
+          <CommissionTracker />
+        </div>
+      )}
+
       {/* --------------------- HIGH FIDELITY PRINTABLE STATEMENT (EXPENSES MONTHLY PRINT OUT OVERLAY) --------------------- */}
       <div className="printable-area">
         <div className="dashboard-print">
@@ -1101,6 +1649,119 @@ export default function AccountingPayroll({ currentUser }) {
             </tbody>
           </table>
         </div>
+
+        {/* --------------------- MONTHLY SUMMARY PRINT OUT OVERLAY --------------------- */}
+        {(() => {
+          const data = calculateMonthlySummaryData(summaryMonth);
+          return (
+            <div className="monthly-summary-print" style={{ padding: "10mm" }}>
+              <div style={{ textAlign: "center", marginBottom: "20px", borderBottom: "2px solid #000", paddingBottom: "10px" }}>
+                <h2 style={{ fontSize: "18px", fontWeight: "bold" }}>ໃບສະຫຼຸບລາຍຮັບພະນັກງານ ແລະ ຄ່າຄອມເອເຈນ ປະຈຳເດືອນ</h2>
+                <h3 style={{ fontSize: "14px", fontWeight: "bold", margin: "4px 0" }}>MONTHLY EARNINGS SUMMARY REPORT</h3>
+                <p style={{ fontSize: "12px", color: "#666" }}>TADFANE RAFTING / ຕາດຟານ ລ່ອງແກ່ງ</p>
+                <p style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
+                  <strong>ປະຈຳເດືອນ / Month Period:</strong> {summaryMonth} | <strong>ພິມວັນທີ / Printed:</strong> {new Date().toLocaleString()}
+                </p>
+              </div>
+
+              {/* Summary table */}
+              <h4 style={{ fontSize: "12px", fontWeight: "bold", marginBottom: "6px" }}>ສະຫຼຸບຍອດລວມ / Financial Payout Summary</h4>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "20px" }}>
+                <tbody>
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>ລວມຈ່າຍພະນັກງານທັງໝົດ / Total Employee Payout:</td>
+                    <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>{formatLAK(data.totalEmployeePayout)} LAK</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>ລວມຄ່າຄອມເອເຈນທັງໝົດ / Total Agent Commissions:</td>
+                    <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>{formatLAK(data.totalAgentCommissions)} LAK</td>
+                  </tr>
+                  <tr style={{ background: "#cbd5e1" }}>
+                    <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>ລວມລາຍຈ່າຍປະຈຳເດືອນທັງໝົດ / Monthly Grand Total:</td>
+                    <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>{formatLAK(data.grandTotal)} LAK</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Employee table */}
+              <h4 style={{ fontSize: "12px", fontWeight: "bold", marginBottom: "6px" }}>ລາຍຮັບພະນັກງານປະຈຳເດືອນ / Employee Monthly Earnings Ledger</h4>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "20px" }}>
+                <thead>
+                  <tr style={{ background: "#cbd5e1" }}>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "left" }}>ຊື່ພະນັກງານ / Name</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "left" }}>ບົດບາດ / Role</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>ເງິນເດືອນ / Base</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>ວັນ / Days</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>ຄ່າແຮງ / Daily</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>ທ່ຽວ / Trips</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>ຄ່າທ່ຽວ / Trip Pay</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>ອື່นໆ / Other</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>ຍອດລວມ / Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.employeeDetails.map(emp => (
+                    <tr key={emp.id}>
+                      <td style={{ border: "1px solid #000", padding: "6px" }}>{emp.name}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px" }}>{emp.role}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(emp.baseSalary)}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>{emp.daysWorked || 0}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(emp.dailyWagePay)}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>{emp.tripCount}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(emp.tripPay)}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(emp.otherPay)}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>{formatLAK(emp.totalPayout)}</td>
+                    </tr>
+                  ))}
+                  <tr style={{ background: "#cbd5e1", fontWeight: "bold" }}>
+                    <td colSpan="8" style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>ລວມຈ່າຍພະນັກງານທັງໝົດ / Total Employee Payout:</td>
+                    <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(data.totalEmployeePayout)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Agent table */}
+              <h4 style={{ fontSize: "12px", fontWeight: "bold", marginBottom: "6px" }}>ຄ່າຄອມມິດຊັນເອເຈນປະຈຳເດືອນ / Agent Commissions Ledger</h4>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "30px" }}>
+                <thead>
+                  <tr style={{ background: "#cbd5e1" }}>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "left" }}>ຊື່ອີເຈນ / Partner Name</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "left" }}>ປະເພດ / Type</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>ເລດຄ່າຄອມ / Rate</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>ຈຳນວນຄົນ / Pax</th>
+                    <th style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>ຍອດເງິນຄອມ / Total Commission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.agentDetails.map(partner => (
+                    <tr key={partner.id}>
+                      <td style={{ border: "1px solid #000", padding: "6px" }}>{partner.name}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px" }}>{partner.type}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(partner.commissionRate)} / pax</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>{partner.paxCount}</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>{formatLAK(partner.totalCommission)}</td>
+                    </tr>
+                  ))}
+                  <tr style={{ background: "#cbd5e1", fontWeight: "bold" }}>
+                    <td colSpan="4" style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>ລວມຄ່າຄອມເອເຈນທັງໝົດ / Total Agent Commissions:</td>
+                    <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(data.totalAgentCommissions)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div style={{ marginTop: "40px", display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
+                <div>
+                  Prepared by: _______________________<br />
+                  Accountant / ເຈົ້າໜ້າທີ່ບັນຊີ
+                </div>
+                <div>
+                  Approved by: _______________________<br />
+                  Director / ຜູ້ອຳນວຍການ
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
     </div>

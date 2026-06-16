@@ -1,6 +1,13 @@
 // QRBooking.jsx - Cashier POS Terminal (Staff Assignment & QR Scanner Updates)
 import React, { useState, useEffect, useRef } from "react";
 import { useLanguage } from "../utils/LanguageContext";
+import { getDb, addBooking, saveDb, purgeTestData } from "../db/mockDb";
+import { formatLAK, formatTHB, formatUSD, generateBillId, getStatusLabel } from "../utils/helpers";
+import { 
+  Printer, Ticket, CreditCard, Wallet, Banknote, Clock, Users, Plus, Minus, 
+  Ship, Check, Calendar, QrCode, ExternalLink, RefreshCw, AlertTriangle, UserCheck, ShieldAlert, X, Scan, Settings 
+} from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 const formatLocalDate = (dateStr) => {
   if (!dateStr) return "-";
@@ -10,13 +17,6 @@ const formatLocalDate = (dateStr) => {
   }
   return dateStr;
 };
-import { getDb, addBooking, saveDb, purgeTestData } from "../db/mockDb";
-import { formatLAK, formatTHB, formatUSD, generateBillId, getStatusLabel } from "../utils/helpers";
-import { 
-  Printer, Ticket, CreditCard, Wallet, Banknote, Clock, Users, Plus, Minus, 
-  Ship, Check, Calendar, QrCode, ExternalLink, RefreshCw, AlertTriangle, UserCheck, ShieldAlert, X, Scan 
-} from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
 
 const calculateAge = (dobString) => {
   if (!dobString) return "";
@@ -82,7 +82,14 @@ const receiptTranslations = {
     completeBtn: "Complete Trip",
     cancelBtn: "Cancel Bill",
     auditLogsTitle: "Audit Logs:",
-    editLabel: "Edit"
+    editLabel: "Edit",
+    discount: "Discount:",
+    debt: "Outstanding Debt:",
+    netTotal: "NET TOTAL:",
+    actualPaid: "ACTUALLY PAID:",
+    subtotal: "Subtotal:",
+    discountLabel: "Discount",
+    debtLabel: "Debt / Credit"
   },
   la: {
     billNumber: "ເລກທີບິນ:",
@@ -125,7 +132,14 @@ const receiptTranslations = {
     completeBtn: "ສຳເລັດທຣິບ",
     cancelBtn: "ຍົກເລີກບິນ",
     auditLogsTitle: "ປະຫວັດການແກ້ໄຂບິນ:",
-    editLabel: "ແກ້ໄຂ"
+    editLabel: "ແກ້ໄຂ",
+    discount: "ສ່ວນຫຼຸດ:",
+    debt: "ຄ້າງຊຳລະ:",
+    netTotal: "ຍອດສຸທິ:",
+    actualPaid: "ຈ່າຍຕົວຈິງ:",
+    subtotal: "ຍອດລວມ:",
+    discountLabel: "ສ່ວນຫຼຸດ",
+    debtLabel: "ຄ້າງຊຳລະ"
   }
 };
 
@@ -265,11 +279,17 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const [selectedTier, setSelectedTier] = useState("tier1"); // "tier1" or "tier3"
   const [customPricePerPax, setCustomPricePerPax] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountMode, setDiscountMode] = useState("lak"); // "lak" or "percent"
+  const [debtAmount, setDebtAmount] = useState(0);
   
   // Crew assignment form state (loaded from booking)
   const [selectedGuideIds, setSelectedGuideIds] = useState([]); // Multiple guides
   const [selectedBoatIds, setSelectedBoatIds] = useState([]); // Multiple boat IDs (selected cards)
   const [assignedDriverId, setAssignedDriverId] = useState("");
+  const [selectedDriverIds, setSelectedDriverIds] = useState([]); // Multiple driver IDs
+  const [vehicleCount, setVehicleCount] = useState(1);
+  const [boatCount, setBoatCount] = useState(1);
 
   // Edit Control States
   const [isEditingPaidBill, setIsEditingPaidBill] = useState(false);
@@ -325,6 +345,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         selectedTier,
         customPricePerPax,
         paymentMethod,
+        discountAmount,
+        debtAmount,
         registrationGroupId,
         billNumber
       };
@@ -371,6 +393,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
           if (draft.selectedTier !== undefined) setSelectedTier(draft.selectedTier);
           if (draft.customPricePerPax !== undefined) setCustomPricePerPax(draft.customPricePerPax);
           if (draft.paymentMethod !== undefined) setPaymentMethod(draft.paymentMethod);
+          if (draft.discountAmount !== undefined) setDiscountAmount(draft.discountAmount);
+          if (draft.debtAmount !== undefined) setDebtAmount(draft.debtAmount);
           if (draft.registrationGroupId !== undefined) setRegistrationGroupId(draft.registrationGroupId);
           if (draft.billNumber !== undefined) setBillNumber(draft.billNumber);
         }
@@ -402,11 +426,19 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       const data = getDb();
       setDb(data);
       setCustomHostUrl(localStorage.getItem("pos_custom_host_url") || "");
+
+      // Sync the loaded booking with the latest data from the database
+      if (loadedBooking) {
+        const latest = (data.bookings || []).find(b => b.id === loadedBooking.id);
+        if (latest) {
+          setLoadedBooking(latest);
+        }
+      }
     };
     handleDbUpdate();
     window.addEventListener("db-update", handleDbUpdate);
     return () => window.removeEventListener("db-update", handleDbUpdate);
-  }, []);
+  }, [loadedBooking]);
 
   // 2b. Automatically update selectedTier when paxCount or selectedServiceId changes
   useEffect(() => {
@@ -632,6 +664,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const defaultPrice = pricingDetails.rawPrice;
   const activePricePerPax = customPricePerPax !== "" ? parseFloat(customPricePerPax) : defaultPrice;
 
+  // Compute actual discount in LAK (supports both fixed LAK and percentage modes)
+  const computedDiscountLAK = discountMode === "percent"
+    ? Math.round((totalPriceLAK * Math.min(discountAmount, 100)) / 100)
+    : discountAmount;
+
   // Generate self registration URL
   const getSelfRegUrl = (grpId, bookingPartnerId = null) => {
     let origin = customHostUrl.trim() || window.location.origin;
@@ -717,6 +754,10 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       serviceName: currentService.name,
       pricePerPax: activePricePerPax,
       pricePaidLAK: totalPriceLAK,
+      discountLAK: computedDiscountLAK,
+      netPriceLAK: totalPriceLAK - computedDiscountLAK,
+      debtLAK: debtAmount,
+      paidLAK: (totalPriceLAK - computedDiscountLAK) - debtAmount,
       paymentMethod,
       billNumber,
       status: "รอลูกค้ากรอกข้อมูล",
@@ -782,12 +823,19 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       setSelectedTier("tier1");
     }
     setPaymentMethod(bk.paymentMethod || "cash");
+    setDiscountAmount(bk.discountLAK || 0);
+    setDebtAmount(bk.debtLAK || 0);
     
     // Load assigned crew
     setSelectedGuideIds(bk.guideIds || (bk.guideId ? [bk.guideId] : []));
     const loadedBoats = bk.assignedBoats || (bk.boatId ? [{ boatId: bk.boatId }] : []);
     setSelectedBoatIds(loadedBoats.map(b => parseInt(b.boatId)).filter(id => !isNaN(id)));
     setAssignedDriverId(bk.driverId || "");
+
+    const drivers = bk.driverIds || (bk.driverId ? [bk.driverId] : []);
+    setSelectedDriverIds(drivers);
+    setVehicleCount(bk.vehicleCount !== undefined ? bk.vehicleCount : Math.max(1, drivers.length));
+    setBoatCount(bk.boatCount !== undefined ? bk.boatCount : Math.max(1, loadedBoats.length));
 
     setIsEditingPaidBill(false);
   };
@@ -885,6 +933,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     saveDb(currentDb);
     setDb(currentDb);
     setAssignedDriverId(newDriver.id);
+    setSelectedDriverIds(prev => {
+      const next = [...prev, newDriver.id];
+      setVehicleCount(next.length);
+      return next;
+    });
   };
 
   // Save staff assignment directly to booking
@@ -902,7 +955,10 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
           ...b,
           guideIds: selectedGuideIds,
           assignedBoats: computedBoats,
-          driverId: assignedDriverId || null,
+          driverId: selectedDriverIds[0] || null,
+          driverIds: selectedDriverIds,
+          vehicleCount: vehicleCount,
+          boatCount: boatCount,
           // Legacy properties mapping for single guides/boats compat
           guideId: selectedGuideIds[0] || null,
           boatId: computedBoats[0]?.boatId ? parseInt(computedBoats[0].boatId) : null
@@ -942,9 +998,16 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
           ...b,
           status: "ชำระเงินแล้ว / ออกบิลแล้ว",
           paymentMethod: paymentMethod,
+          discountLAK: computedDiscountLAK,
+          netPriceLAK: (b.pricePaidLAK || totalPriceLAK) - computedDiscountLAK,
+          debtLAK: debtAmount,
+          paidLAK: ((b.pricePaidLAK || totalPriceLAK) - computedDiscountLAK) - debtAmount,
           guideIds: selectedGuideIds,
           assignedBoats: computedBoats,
-          driverId: assignedDriverId || null,
+          driverId: selectedDriverIds[0] || null,
+          driverIds: selectedDriverIds,
+          vehicleCount: vehicleCount,
+          boatCount: boatCount,
           date: currentDateStr,
           time: currentTimeStr,
           // Legacy mappings
@@ -991,6 +1054,10 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
           paxCount: parseInt(paxCount),
           pricePerPax: activePricePerPax,
           pricePaidLAK: totalPriceLAK,
+          discountLAK: computedDiscountLAK,
+          netPriceLAK: totalPriceLAK - computedDiscountLAK,
+          debtLAK: debtAmount,
+          paidLAK: (totalPriceLAK - computedDiscountLAK) - debtAmount,
           date,
           time,
           serviceId: selectedServiceId,
@@ -1885,8 +1952,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                     {db.settings.logo && (
                       <img src={db.settings.logo} alt="Logo" style={{ maxHeight: "60px", maxWidth: "160px", objectFit: "contain", marginBottom: "8px" }} />
                     )}
-                    <div style={{ fontWeight: "900", fontSize: "1.3rem", letterSpacing: "1px", color: "#000000" }}>TADFANE RAFTING</div>
-                    <div style={{ fontWeight: "900", fontSize: "1.1rem", color: "#000000", marginTop: "2px" }}>ຕາດຟານ ລ່ອງແກ່ງ</div>
+                    <div style={{ fontWeight: "900", fontSize: "1.3rem", letterSpacing: "1px", color: "#000000" }}>{db.settings.shopName || "TADFANE RAFTING"}</div>
+                    {db.settings.shopNameLao && <div style={{ fontWeight: "900", fontSize: "1.1rem", color: "#000000", marginTop: "2px" }}>{db.settings.shopNameLao}</div>}
                     <div style={{ fontSize: "0.85rem", color: "#64748b", textTransform: "uppercase", marginTop: "4px", fontWeight: "700" }}>
                       {rt.posBillPreview}
                     </div>
@@ -2014,7 +2081,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <label style={{ fontSize: "0.85rem", fontWeight: "800", color: "#475569" }}>
-                      2. Driver / ຄົນຂັບລົດ ({t("select_one_driver", "ເລືອກໄດ້ 1 ຄົນເທົ່ານັ້ນ")})
+                      2. Driver / ຄົນຂັບລົດ ({t("select_multiple_drivers", "ເລືອກໄດ້ຫຼາຍກວ່າ 1 ຄົນ")})
                     </label>
                     <button
                       type="button"
@@ -2041,10 +2108,17 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                     marginTop: "6px"
                   }}>
                     {db.employees.filter(emp => emp.role === "driver").map(d => {
-                      const isSelected = assignedDriverId === d.id;
+                      const isSelected = selectedDriverIds.includes(d.id);
 
                       const handleCardClick = () => {
-                        setAssignedDriverId(prev => prev === d.id ? "" : d.id);
+                        let nextDrivers;
+                        if (selectedDriverIds.includes(d.id)) {
+                          nextDrivers = selectedDriverIds.filter(id => id !== d.id);
+                        } else {
+                          nextDrivers = [...selectedDriverIds, d.id];
+                        }
+                        setSelectedDriverIds(nextDrivers);
+                        setVehicleCount(nextDrivers.length || 1);
                       };
 
                       const nickname = d.name.split(" (")[1]?.replace(")", "") || d.name.split(" ")[0];
@@ -2074,6 +2148,25 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       );
                     })}
                   </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "10px" }}>
+                    <label style={{ fontSize: "0.8rem", fontWeight: "700", color: "#475569" }}>
+                      {t("actual_vehicles", "จำนวนรถที่ใช้จริง / Actual Vehicles")}:
+                    </label>
+                    <input 
+                      type="number"
+                      min="1"
+                      value={vehicleCount}
+                      onChange={(e) => setVehicleCount(Math.max(1, parseInt(e.target.value) || 1))}
+                      style={{
+                        padding: "8px 12px",
+                        border: "1.5px solid #cbd5e1",
+                        borderRadius: "8px",
+                        fontSize: "0.9rem",
+                        width: "100%",
+                        boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {isBoatTrip && (
@@ -2093,9 +2186,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                           const isSelected = selectedBoatIds.includes(b.id);
 
                           const handleCardClick = () => {
-                            setSelectedBoatIds(prev => 
-                              prev.includes(b.id) ? prev.filter(id => id !== b.id) : [...prev, b.id]
-                            );
+                            setSelectedBoatIds(prev => {
+                              const next = prev.includes(b.id) ? prev.filter(id => id !== b.id) : [...prev, b.id];
+                              setBoatCount(next.length || 1);
+                              return next;
+                            });
                           };
 
                           const boatNum = b.name.match(/\d+/) ? b.name.match(/\d+/)[0].padStart(2, "0") : b.name;
@@ -2126,6 +2221,25 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                           );
                         })}
                       </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "10px" }}>
+                        <label style={{ fontSize: "0.8rem", fontWeight: "700", color: "#475569" }}>
+                          {t("actual_boats", "จำนวนเรือที่ใช้จริง / Actual Boats")}:
+                        </label>
+                        <input 
+                          type="number"
+                          min="1"
+                          value={boatCount}
+                          onChange={(e) => setBoatCount(Math.max(1, parseInt(e.target.value) || 1))}
+                          style={{
+                            padding: "8px 12px",
+                            border: "1.5px solid #cbd5e1",
+                            borderRadius: "8px",
+                            fontSize: "0.9rem",
+                            width: "100%",
+                            boxSizing: "border-box"
+                          }}
+                        />
+                      </div>
                     </div>
                   </>
                 )}
@@ -2144,19 +2258,80 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   <span>{rt.boatTickets}</span>
                   <span style={{ fontWeight: "700" }}>{formatLAK(loadedBooking.pricePaidLAK)} LAK</span>
                 </div>
+                {/* Discount line */}
+                {computedDiscountLAK > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.95rem", color: "#e11d48", marginTop: "4px" }}>
+                    <span>{rt.discount} {discountMode === "percent" ? `(${discountAmount}%)` : ""}</span>
+                    <span style={{ fontWeight: "700" }}>-{formatLAK(computedDiscountLAK)} LAK</span>
+                  </div>
+                )}
+                {/* Net total */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "6px" }}>
-                  <span style={{ fontWeight: "bold", fontSize: "1.05rem" }}>{rt.totalLAK}</span>
-                  <span style={{ fontWeight: "900", fontSize: "1.5rem", color: "#0f766e" }}>{formatLAK(loadedBooking.pricePaidLAK)} LAK</span>
+                  <span style={{ fontWeight: "bold", fontSize: "1.05rem" }}>{computedDiscountLAK > 0 || debtAmount > 0 ? rt.netTotal : rt.totalLAK}</span>
+                  <span style={{ fontWeight: "900", fontSize: "1.5rem", color: "#0f766e" }}>{formatLAK(loadedBooking.pricePaidLAK - computedDiscountLAK)} LAK</span>
                 </div>
+                {/* Debt line */}
+                {debtAmount > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.95rem", color: "#ea580c", marginTop: "4px", borderTop: "1px dotted #cbd5e1", paddingTop: "4px" }}>
+                    <span>⚠️ {rt.debt}</span>
+                    <span style={{ fontWeight: "700" }}>-{formatLAK(debtAmount)} LAK</span>
+                  </div>
+                )}
+                {/* Actual paid (if discount or debt) */}
+                {(computedDiscountLAK > 0 || debtAmount > 0) && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "6px", borderTop: "2px solid #000000", paddingTop: "4px" }}>
+                    <span style={{ fontWeight: "900", fontSize: "1.05rem" }}>{rt.actualPaid}</span>
+                    <span style={{ fontWeight: "900", fontSize: "1.5rem", color: "#15803d" }}>{formatLAK((loadedBooking.pricePaidLAK - computedDiscountLAK) - debtAmount)} LAK</span>
+                  </div>
+                )}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", color: "#475569", marginTop: "4px" }}>
-                  <span>≈ {formatTHB(loadedBooking.pricePaidLAK / db.settings.rateTHB)} THB</span>
-                  <span>≈ {formatUSD(loadedBooking.pricePaidLAK / db.settings.rateUSD)} USD</span>
+                  <span>≈ {formatTHB((loadedBooking.pricePaidLAK - computedDiscountLAK) / db.settings.rateTHB)} THB</span>
+                  <span>≈ {formatUSD((loadedBooking.pricePaidLAK - computedDiscountLAK) / db.settings.rateUSD)} USD</span>
                 </div>
               </div>
 
               {/* Payment Method Selector & Checkout Actions */}
               {!isPaidStatus ? (
                 <div style={{ borderTop: "1px dashed #000000", marginTop: "12px", paddingTop: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {/* Discount & Debt Inputs */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                    <div>
+                      <label style={receiptFieldLabelStyle}>{rt.discountLabel}</label>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        <input
+                          type="number"
+                          min="0"
+                          max={discountMode === "percent" ? 100 : undefined}
+                          value={discountAmount || ""}
+                          onChange={(e) => setDiscountAmount(Math.max(0, parseInt(e.target.value) || 0))}
+                          placeholder="0"
+                          style={{ flex: 1, height: "34px", borderRadius: "6px 0 0 6px", border: "1px solid #cbd5e1", background: "#fff", color: "#000", padding: "0 8px", fontSize: "0.85rem", outline: "none", boxSizing: "border-box" }}
+                        />
+                        <button
+                          onClick={() => { setDiscountMode(discountMode === "lak" ? "percent" : "lak"); setDiscountAmount(0); }}
+                          style={{ padding: "0 10px", height: "34px", borderRadius: "0 6px 6px 0", border: "1px solid #cbd5e1", borderLeft: "none", background: discountMode === "percent" ? "#3b82f6" : "#f1f5f9", color: discountMode === "percent" ? "#fff" : "#334155", fontWeight: "800", fontSize: "0.8rem", cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s ease" }}
+                        >
+                          {discountMode === "percent" ? "%" : "LAK"}
+                        </button>
+                      </div>
+                      {discountMode === "percent" && discountAmount > 0 && (
+                        <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "2px" }}>
+                          = {formatLAK(computedDiscountLAK)} LAK
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label style={receiptFieldLabelStyle}>{rt.debtLabel} (LAK)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={debtAmount || ""}
+                        onChange={(e) => setDebtAmount(Math.max(0, parseInt(e.target.value) || 0))}
+                        placeholder="0"
+                        style={{ width: "100%", height: "34px", borderRadius: "6px", border: "1px solid #ea580c", background: "#fff7ed", color: "#000", padding: "0 8px", fontSize: "0.85rem", outline: "none", boxSizing: "border-box" }}
+                      />
+                    </div>
+                  </div>
                   <div>
                     <label style={receiptFieldLabelStyle}>{rt.paymentMethodLabel}</label>
                     <div style={{ display: "flex", gap: "5px" }}>
@@ -2164,19 +2339,19 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                         onClick={() => setPaymentMethod("cash")}
                         style={paymentMethod === "cash" ? activePaymentBtnStyle : inactivePaymentBtnStyle}
                       >
-                        <Banknote size={14} /> Cash
+                        <Banknote size={14} /> ເງິນສົດ
                       </button>
                       <button
                         onClick={() => setPaymentMethod("transfer")}
                         style={paymentMethod === "transfer" ? activePaymentBtnStyle : inactivePaymentBtnStyle}
                       >
-                        <Wallet size={14} /> Transfer
+                        <Wallet size={14} /> ໂອນເງິນ
                       </button>
                       <button
                         onClick={() => setPaymentMethod("card")}
                         style={paymentMethod === "card" ? activePaymentBtnStyle : inactivePaymentBtnStyle}
                       >
-                        <CreditCard size={14} /> Card
+                        <CreditCard size={14} /> ບັດ
                       </button>
                     </div>
                   </div>
@@ -2197,6 +2372,15 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                     <Printer size={18} />
                     <span>🖨️ {rt.reprintBtn}</span>
                   </button>
+
+                  {/* Manage / Edit Bill button */}
+                  <button
+                    onClick={() => setIsManageBillOpen(true)}
+                    style={{ width: "100%", padding: "12px 20px", borderRadius: "10px", background: "#b45309", border: "none", color: "#fff", fontWeight: "800", fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", boxShadow: "0 4px 12px rgba(180, 83, 9, 0.25)", transition: "all 0.2s ease" }}
+                  >
+                    <Settings size={18} />
+                    <span>📝 {t("manage_bill_btn", "ຈັດການບິນ / Manage Bill")}</span>
+                  </button>
                   
                   {(loadedBooking.status === "ชำระแล้ว" || loadedBooking.status === "ชำระเงินแล้ว / ออกบิลแล้ว") && (
                     <button
@@ -2216,7 +2400,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                     </button>
                   )}
  
-                  {canDelete && (
+                  {(!isPaidStatus ? canDelete : (currentUser?.role === "owner" || currentUser?.role === "admin")) && (
                     <button
                       onClick={() => handleCancelBooking(loadedBooking.id)}
                       style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "#ef4444", border: "none", color: "#fff", fontWeight: "bold", fontSize: "0.85rem", cursor: "pointer", marginTop: "4px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
@@ -2836,6 +3020,10 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       selectedTier: editTier,
                       customPricePerPax: editCustomPrice,
                       pricePaidLAK: priceDetails.totalLAK,
+                      discountLAK: loadedBooking.discountLAK || 0,
+                      netPriceLAK: priceDetails.totalLAK - (loadedBooking.discountLAK || 0),
+                      debtLAK: loadedBooking.debtLAK || 0,
+                      paidLAK: (priceDetails.totalLAK - (loadedBooking.discountLAK || 0)) - (loadedBooking.debtLAK || 0),
                       paymentMethod: editPaymentMethod,
                       notes: editNotes,
                       passengers: editPassengers.map(p => ({
@@ -2940,10 +3128,12 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                 {db.settings.logo && (
                   <img src={db.settings.logo} alt="Logo" style={{ maxHeight: "80px", maxWidth: "220px", objectFit: "contain", marginBottom: "8px" }} />
                 )}
-                <h3 style={{ margin: "4px 0 0 0", fontWeight: "900", fontSize: "20px", color: "#000000", letterSpacing: "1px" }}>TADFANE RAFTING</h3>
-                <h4 style={{ margin: "2px 0 0 0", fontWeight: "900", fontSize: "16px", color: "#000000" }}>ຕາດຟານ ລ່ອງແກ່ງ</h4>
-                <p style={{ fontSize: "12px", margin: "4px 0 2px 0", fontWeight: "bold" }}>{rt.address}</p>
-                <p style={{ fontSize: "12px", margin: "0", fontWeight: "bold" }}>{rt.tel}</p>
+                <h3 style={{ margin: "4px 0 0 0", fontWeight: "900", fontSize: "20px", color: "#000000", letterSpacing: "1px" }}>{db.settings.shopName || "TADFANE RAFTING"}</h3>
+                {db.settings.shopNameLao && <h4 style={{ margin: "2px 0 0 0", fontWeight: "900", fontSize: "16px", color: "#000000" }}>{db.settings.shopNameLao}</h4>}
+                <p style={{ fontSize: "12px", margin: "4px 0 2px 0", fontWeight: "bold" }}>{lang === "en" ? (db.settings.shopAddress || "Vang Vieng, Laos") : (db.settings.shopAddressLao || db.settings.shopAddress || rt.address)}</p>
+                <p style={{ fontSize: "12px", margin: "0", fontWeight: "bold" }}>Tel: {db.settings.shopTel || "+856 20 555-9000"}</p>
+                {db.settings.shopTaxId && <p style={{ fontSize: "11px", margin: "2px 0 0 0", fontWeight: "bold" }}>Tax ID: {db.settings.shopTaxId}</p>}
+                {db.settings.shopExtra && <p style={{ fontSize: "11px", margin: "2px 0 0 0", fontWeight: "bold" }}>{db.settings.shopExtra}</p>}
               </div>
 
               <div style={{ fontSize: "15px", marginBottom: "6px", lineHeight: "1.5" }}>
@@ -2979,7 +3169,15 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                 <div style={{ borderTop: "2px dashed #000000", margin: "6px 0" }}></div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <strong>{rt.driver}</strong>
-                  <span>{getDriverName(loadedBooking.driverId) || rt.unassigned}</span>
+                  <span>
+                    {(() => {
+                      const driversNames = loadedBooking.driverIds && loadedBooking.driverIds.length > 0
+                        ? loadedBooking.driverIds.map(id => getDriverName(id).split(" (")[1]?.replace(")", "") || getDriverName(id).split(" ")[0]).join(", ")
+                        : (loadedBooking.driverId ? getDriverName(loadedBooking.driverId) : rt.unassigned);
+                      const vehCount = loadedBooking.vehicleCount !== undefined ? loadedBooking.vehicleCount : 1;
+                      return `${driversNames} (รถ: ${vehCount} คัน)`;
+                    })()}
+                  </span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <strong>{rt.guides}</strong>
@@ -2990,12 +3188,18 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   <strong>{rt.boats}</strong>
                 </div>
                 {loadedBooking.assignedBoats && loadedBooking.assignedBoats.length > 0 ? (
-                  loadedBooking.assignedBoats.map((ab, index) => (
-                    <div key={index} style={{ paddingLeft: "6px", fontSize: "12px", fontWeight: "700", display: "flex", justifyContent: "space-between" }}>
-                      <span>{rt.boatLabel} {index + 1}: {getBoatName(ab.boatId)}</span>
-                      <span>({ab.paxCount} {rt.paxUnit})</span>
+                  <>
+                    {loadedBooking.assignedBoats.map((ab, index) => (
+                      <div key={index} style={{ paddingLeft: "6px", fontSize: "12px", fontWeight: "700", display: "flex", justifyContent: "space-between" }}>
+                        <span>{rt.boatLabel} {index + 1}: {getBoatName(ab.boatId)}</span>
+                        <span>({ab.paxCount} {rt.paxUnit})</span>
+                      </div>
+                    ))}
+                    <div style={{ paddingLeft: "6px", fontSize: "12px", fontWeight: "700", borderTop: "1px dashed #000000", marginTop: "2px", paddingTop: "2px", display: "flex", justifyContent: "space-between" }}>
+                      <strong>จำนวนเรือ / Boats:</strong>
+                      <span>{loadedBooking.boatCount !== undefined ? loadedBooking.boatCount : loadedBooking.assignedBoats.length} ລຳ / Boats</span>
                     </div>
-                  ))
+                  </>
                 ) : (
                   <div style={{ paddingLeft: "6px", fontSize: "12px" }}>{rt.unassigned}</div>
                 )}
@@ -3034,19 +3238,41 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                     {formatLAK(loadedBooking.pricePaidLAK)} LAK
                   </span>
                 </div>
+                {/* Discount on receipt */}
+                {(loadedBooking.discountLAK || 0) > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px" }}>
+                    <span>{rt.discount}</span>
+                    <span>-{formatLAK(loadedBooking.discountLAK)} LAK</span>
+                  </div>
+                )}
+                {/* Net total on receipt */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "900", fontSize: "20px", marginTop: "8px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
-                  <span style={{ flex: 1, textAlign: "left" }}>{rt.total}</span>
+                  <span style={{ flex: 1, textAlign: "left" }}>{(loadedBooking.discountLAK || 0) > 0 || (loadedBooking.debtLAK || 0) > 0 ? rt.netTotal : rt.total}</span>
                   <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                    {formatLAK(loadedBooking.pricePaidLAK)} LAK
+                    {formatLAK((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK))} LAK
                   </span>
                 </div>
+                {/* Debt on receipt */}
+                {(loadedBooking.debtLAK || 0) > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px", borderTop: "1px dotted #000000", paddingTop: "4px" }}>
+                    <span>⚠️ {rt.debt}</span>
+                    <span>-{formatLAK(loadedBooking.debtLAK)} LAK</span>
+                  </div>
+                )}
+                {/* Actual paid on receipt */}
+                {((loadedBooking.discountLAK || 0) > 0 || (loadedBooking.debtLAK || 0) > 0) && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "900", fontSize: "18px", marginTop: "6px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
+                    <span>{rt.actualPaid}</span>
+                    <span>{formatLAK(loadedBooking.paidLAK !== undefined ? loadedBooking.paidLAK : loadedBooking.pricePaidLAK)} LAK</span>
+                  </div>
+                )}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", marginTop: "6px", fontWeight: "700" }}>
                   <span>THB:</span>
-                  <span>{formatTHB(loadedBooking.pricePaidLAK / db.settings.rateTHB)}</span>
+                  <span>{formatTHB((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK) / db.settings.rateTHB)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", fontWeight: "700" }}>
                   <span>USD:</span>
-                  <span>{formatUSD(loadedBooking.pricePaidLAK / db.settings.rateUSD)}</span>
+                  <span>{formatUSD((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK) / db.settings.rateUSD)}</span>
                 </div>
               </div>
 
@@ -3060,8 +3286,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 {/* ---------------- HIDDEN PRINTABLE SIGN STANDEE (Only Visible to @media print in print-qr-sign-mode) ---------------- */}
       <div className="printable-area">
         <div className="qr-sign-print" style={{ color: "#000000", textAlign: "center", padding: "40px", fontFamily: "sans-serif" }}>
-          <h1 style={{ fontWeight: "900", fontSize: "2.4rem", color: "#000000", margin: "0 0 5px 0" }}>TADFANE RAFTING</h1>
-          <h2 style={{ fontWeight: "900", fontSize: "1.8rem", color: "#000000", margin: "0 0 15px 0" }}>ຕາດຟານ ລ່ອງແກ່ງ</h2>
+          <h1 style={{ fontWeight: "900", fontSize: "2.4rem", color: "#000000", margin: "0 0 5px 0" }}>{db.settings.shopName || "TADFANE RAFTING"}</h1>
+          {db.settings.shopNameLao && <h2 style={{ fontWeight: "900", fontSize: "1.8rem", color: "#000000", margin: "0 0 15px 0" }}>{db.settings.shopNameLao}</h2>}
           <h3 style={{ fontSize: "1.3rem", color: "#475569", marginBottom: "1.5rem" }}>ລົງທະບຽນຜູ້ໂດຍສານ / Customer Registration</h3>
           
           <div style={{ margin: "25px 0", display: "flex", justifyContent: "center" }}>
@@ -3084,8 +3310,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       {loadedBooking && (
         <div className="printable-area">
           <div className="qr-slip-print" style={{ color: "#000000", width: "260px", margin: "0 auto", padding: "12px", textAlign: "center", fontFamily: "monospace", lineHeight: "1.5" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: "900", color: "#000000", margin: "0" }}>TADFANE RAFTING</h3>
-            <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#000000", margin: "2px 0 0 0" }}>ຕາດຟານ ລ່ອງແກ່ງ</h4>
+            <h3 style={{ fontSize: "16px", fontWeight: "900", color: "#000000", margin: "0" }}>{db.settings.shopName || "TADFANE RAFTING"}</h3>
+            {db.settings.shopNameLao && <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#000000", margin: "2px 0 0 0" }}>{db.settings.shopNameLao}</h4>}
             <p style={{ fontWeight: "bold", fontSize: "11px", margin: "6px 0 6px 0", color: "#000000" }}>ບິນລົງທະບຽນລູກຄ້າ / Register Slip</p>
             
             <div style={{ display: "inline-block", padding: "10px", background: "#ffffff", border: "1px solid #000000", borderRadius: "8px", margin: "10px 0" }}>
@@ -3128,6 +3354,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             border: "1px solid var(--border-color, #cbd5e1)",
             width: "100%",
             maxWidth: "460px",
+            maxHeight: "90vh",
+            overflowY: "auto",
             borderRadius: "16px",
             padding: "24px",
             boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)",

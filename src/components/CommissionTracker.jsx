@@ -59,6 +59,73 @@ export default function CommissionTracker() {
     };
   };
 
+  // Find trip details for a specific booking
+  const getBookingTripDetails = (bookingId) => {
+    const trips = (db.trips || []).filter(t => t.bookingId === bookingId);
+    if (trips.length === 0) {
+      return { boatName: "N/A", captainNames: "N/A", guideNames: "N/A", driverNames: "N/A", date: "N/A" };
+    }
+
+    // Boat names
+    const boatNames = [];
+    trips.forEach(trip => {
+      const tripBoatIds = trip.boatIds || (trip.boatId ? [trip.boatId] : []);
+      tripBoatIds.forEach(bid => {
+        const b = db.boats.find(boat => boat.id === bid);
+        if (b && !boatNames.includes(b.name)) boatNames.push(b.name);
+      });
+    });
+
+    // Captain names
+    const captainNames = [];
+    trips.forEach(trip => {
+      const tripCaptainIds = trip.captainIds || (trip.captainId ? [trip.captainId] : []);
+      tripCaptainIds.forEach(cid => {
+        const e = db.employees.find(emp => emp.id === cid);
+        if (e) {
+          const shortName = e.name.split(" (")[0];
+          if (!captainNames.includes(shortName)) captainNames.push(shortName);
+        }
+      });
+    });
+
+    // Guide names
+    const guideNames = [];
+    trips.forEach(trip => {
+      if (trip.guideIds) {
+        trip.guideIds.forEach(gid => {
+          const e = db.employees.find(emp => emp.id === gid);
+          if (e) {
+            const shortName = e.name.split(" (")[0];
+            if (!guideNames.includes(shortName)) guideNames.push(shortName);
+          }
+        });
+      }
+    });
+
+    // Driver names
+    const driverNames = [];
+    trips.forEach(trip => {
+      if (trip.driverIds) {
+        trip.driverIds.forEach(did => {
+          const e = db.employees.find(emp => emp.id === did);
+          if (e) {
+            const shortName = e.name.split(" (")[0];
+            if (!driverNames.includes(shortName)) driverNames.push(shortName);
+          }
+        });
+      }
+    });
+
+    return {
+      date: trips[0].date,
+      boatName: boatNames.join(", ") || "N/A",
+      captainNames: captainNames.join(", ") || "N/A",
+      guideNames: guideNames.join(", ") || "N/A",
+      driverNames: driverNames.join(", ") || "N/A"
+    };
+  };
+
   // Trigger partner statement print
   const triggerPrintCommission = () => {
     const originalClass = document.body.className;
@@ -73,11 +140,13 @@ export default function CommissionTracker() {
   const [partnerType, setPartnerType] = useState("company"); // company, agent, guide
   const [commissionRate, setCommissionRate] = useState(40000); // default LAK
   const [contact, setContact] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
   const [selectedPartnerId, setSelectedPartnerId] = useState("");
   
   // Edit & Filter states
   const [editingPartnerId, setEditingPartnerId] = useState("");
   const [selectedMonthFilter, setSelectedMonthFilter] = useState("");
+  const [sortBy, setSortBy] = useState("name"); // name, pax, sales, commission
 
   useEffect(() => {
     const handleDbUpdate = () => {
@@ -106,7 +175,8 @@ export default function CommissionTracker() {
               name: partnerName, 
               type: partnerType, 
               commissionRate: parseInt(commissionRate), 
-              contact 
+              contact,
+              bankAccount
             }
           : p
       );
@@ -128,7 +198,8 @@ export default function CommissionTracker() {
         name: partnerName,
         type: partnerType,
         commissionRate: parseInt(commissionRate),
-        contact
+        contact,
+        bankAccount
       };
       updatedDb.partners.push(newPartner);
       alert("ເພີ່ມບໍລິສັດຄູ່ຄ້າສຳເລັດ! / Partner added successfully!");
@@ -137,6 +208,7 @@ export default function CommissionTracker() {
     saveDb(updatedDb);
     setPartnerName("");
     setContact("");
+    setBankAccount("");
     setCommissionRate(40000);
     setEditingPartnerId("");
     refreshState();
@@ -145,6 +217,7 @@ export default function CommissionTracker() {
   const handleCancelEdit = () => {
     setPartnerName("");
     setContact("");
+    setBankAccount("");
     setCommissionRate(40000);
     setEditingPartnerId("");
   };
@@ -164,14 +237,14 @@ export default function CommissionTracker() {
 
   // Calculate overall stats for a partner
   const getPartnerStats = (partner) => {
-    const customerList = db.customers.filter(c => c.partnerId === partner.id);
-    const totalPax = customerList.length;
+    const bookings = (db.bookings || []).filter(b => b.partnerId === partner.id && b.status !== "canceled");
+    const totalPax = bookings.reduce((sum, b) => sum + (parseInt(b.paxCount) || 0), 0);
     const totalEarned = totalPax * partner.commissionRate;
     
     return {
       paxCount: totalPax,
       totalCommission: totalEarned,
-      customers: customerList
+      bookings: bookings
     };
   };
 
@@ -188,7 +261,7 @@ export default function CommissionTracker() {
       "06": "ມິຖຸນາ (Jun)",
       "07": "ກໍລະກົດ (Jul)",
       "08": "ສິງຫາ (Aug)",
-      "09": "ກັນຍາ (Sep)",
+      "09": "ກັນຍา (Sep)",
       "10": "ຕຸລາ (Oct)",
       "11": "ພະຈິກ (Nov)",
       "12": "ທັນວາ (Dec)"
@@ -200,21 +273,22 @@ export default function CommissionTracker() {
   // Group referrals by month
   const getPartnerMonthlyGroups = (partner) => {
     if (!partner) return {};
-    const customers = db.customers.filter(c => c.partnerId === partner.id);
-    const groups = {}; // "YYYY-MM" -> { paxCount: 0, commission: 0, customers: [] }
+    const bookings = (db.bookings || []).filter(b => b.partnerId === partner.id && b.status !== "canceled");
+    const groups = {}; // "YYYY-MM" -> { paxCount: 0, commission: 0, bookings: [] }
 
-    customers.forEach(c => {
-      const monthKey = c.checkInDate ? c.checkInDate.substring(0, 7) : new Date().toISOString().substring(0, 7);
+    bookings.forEach(b => {
+      const monthKey = b.date ? b.date.substring(0, 7) : new Date().toISOString().substring(0, 7);
       if (!groups[monthKey]) {
         groups[monthKey] = {
           paxCount: 0,
           commission: 0,
-          customers: []
+          bookings: []
         };
       }
-      groups[monthKey].paxCount += 1;
-      groups[monthKey].commission += partner.commissionRate;
-      groups[monthKey].customers.push(c);
+      const pCount = parseInt(b.paxCount) || 0;
+      groups[monthKey].paxCount += pCount;
+      groups[monthKey].commission += pCount * partner.commissionRate;
+      groups[monthKey].bookings.push(b);
     });
 
     return groups;
@@ -231,14 +305,65 @@ export default function CommissionTracker() {
   // Filtered referrals list for the selected partner
   const getFilteredReferrals = () => {
     if (!activeStats) return [];
-    if (!selectedMonthFilter) return activeStats.customers;
-    return activeStats.customers.filter(c => {
-      const cMonth = c.checkInDate ? c.checkInDate.substring(0, 7) : "";
-      return cMonth === selectedMonthFilter;
+    if (!selectedMonthFilter) return activeStats.bookings;
+    return activeStats.bookings.filter(b => {
+      const bMonth = b.date ? b.date.substring(0, 7) : "";
+      return bMonth === selectedMonthFilter;
     });
   };
 
   const filteredReferrals = getFilteredReferrals();
+
+  // Export Summary & Detail CSV
+  const handleExportSummaryCSV = () => {
+    let csvContent = "\uFEFF";
+    csvContent += "Partner ID,Partner Name,Type,Commission Rate (LAK),Total PAX,Total Commission (LAK)\n";
+    db.partners.forEach(partner => {
+      const stats = getPartnerStats(partner);
+      const typeLabel = 
+        partner.type === "company" ? "Tour Company" : 
+        partner.type === "agent" ? "Agent" : "Guide";
+      csvContent += `"${partner.id}","${partner.name.replace(/"/g, '""')}","${typeLabel}",${partner.commissionRate},${stats.paxCount},${stats.totalCommission}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `partner_commission_summary_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportDetailCSV = (partner) => {
+    if (!partner) return;
+    let csvContent = "\uFEFF";
+    csvContent += `Partner ID,${partner.id}\n`;
+    csvContent += `Partner Name,${partner.name}\n`;
+    csvContent += `Commission Rate,${partner.commissionRate} LAK/pax\n`;
+    csvContent += `Filtered Period,${selectedMonthFilter ? selectedMonthFilter : "All"}\n\n`;
+
+    csvContent += "Date & Time,Booking ID,Customer Name,PAX,Service,Sales (LAK),Status,Commission (LAK)\n";
+    filteredReferrals.forEach(b => {
+      const commVal = (parseInt(b.paxCount) || 0) * partner.commissionRate;
+      const leadName = b.passengers && b.passengers[0] ? b.passengers[0].name : "Walk-in";
+      csvContent += `"${b.date} ${b.time}","${b.id}","${leadName.replace(/"/g, '""')}",${b.paxCount},"${b.serviceName.replace(/"/g, '""')}",${b.pricePaidLAK},"${b.status}",${commVal}\n`;
+    });
+
+    const totalPax = filteredReferrals.reduce((sum, b) => sum + (parseInt(b.paxCount) || 0), 0);
+    const totalComm = totalPax * partner.commissionRate;
+    csvContent += `\nTotal,,${totalPax},,,${totalComm}\n`;
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `partner_${partner.id}_detail_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
 
 
@@ -255,12 +380,39 @@ export default function CommissionTracker() {
         
         {/* Commission Summary Table */}
         <div className="card">
-          <h2 style={{ fontSize: "1.25rem", marginBottom: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Coins size={20} color="var(--primary)" />
-            {t("commission_report", "ລາຍງານຄ່າຄອມມິດຊັນສະສົມ / Commission Report")}
-          </h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "10px" }}>
+            <h2 style={{ fontSize: "1.25rem", margin: 0, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Coins size={20} color="var(--primary)" />
+              {t("commission_report", "ລາຍງານຄ່າຄອມມິດຊັນສະສົມ / Commission Report")}
+            </h2>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{t("sort_by", "จัดเรียง / Sort")}:</span>
+                <select
+                  className="form-control"
+                  style={{ width: "auto", padding: "4px 8px", fontSize: "0.8rem", height: "auto" }}
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <option value="name">ຊື່ (Name)</option>
+                  <option value="pax">PAX</option>
+                  <option value="sales">ຍອດຂາຍ (Sales)</option>
+                  <option value="commission">ຄ່າຄອມ (Commission)</option>
+                </select>
+              </div>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                style={{ padding: "4px 8px", fontSize: "0.8rem", height: "auto" }}
+                onClick={handleExportSummaryCSV}
+              >
+                Export CSV
+              </button>
+            </div>
+          </div>
 
-          <div style={{ overflowX: "auto" }}>
+          {/* Desktop View Table */}
+          <div className="desktop-only-view" style={{ overflowX: "auto" }}>
             <table>
               <thead>
                 <tr>
@@ -273,77 +425,194 @@ export default function CommissionTracker() {
                 </tr>
               </thead>
               <tbody>
-                {db.partners.map(partner => {
-                  const stats = getPartnerStats(partner);
-                  const typeLabel = 
-                    partner.type === "company" ? t("type_company", "ບໍລິສັດທົວ") : 
-                    partner.type === "agent" ? t("type_agent", "ເອເຈນ") : t("type_guide", "<b>ໄກ້ດແນະນຳ</b>");
+                {[...db.partners]
+                  .sort((a, b) => {
+                    const statsA = getPartnerStats(a);
+                    const statsB = getPartnerStats(b);
+                    if (sortBy === "name") return a.name.localeCompare(b.name);
+                    if (sortBy === "pax") return statsB.paxCount - statsA.paxCount;
+                    if (sortBy === "sales") {
+                      const salesA = statsA.bookings.reduce((sum, bk) => sum + (parseInt(bk.pricePaidLAK) || 0), 0);
+                      const salesB = statsB.bookings.reduce((sum, bk) => sum + (parseInt(bk.pricePaidLAK) || 0), 0);
+                      return salesB - salesA;
+                    }
+                    if (sortBy === "commission") return statsB.totalCommission - statsA.totalCommission;
+                    return 0;
+                  })
+                  .map(partner => {
+                    const stats = getPartnerStats(partner);
+                    const typeLabel = 
+                      partner.type === "company" ? t("type_company", "ບໍລິສັດທົວ") : 
+                      partner.type === "agent" ? t("type_agent", "ເອເຈນ") : t("type_guide", "ໄກ້ດແນະນຳ");
 
-                  return (
-                    <tr 
-                      key={partner.id}
-                      style={{ cursor: "pointer", background: selectedPartnerId === partner.id ? "var(--primary-light)" : "transparent" }}
-                      onClick={() => {
-                        setSelectedPartnerId(partner.id);
-                        setSelectedMonthFilter(""); // Reset month filter when changing partner
-                      }}
-                    >
-                      <td style={{ fontWeight: "600", color: "var(--text-primary)" }}>{partner.name}</td>
-                      <td>
-                        <span className={`badge ${
-                          partner.type === "company" ? "badge-success" : 
-                          partner.type === "agent" ? "badge-warning" : "badge-danger"
-                        }`}>
-                          {typeLabel}
-                        </span>
-                      </td>
-                      <td>{formatLAK(partner.commissionRate)}/pax</td>
-                      <td>{stats.paxCount} {t("pax_unit", "ຄົນ (Pax)")}</td>
-                      <td style={{ fontWeight: "bold", color: "var(--primary)" }}>{formatLAK(stats.totalCommission)}</td>
-                      <td>
-                        <div style={{ display: "flex", gap: "4px" }}>
-                          <button 
-                            className="btn btn-secondary"
-                            style={{ padding: "4px 8px", fontSize: "0.75rem", background: "var(--bg-tertiary)" }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedPartnerId(partner.id);
-                              setSelectedMonthFilter("");
-                            }}
-                          >
-                            ລາຍລະອຽດ
-                          </button>
-                          <button 
-                            className="btn btn-secondary"
-                            style={{ padding: "4px 8px", fontSize: "0.75rem" }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingPartnerId(partner.id);
-                              setPartnerName(partner.name);
-                              setPartnerType(partner.type);
-                              setCommissionRate(partner.commissionRate);
-                              setContact(partner.contact || "");
-                            }}
-                          >
-                            {t("edit_label", "ແກ້ໄຂ")}
-                          </button>
-                          <button 
-                            className="btn btn-danger"
-                            style={{ padding: "4px", borderRadius: "4px" }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeletePartner(partner.id);
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                    return (
+                      <tr 
+                        key={partner.id}
+                        style={{ cursor: "pointer", background: selectedPartnerId === partner.id ? "var(--primary-light)" : "transparent" }}
+                        onClick={() => {
+                          setSelectedPartnerId(partner.id);
+                          setSelectedMonthFilter("");
+                        }}
+                      >
+                        <td style={{ fontWeight: "600", color: "var(--text-primary)" }}>{partner.name}</td>
+                        <td>
+                          <span className={`badge ${
+                            partner.type === "company" ? "badge-success" : 
+                            partner.type === "agent" ? "badge-warning" : "badge-danger"
+                          }`}>
+                            {typeLabel}
+                          </span>
+                        </td>
+                        <td>{formatLAK(partner.commissionRate)}/pax</td>
+                        <td>{stats.paxCount} {t("pax_unit", "ຄົນ (Pax)")}</td>
+                        <td style={{ fontWeight: "bold", color: "var(--primary)" }}>{formatLAK(stats.totalCommission)}</td>
+                        <td>
+                          <div style={{ display: "flex", gap: "4px" }}>
+                            <button 
+                              className="btn btn-secondary"
+                              style={{ padding: "4px 8px", fontSize: "0.75rem", background: "var(--bg-tertiary)" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedPartnerId(partner.id);
+                                setSelectedMonthFilter("");
+                              }}
+                            >
+                              ລາຍລະອຽດ
+                            </button>
+                            <button 
+                              className="btn btn-secondary"
+                              style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingPartnerId(partner.id);
+                                setPartnerName(partner.name);
+                                setPartnerType(partner.type);
+                                setCommissionRate(partner.commissionRate);
+                                setContact(partner.contact || "");
+                                setBankAccount(partner.bankAccount || "");
+                              }}
+                            >
+                              {t("edit_label", "ແກ້ໄຂ")}
+                            </button>
+                            <button 
+                              className="btn btn-danger"
+                              style={{ padding: "4px", borderRadius: "4px" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePartner(partner.id);
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile View Card Grid */}
+          <div className="mobile-only-view" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {[...db.partners]
+              .sort((a, b) => {
+                const statsA = getPartnerStats(a);
+                const statsB = getPartnerStats(b);
+                if (sortBy === "name") return a.name.localeCompare(b.name);
+                if (sortBy === "pax") return statsB.paxCount - statsA.paxCount;
+                if (sortBy === "sales") {
+                  const salesA = statsA.bookings.reduce((sum, bk) => sum + (parseInt(bk.pricePaidLAK) || 0), 0);
+                  const salesB = statsB.bookings.reduce((sum, bk) => sum + (parseInt(bk.pricePaidLAK) || 0), 0);
+                  return salesB - salesA;
+                }
+                if (sortBy === "commission") return statsB.totalCommission - statsA.totalCommission;
+                return 0;
+              })
+              .map(partner => {
+                const stats = getPartnerStats(partner);
+                const totalSales = stats.bookings.reduce((sum, bk) => sum + (parseInt(bk.pricePaidLAK) || 0), 0);
+                const typeLabel = 
+                  partner.type === "company" ? t("type_company", "ບໍລິສັດທົວ") : 
+                  partner.type === "agent" ? t("type_agent", "ເອເຈນ") : t("type_guide", "ໄກ້ດແນະນຳ");
+                const isSelected = selectedPartnerId === partner.id;
+
+                return (
+                  <div 
+                    key={partner.id} 
+                    className="card" 
+                    style={{ 
+                      padding: "1rem", 
+                      border: isSelected ? "2px solid var(--primary)" : "1px solid var(--border-color)",
+                      background: isSelected ? "var(--primary-light)" : "var(--bg-secondary)",
+                      cursor: "pointer"
+                    }}
+                    onClick={() => {
+                      setSelectedPartnerId(partner.id);
+                      setSelectedMonthFilter("");
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                      <div>
+                        <h3 style={{ fontSize: "1rem", margin: 0, color: "var(--text-primary)", fontWeight: "bold" }}>{partner.name}</h3>
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>ID: {partner.id}</span>
+                      </div>
+                      <span className={`badge ${
+                        partner.type === "company" ? "badge-success" : 
+                        partner.type === "agent" ? "badge-warning" : "badge-danger"
+                      }`} style={{ fontSize: "0.7rem", padding: "2px 6px" }}>
+                        {typeLabel}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "10px" }}>
+                      <div><strong>Rate:</strong> {formatLAK(partner.commissionRate)}/pax</div>
+                      <div><strong>PAX:</strong> {stats.paxCount} pax</div>
+                      <div><strong>Sales:</strong> {formatLAK(totalSales)}</div>
+                      <div><strong>Commission:</strong> <span style={{ color: "var(--primary)", fontWeight: "bold" }}>{formatLAK(stats.totalCommission)}</span></div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPartnerId(partner.id);
+                          setSelectedMonthFilter("");
+                        }}
+                      >
+                        ລາຍລະອຽດ
+                      </button>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPartnerId(partner.id);
+                          setPartnerName(partner.name);
+                          setPartnerType(partner.type);
+                          setCommissionRate(partner.commissionRate);
+                          setContact(partner.contact || "");
+                          setBankAccount(partner.bankAccount || "");
+                        }}
+                      >
+                        {t("edit_label", "ແກ້ໄຂ")}
+                      </button>
+                      <button 
+                        className="btn btn-danger" 
+                        style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePartner(partner.id);
+                        }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
 
@@ -359,6 +628,9 @@ export default function CommissionTracker() {
                   <h3 style={{ color: "var(--text-primary)", fontSize: "1.3rem", marginTop: "2px" }}>{activePartnerData.name}</h3>
                 </div>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <button className="btn btn-secondary" style={{ padding: "4px 8px", fontSize: "0.75rem" }} onClick={() => handleExportDetailCSV(activePartnerData)}>
+                    Export CSV
+                  </button>
                   <button className="btn btn-primary" style={{ padding: "4px 8px", fontSize: "0.75rem" }} onClick={() => triggerPrintCommission()}>
                     ພິມລາຍງານ (Print)
                   </button>
@@ -372,7 +644,8 @@ export default function CommissionTracker() {
                 <div><strong>{t("contact_label", "ຕິດຕໍ່")}:</strong> {activePartnerData.contact || "-"}</div>
                 <div><strong>{t("rate_pax", "ເລດຄ່າຄອມ")}:</strong> {formatLAK(activePartnerData.commissionRate)}/pax</div>
                 <div><strong>{t("total_referred", "ລວມຜູ້ແນະນຳທັງໝົດ")}:</strong> {activeStats.paxCount} {t("pax_unit", "ຄົນ")}</div>
-                <div><strong>{t("total_commission", "ຍอดເງິນສະສົມທັງໝົດ")}:</strong> <span style={{ color: "var(--success)", fontWeight: "bold" }}>{formatLAK(activeStats.totalCommission)}</span></div>
+                <div><strong>{t("total_commission", "ຍອດເງິນສະສົມທັງໝົດ")}:</strong> <span style={{ color: "var(--success)", fontWeight: "bold" }}>{formatLAK(activeStats.totalCommission)}</span></div>
+                <div style={{ gridColumn: "span 2" }}><strong>{t("bank_account_label", "ເລກບັນຊີ / Bank Account")}:</strong> {activePartnerData.bankAccount || "-"}</div>
               </div>
 
               {/* Monthly breakdown cards - Click to filter */}
@@ -463,20 +736,24 @@ export default function CommissionTracker() {
                       </tr>
                     ) : (
                       filteredReferrals.map((c) => {
-                        const tripInfo = getCustomerTripDetails(c.id);
+                        const tripInfo = getBookingTripDetails(c.id);
+                        const leadPassenger = c.passengers && c.passengers[0];
+                        const leadName = leadPassenger ? leadPassenger.name : "Walk-in";
+                        const extraPax = c.passengers && c.passengers.length > 1 ? ` (+${c.passengers.length - 1})` : "";
+                        const rowCommission = (parseInt(c.paxCount) || 0) * activePartnerData.commissionRate;
                         return (
                           <tr key={c.id}>
-                            <td>{c.checkInDate || tripInfo.date}</td>
+                            <td>{c.date} {c.time}</td>
                             <td>
-                              <div style={{ fontWeight: "600" }}>{c.name}</div>
-                              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{c.passport}</span>
+                              <div style={{ fontWeight: "600" }}>{leadName}{extraPax}</div>
+                              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>ID: {c.id} | {c.serviceName} ({c.paxCount} pax)</span>
                             </td>
                             <td>{tripInfo.boatName}</td>
                             <td>{tripInfo.captainNames}</td>
                             <td>{tripInfo.guideNames}</td>
                             <td>{tripInfo.driverNames}</td>
                             <td style={{ textAlign: "right", fontWeight: "bold", color: "var(--success)" }}>
-                              {formatLAK(activePartnerData.commissionRate)}
+                              {formatLAK(rowCommission)}
                             </td>
                           </tr>
                         );
@@ -501,7 +778,7 @@ export default function CommissionTracker() {
                   className="form-control" 
                   value={partnerName}
                   onChange={(e) => setPartnerName(e.target.value)}
-                  placeholder={t("partner_name_placeholder", "ຕົວຢ່າງ: ບໍລິສັດ ຕາດຟານ ດີດຄັຟເວີຣี ຈຳກັດ")}
+                  placeholder={t("partner_name_placeholder", "ຕົວຢ່າງ: ບໍລິສັດ ຕາດຟານ ດີດຄັຟເວີຣີ ຈຳກັດ")}
                   required 
                 />
               </div>
@@ -535,13 +812,24 @@ export default function CommissionTracker() {
               </div>
 
               <div className="form-group">
-                <label>{t("contact_info_field", "ເບີຕິດຕໍ່ / ລາຍລະອຽด (Contact Info)")}</label>
+                <label>{t("contact_info_field", "ເບີຕິດຕໍ່ / ລາຍລະອຽດ (Contact Info)")}</label>
                 <input 
                   type="text" 
                   className="form-control" 
                   value={contact}
                   onChange={(e) => setContact(e.target.value)}
                   placeholder={t("contact_info_placeholder", "ເບີໂທລະສັບ ຫຼື ອີເມວ")}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>{t("bank_account_field", "ເລກບັນຊີ / Bank Account")}</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={bankAccount}
+                  onChange={(e) => setBankAccount(e.target.value)}
+                  placeholder={t("bank_account_placeholder", "ທະນາຄານ ແລະ ເລກບັນຊີ (Bank name & account)")}
                 />
               </div>
 
@@ -565,7 +853,7 @@ export default function CommissionTracker() {
         {activePartnerData && activeStats && (() => {
           const partner = activePartnerData;
           const commissionRate = partner.commissionRate;
-          const totalEarned = filteredReferrals.length * commissionRate;
+          const totalEarned = filteredReferrals.reduce((sum, b) => sum + (parseInt(b.paxCount) || 0) * commissionRate, 0);
           
           return (
             <div className="commission-print">
@@ -589,6 +877,10 @@ export default function CommissionTracker() {
                     <td style={{ border: "1px solid #000", padding: "6px" }}>{partner.contact || "-"}</td>
                     <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold", background: "#f8fafc" }}>ອັດຕາຄ່າຄອມ / Rate:</td>
                     <td style={{ border: "1px solid #000", padding: "6px" }}>{formatLAK(commissionRate)} / ຄົນ</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold", background: "#f8fafc" }}>ເລກບັນຊີ / Bank Account:</td>
+                    <td colSpan="3" style={{ border: "1px solid #000", padding: "6px" }}>{partner.bankAccount || "-"}</td>
                   </tr>
                 </tbody>
               </table>
@@ -618,18 +910,22 @@ export default function CommissionTracker() {
                     </tr>
                   ) : (
                     filteredReferrals.map((c) => {
-                      const tripInfo = getCustomerTripDetails(c.id);
+                      const tripInfo = getBookingTripDetails(c.id);
+                      const leadPassenger = c.passengers && c.passengers[0];
+                      const leadName = leadPassenger ? leadPassenger.name : "Walk-in";
+                      const extraPax = c.passengers && c.passengers.length > 1 ? ` (+${c.passengers.length - 1})` : "";
+                      const rowCommission = (parseInt(c.paxCount) || 0) * commissionRate;
                       return (
                         <tr key={c.id}>
-                          <td style={{ border: "1px solid #000", padding: "6px" }}>{c.checkInDate || tripInfo.date}</td>
+                          <td style={{ border: "1px solid #000", padding: "6px" }}>{c.date} {c.time}</td>
                           <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>
-                            {c.name} <span style={{ fontSize: "8px", fontWeight: "normal", color: "#666" }}>({c.passport})</span>
+                            {leadName}{extraPax} <span style={{ fontSize: "8px", fontWeight: "normal", color: "#666" }}>({c.id} | {c.serviceName} | {c.paxCount} pax)</span>
                           </td>
                           <td style={{ border: "1px solid #000", padding: "6px" }}>{tripInfo.boatName}</td>
                           <td style={{ border: "1px solid #000", padding: "6px" }}>{tripInfo.captainNames}</td>
                           <td style={{ border: "1px solid #000", padding: "6px" }}>{tripInfo.guideNames}</td>
                           <td style={{ border: "1px solid #000", padding: "6px" }}>{tripInfo.driverNames}</td>
-                          <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>{formatLAK(commissionRate)}</td>
+                          <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>{formatLAK(rowCommission)}</td>
                         </tr>
                       );
                     })
@@ -711,17 +1007,23 @@ export default function CommissionTracker() {
                   </tr>
                 ) : (
                   filteredReferrals.map((c) => {
-                    const tripInfo = getCustomerTripDetails(c.id);
+                    const tripInfo = getBookingTripDetails(c.id);
+                    const leadPassenger = c.passengers && c.passengers[0];
+                    const leadName = leadPassenger ? leadPassenger.name : "Walk-in";
+                    const extraPax = c.passengers && c.passengers.length > 1 ? ` (+${c.passengers.length - 1})` : "";
+                    const rowCommission = (parseInt(c.paxCount) || 0) * activePartnerData.commissionRate;
                     return (
                       <tr key={c.id}>
-                        <td style={{ border: "1px solid #000", padding: "6px" }}>{c.checkInDate}</td>
-                        <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>{c.name}</td>
+                        <td style={{ border: "1px solid #000", padding: "6px" }}>{c.date} {c.time}</td>
+                        <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>
+                          {leadName}{extraPax} <span style={{ fontSize: "8px", fontWeight: "normal", color: "#666" }}>({c.id} | {c.serviceName} | {c.paxCount} pax)</span>
+                        </td>
                         <td style={{ border: "1px solid #000", padding: "6px" }}>{tripInfo.boatName}</td>
                         <td style={{ border: "1px solid #000", padding: "6px" }}>{tripInfo.captainNames}</td>
                         <td style={{ border: "1px solid #000", padding: "6px" }}>{tripInfo.guideNames}</td>
                         <td style={{ border: "1px solid #000", padding: "6px" }}>{tripInfo.driverNames}</td>
-                        <td style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>{c.status === "completed" ? "Completed" : "Pending"}</td>
-                        <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>{formatLAK(activePartnerData.commissionRate)}</td>
+                        <td style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>{c.status === "completed" || c.status === "ออกเรือแล้ว" ? "Completed" : "Pending"}</td>
+                        <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>{formatLAK(rowCommission)}</td>
                       </tr>
                     );
                   })

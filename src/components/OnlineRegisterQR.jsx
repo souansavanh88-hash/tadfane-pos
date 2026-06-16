@@ -15,6 +15,7 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
   const [customHostUrl, setCustomHostUrl] = useState(localStorage.getItem("pos_custom_host_url") || "");
   const [modalBooking, setModalBooking] = useState(null);
   const [printBooking, setPrintBooking] = useState(null);
+  const [isPrintLoading, setIsPrintLoading] = useState(false);
 
   // Sync DB updates
   useEffect(() => {
@@ -59,23 +60,27 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
   };
 
   const triggerQrSignPrint = () => {
+    setIsPrintLoading(true);
     const originalClass = document.body.className;
     document.body.classList.add("print-qr-sign-mode");
     setTimeout(() => {
       window.print();
       document.body.className = originalClass;
-    }, 150);
+      setIsPrintLoading(false);
+    }, 800);
   };
 
   const handlePrintBookingQrSign = (bk) => {
     setPrintBooking(bk);
+    setIsPrintLoading(true);
     const originalClass = document.body.className;
     document.body.classList.add("print-qr-sign-mode");
     setTimeout(() => {
       window.print();
       document.body.className = originalClass;
       setPrintBooking(null);
-    }, 200);
+      setIsPrintLoading(false);
+    }, 800);
   };
 
   const handleSetReadyToPay = (bk) => {
@@ -472,6 +477,8 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
           <div className="card" style={{
             width: "100%",
             maxWidth: "400px",
+            maxHeight: "90vh",
+            overflowY: "auto",
             background: "#ffffff",
             borderRadius: "16px",
             padding: "2rem",
@@ -582,6 +589,38 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
           )}
         </div>
       </div>
+      {isPrintLoading && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 23, 42, 0.85)",
+          zIndex: 999999,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "15px",
+          color: "#ffffff"
+        }} className="no-print">
+          <div style={{
+            width: "50px",
+            height: "50px",
+            border: "5px solid rgba(255, 255, 255, 0.3)",
+            borderTop: "5px solid #10b981",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite"
+          }}></div>
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          <div style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
+            {lang === "en" ? "Generating Print Preview..." : "กำลังสร้างหน้ารวมคิวอาร์สำหรับพิมพ์..."}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

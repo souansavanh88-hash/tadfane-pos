@@ -178,6 +178,24 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
           >
             ລາວ
           </button>
+          <span style={{ color: "rgba(255,255,255,0.15)", fontSize: "0.75rem" }}>/</span>
+          <button 
+            type="button"
+            onClick={() => setLang("th")} 
+            style={{
+              background: lang === "th" ? "#10b981" : "rgba(255,255,255,0.08)",
+              color: lang === "th" ? "#ffffff" : "#94a3b8",
+              border: "none",
+              borderRadius: "4px",
+              padding: "4px 8px",
+              fontSize: "0.75rem",
+              fontWeight: "bold",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            ไทย
+          </button>
         </div>
       </div>
 

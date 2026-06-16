@@ -6,7 +6,14 @@ const SEED_DATA = {
     rateTHB: 620,         // 1 THB = 620 LAK
     rateUSD: 21500,       // 1 USD = 21,500 LAK
     expenseApprovalLimit: 500000, // 500,000 LAK default limit for manager approval
-    logo: "/tadfane_logo.jpg"
+    logo: "/tadfane_logo.jpg",
+    shopName: "TADFANE RAFTING",
+    shopNameLao: "ຕາດຟານ ລ່ອງແກ່ງ",
+    shopAddress: "Vang Vieng, Laos",
+    shopAddressLao: "ວັງວຽງ, ປະເທດລາວ",
+    shopTel: "+856 20 555-9000",
+    shopTaxId: "",
+    shopExtra: ""
   },
   services: [
     { id: "SRV-001", name: "ລ່ອງເຮືອ / Adult Boat Ride", price: 250000, priceTier1: 250000, priceTier1Type: "pax", priceTier2: 230000, priceTier2Type: "pax", priceTier3: 200000, priceTier3Type: "pax", currency: "LAK", status: "active" },
@@ -170,6 +177,10 @@ export const migrateDb = (parsed) => {
         e.phone = "";
         updated = true;
       }
+      if (e.bankAccount === undefined) {
+        e.bankAccount = "";
+        updated = true;
+      }
       if (e.hireDate === undefined) {
         e.hireDate = "2025-01-01";
         updated = true;
@@ -248,6 +259,17 @@ export const migrateDb = (parsed) => {
   if (parsed.partners && parsed.partners.some(p => p.name.includes("Lao Travel Discovery"))) {
     parsed.partners = SEED_DATA.partners;
     migrated = true;
+  }
+
+  // Populate missing bankAccount field for all partners
+  if (parsed.partners && Array.isArray(parsed.partners)) {
+    parsed.partners = parsed.partners.map(p => {
+      if (p.bankAccount === undefined) {
+        p.bankAccount = "";
+        migrated = true;
+      }
+      return p;
+    });
   }
 
   // Automatically migrate settings to support expenseApprovalLimit and logo
@@ -369,6 +391,23 @@ export const migrateDb = (parsed) => {
     });
   }
 
+  // Migration: Discount & Debt fields
+  (parsed.bookings || []).forEach(bk => {
+    if (bk.discountLAK === undefined) bk.discountLAK = 0;
+    if (bk.debtLAK === undefined) bk.debtLAK = 0;
+    if (bk.netPriceLAK === undefined) bk.netPriceLAK = bk.pricePaidLAK || 0;
+    if (bk.paidLAK === undefined) bk.paidLAK = bk.pricePaidLAK || 0;
+  });
+
+  // Migration: Shop info settings
+  if (!parsed.settings.shopName) parsed.settings.shopName = "TADFANE RAFTING";
+  if (!parsed.settings.shopNameLao) parsed.settings.shopNameLao = "\u0e95\u0eb2\u0e94\u0e9f\u0eb2\u0e99 \u0ea5\u0ec8\u0ead\u0e87\u0ec1\u0e81\u0ec8\u0e87";
+  if (!parsed.settings.shopAddress) parsed.settings.shopAddress = "Vang Vieng, Laos";
+  if (!parsed.settings.shopAddressLao) parsed.settings.shopAddressLao = "\u0ea7\u0eb1\u0e87\u0ea7\u0ebd\u0e87, \u0e9b\u0eb0\u0ec0\u0e97\u0e94\u0ea5\u0eb2\u0ea7";
+  if (!parsed.settings.shopTel) parsed.settings.shopTel = "+856 20 555-9000";
+  if (parsed.settings.shopTaxId === undefined) parsed.settings.shopTaxId = "";
+  if (parsed.settings.shopExtra === undefined) parsed.settings.shopExtra = "";
+
   return migrated;
 };
 
@@ -454,6 +493,7 @@ const syncTripsWithBookings = (db) => {
             facePhoto: p.facePhoto || "",
             groupId: b.groupId,
             bookingId: b.id,
+            partnerId: b.partnerId,
             status: (b.status === "ชำระเงินแล้ว / ออกบิลแล้ว" || b.status === "ชำระแล้ว" || b.status === "ออกบิลแล้ว" || b.status === "ออกเรือแล้ว" || b.status === "เสร็จสิ้น") ? "completed" : "assigned",
             checkInDate: b.date
           });
@@ -486,7 +526,7 @@ const syncTripsWithBookings = (db) => {
           captainId: assignedCaptainId,
           captainIds: assignedCaptainId ? [assignedCaptainId] : [],
           guideIds: boatInfo.guideId ? [boatInfo.guideId] : (b.guideIds || []),
-          driverIds: b.driverId ? [b.driverId] : [],
+          driverIds: b.driverIds && b.driverIds.length > 0 ? b.driverIds : (b.driverId ? [b.driverId] : []),
           customerIds: customerIds,
           bookingId: b.id,
           status: b.status === "เสร็จสิ้น" ? "completed" : "dispatched",
@@ -508,6 +548,16 @@ export const saveDb = (db) => {
   memoryDb = db;
   safeSetItem(DB_KEY, JSON.stringify(db));
   
+  // Proactively send database state to server sync endpoint
+  if (typeof window !== "undefined" && window.fetch) {
+    window.fetch("/api/db", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(db)
+    }).catch(err => console.warn("Failed to push DB update to server:", err));
+  }
 
   try {
     window.dispatchEvent(new Event("db-update"));
