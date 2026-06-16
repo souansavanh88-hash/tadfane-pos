@@ -1,4 +1,5 @@
 // mockDb.js - Client-Side Local Database with LocalStorage persistence
+import { syncDbToFirebase } from "./firebaseSync";
 
 const SEED_DATA = {
   settings: {
@@ -558,6 +559,9 @@ export const saveDb = (db) => {
       body: JSON.stringify(db)
     }).catch(err => console.warn("Failed to push DB update to server:", err));
   }
+
+  // Push to Firebase Realtime Cloud DB
+  syncDbToFirebase(db);
 
   try {
     window.dispatchEvent(new Event("db-update"));

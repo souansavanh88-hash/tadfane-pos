@@ -1,6 +1,7 @@
 // SelfRegisterPortal.jsx - Customer Self-Service Online Registration & Waiver Portal
 import React, { useState, useEffect, useRef } from "react";
 import { getDb, saveDb } from "../db/mockDb";
+import { getBookingFromFirebase, saveRegistrationToFirebase } from "../db/firebaseSync";
 import { ShieldCheck, User, Globe2, Phone, CalendarRange, CheckCircle2, AlertTriangle, ArrowRight, Ship, Camera, RefreshCw, X } from "lucide-react";
 
 const calculateAge = (dobString) => {
@@ -664,7 +665,12 @@ export default function SelfRegisterPortal() {
         b => b.groupId === cleanCode && b.status !== "ยกเลิก"
       );
 
-      // FALLBACK: If no booking found in local DB and we have paxCount from URL, create a virtual booking
+      // FALLBACK 1: Try to get from Firebase if configured
+      if (!foundBooking) {
+        foundBooking = await getBookingFromFirebase(cleanCode);
+      }
+
+      // FALLBACK 2: If no booking found in local DB/Firebase and we have paxCount from URL, create a virtual booking
       if (!foundBooking && urlPaxCount > 0) {
         foundBooking = {
           id: urlBookingId || ("VIRTUAL-" + cleanCode),
@@ -1165,8 +1171,14 @@ export default function SelfRegisterPortal() {
         console.warn("Server save failed (expected on Vercel production):", err);
       }
 
-      // Fallback: Save registration data to localStorage on the customer's phone
+      // Fallback 1: Try saving to Firebase Cloud
+      let firebaseSaved = false;
       if (!serverSaved) {
+        firebaseSaved = await saveRegistrationToFirebase(booking.groupId, booking.id, newPassenger);
+      }
+
+      // Fallback 2: Save registration data to localStorage on the customer's phone
+      if (!serverSaved && !firebaseSaved) {
         // Store registration in localStorage keyed by groupId
         const regKey = `pos_reg_${booking.groupId}`;
         const existingRegs = JSON.parse(localStorage.getItem(regKey) || "[]");

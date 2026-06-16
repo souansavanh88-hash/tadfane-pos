@@ -165,6 +165,26 @@ export default function App() {
       }
     };
 
+    // Firebase Real-time Sync (if configured)
+    let unsubscribeFirebase = null;
+    try {
+      // Need to import listenToFirebaseDb dynamically or at the top
+      // We'll just dispatch the event when Firebase updates
+      import("./db/firebaseSync").then(({ listenToFirebaseDb }) => {
+        unsubscribeFirebase = listenToFirebaseDb((newData) => {
+          if (newData && active) {
+            const currentLocalRaw = localStorage.getItem("pos_boat_db");
+            if (currentLocalRaw !== JSON.stringify(newData)) {
+              localStorage.setItem("pos_boat_db", JSON.stringify(newData));
+              window.dispatchEvent(new Event("db-update"));
+            }
+          }
+        });
+      }).catch(err => console.warn("Firebase sync module not loaded:", err));
+    } catch (e) {
+      console.warn(e);
+    }
+
     // Initial sync
     pollServerDb();
 
@@ -174,6 +194,9 @@ export default function App() {
     return () => {
       active = false;
       clearInterval(interval);
+      if (unsubscribeFirebase) {
+        unsubscribeFirebase();
+      }
     };
   }, []);
 
