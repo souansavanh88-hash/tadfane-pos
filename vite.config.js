@@ -152,6 +152,7 @@ const dbSyncPlugin = () => ({
 export default defineConfig({
   plugins: [react(), cloudflareTunnelPlugin(), dbSyncPlugin()],
   build: {
+    target: 'es2015',
     chunkSizeWarningLimit: 1000
   },
   server: {
