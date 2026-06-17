@@ -5,12 +5,12 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDwn6XlvXcqMwJwYOoaxy_-Qey5FEsVSh8",
-  authDomain: "pos-system-30a0e.firebaseapp.com",
-  projectId: "pos-system-30a0e",
-  storageBucket: "pos-system-30a0e.firebasestorage.app",
-  messagingSenderId: "12543679140",
-  appId: "1:12543679140:web:ac99f16d5f56239a10e431"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDwn6XlvXcqMwJwYOoaxy_-Qey5FEsVSh8",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "pos-system-30a0e.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "pos-system-30a0e",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "pos-system-30a0e.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "12543679140",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:12543679140:web:ac99f16d5f56239a10e431"
 };
 
 let app = null;
