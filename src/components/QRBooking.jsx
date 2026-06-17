@@ -800,19 +800,22 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
     setLoadedBooking(newBooking);
 
-    // Synchronous print call to bypass Chrome popup blocker
-    setTimeout(() => {
-      triggerQrSlipPrint();
-      
-      // Now save to Firebase asynchronously
-      addBookingToFirebase(newBooking).catch(err => {
-        alert("Failed to create booking in cloud. Please check network.");
-      });
+    // Save to Firebase asynchronously (don't block print)
+    addBookingToFirebase(newBooking).catch(err => {
+      console.error("Failed to create booking in cloud:", err);
+    });
 
-      // Generate new group ID and bill number for next customer
-      setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
-      setBillNumber(generateBillId());
-    }, 50); // Minimal delay just for DOM flush
+    // Use requestAnimationFrame to allow React to flush the DOM first,
+    // while still preserving the user gesture chain (Safari requires this)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        triggerQrSlipPrint();
+
+        // Generate new group ID and bill number for next customer
+        setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
+        setBillNumber(generateBillId());
+      });
+    });
   };
 
   // Loads a booking to details pane
