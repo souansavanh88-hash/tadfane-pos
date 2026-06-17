@@ -710,53 +710,79 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     return url;
   };
 
-  const triggerReceiptPrint = () => {
+  // Universal print helper - works in ALL browsers including Safari
+  // Opens a new window with the printable content to bypass user gesture restrictions
+  const printByClassName = (className) => {
     setIsPrintLoading(true);
 
-    // Inject @page CSS dynamically for thermal receipt print size
-    const styleEl = document.createElement("style");
-    styleEl.id = "receipt-print-style-rules";
-    styleEl.innerHTML = `
-      @page { size: 80mm auto !important; margin: 0 !important; }
-      body { margin: 0 !important; padding: 0 !important; }
-    `;
-    document.head.appendChild(styleEl);
+    // Find the element to print
+    const el = document.querySelector(`.${className}`);
+    if (!el) {
+      console.error(`Print element .${className} not found`);
+      setIsPrintLoading(false);
+      return;
+    }
 
-    const originalClass = document.body.className;
-    document.body.classList.add("print-receipt-mode");
-    
-    // Trigger print synchronously to ensure gesture tracking is preserved
-    window.print();
-    
-    document.body.className = originalClass;
-    const el = document.getElementById("receipt-print-style-rules");
-    if (el) el.remove();
-    setIsPrintLoading(false);
+    // Get all stylesheets from the current page
+    const styles = Array.from(document.styleSheets)
+      .map(sheet => {
+        try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); }
+        catch(e) { return ''; }
+      }).join('\n');
+
+    // Build printable HTML
+    const printHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Print</title>
+<style>
+  @page { size: 80mm auto !important; margin: 0 !important; }
+  body { margin: 0 !important; padding: 0 !important; font-family: monospace; }
+  * { color: #000000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  ${styles}
+  .${className} { display: block !important; }
+</style></head>
+<body>${el.outerHTML}</body></html>`;
+
+    // Open a new window for printing
+    const printWin = window.open('', '_blank', 'width=400,height=600');
+    if (!printWin) {
+      // Popup blocked - fallback to direct print
+      console.warn('Popup blocked, falling back to direct print');
+      const originalClass = document.body.className;
+      document.body.classList.add(className === 'receipt-print' ? 'print-receipt-mode' : 
+                                   className === 'qr-slip-print' ? 'print-qr-slip-mode' : 
+                                   'print-receipt-mode');
+      window.print();
+      document.body.className = originalClass;
+      setIsPrintLoading(false);
+      return;
+    }
+
+    printWin.document.open();
+    printWin.document.write(printHtml);
+    printWin.document.close();
+
+    // Wait for content to load then print
+    printWin.onload = () => {
+      printWin.focus();
+      printWin.print();
+      // Close after a short delay to allow print dialog to process
+      setTimeout(() => { printWin.close(); }, 1000);
+      setIsPrintLoading(false);
+    };
+
+    // Fallback if onload doesn't fire
+    setTimeout(() => {
+      try {
+        printWin.focus();
+        printWin.print();
+        setTimeout(() => { printWin.close(); }, 1000);
+      } catch(e) {}
+      setIsPrintLoading(false);
+    }, 500);
   };
 
-  const triggerQrSlipPrint = () => {
-    setIsPrintLoading(true);
-
-    // Inject @page CSS dynamically for thermal slip print size
-    const styleEl = document.createElement("style");
-    styleEl.id = "receipt-print-style-rules";
-    styleEl.innerHTML = `
-      @page { size: 80mm auto !important; margin: 0 !important; }
-      body { margin: 0 !important; padding: 0 !important; }
-    `;
-    document.head.appendChild(styleEl);
-
-    const originalClass = document.body.className;
-    document.body.classList.add("print-qr-slip-mode");
-    
-    // Trigger print synchronously to ensure gesture tracking is preserved
-    window.print();
-    
-    document.body.className = originalClass;
-    const el = document.getElementById("receipt-print-style-rules");
-    if (el) el.remove();
-    setIsPrintLoading(false);
-  };
+  const triggerReceiptPrint = () => printByClassName('receipt-print');
+  const triggerQrSlipPrint = () => printByClassName('qr-slip-print');
 
   // Handles creating a new booking in "registering"
   const handleCreateBooking = async (e) => {
