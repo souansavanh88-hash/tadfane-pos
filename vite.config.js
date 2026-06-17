@@ -156,6 +156,11 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000
   },
   server: {
-    allowedHosts: true
+    allowedHosts: ['.trycloudflare.com', '.vercel.app', '.web.app', '.firebaseapp.com'],
+    host: true
+  },
+  preview: {
+    allowedHosts: ['.trycloudflare.com', '.vercel.app', '.web.app', '.firebaseapp.com'],
+    host: true
   }
 })
