@@ -557,7 +557,7 @@ export default function SelfRegisterPortal() {
   const params = new URLSearchParams(window.location.search);
   const initialGroupId = params.get("groupId") || "";
   const urlPaxCount = parseInt(params.get("pax")) || 0;
-  const urlBookingId = params.get("bid") || "";
+  const urlBookingId = params.get("bookingId") || params.get("bid") || "";
 
   // State controls
   const [groupIdInput, setGroupIdInput] = useState(initialGroupId);
@@ -1116,6 +1116,11 @@ export default function SelfRegisterPortal() {
       return;
     }
 
+    if (!navigator.onLine) {
+      alert("ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้ กรุณาตรวจสอบสัญญาณเน็ตของคุณ / No internet connection. Please check your network.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -1125,111 +1130,29 @@ export default function SelfRegisterPortal() {
         registeredAt: new Date().toISOString()
       };
 
-      let saved = false;
-
-      // ===== STRATEGY 1: Firebase Cloud (Primary - works on Vercel) =====
-      if (!saved && isFirebaseConfigured()) {
-        try {
-          const success = await addPassengerToFirebaseBooking(booking.id, newPassenger);
-          console.log("Registered via pure Firebase:", success);
-
-          // Check if pax is fulfilled and transition status
-          const updatedPassengersCount = (booking.passengers?.length || 0) + 1;
-          if (updatedPassengersCount >= booking.paxCount && booking.status === "registering") {
-            await updateBookingInFirebase(booking.id, { status: "ready_to_checkout" });
-            console.log("Pax full, auto-transitioned to ready_to_checkout");
-          }
-          saved = true;
-        } catch (error) {
-          console.error("Firebase submit error:", error);
-          // Don't return yet, try server fallback
-        }
+      if (!isFirebaseConfigured()) {
+        throw new Error("ระบบเซิร์ฟเวอร์ยังไม่ได้เชื่อมต่อ (Firebase Not Configured) กรุณาติดต่อพนักงาน");
       }
 
-      // ===== STRATEGY 2: Local Server /api/db (Fallback - works on localhost) =====
-      if (!saved) {
-        try {
-          const response = await fetch("/api/db?t=" + Date.now(), {
-            headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
-          });
-          if (response.ok) {
-            const currentDb = await response.json();
-            const cleanCode = booking.groupId.trim().toUpperCase();
-            const latestBookingIndex = (currentDb.bookings || []).findIndex(
-              b => b.groupId === cleanCode && b.status !== "ยกเลิก"
-            );
-
-            if (latestBookingIndex !== -1) {
-              const latestBooking = currentDb.bookings[latestBookingIndex];
-              const currentPassengers = latestBooking.passengers || [];
-
-              if (currentPassengers.length >= latestBooking.paxCount) {
-                alert(lang === "en" 
-                  ? "This group registration is already full!" 
-                  : lang === "la" 
-                  ? "ກຸ່ມນີ້ລົງທະບຽນຄົບຈຳນວນແລ້ວ!" 
-                  : "กลุ่มนี้ลงทะเบียนครบจำนวนแล้ว!");
-                setIsLoading(false);
-                setBooking(latestBooking);
-                return;
-              }
-
-              const updatedPassengers = [...currentPassengers, newPassenger];
-              const isFull = updatedPassengers.length >= latestBooking.paxCount;
-
-              currentDb.bookings[latestBookingIndex] = {
-                ...latestBooking,
-                status: isFull ? "กรอกข้อมูลเรียบร้อย" : "กำลังกรอกข้อมูล",
-                passengers: updatedPassengers
-              };
-
-              const saveResponse = await fetch("/api/db", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(currentDb)
-              });
-
-              if (saveResponse.ok) {
-                saved = true;
-                localStorage.setItem("pos_boat_db", JSON.stringify(currentDb));
-                window.dispatchEvent(new Event("db-update"));
-                setBooking(currentDb.bookings[latestBookingIndex]);
-              }
-            }
-          }
-        } catch (err) {
-          console.warn("Server save failed (expected on Vercel production):", err);
-        }
+      // Add to Firebase directly
+      const success = await addPassengerToFirebaseBooking(booking.id, newPassenger);
+      if (!success) {
+        throw new Error("บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
       }
+      
+      console.log("Registered via pure Firebase:", success);
 
-      // ===== STRATEGY 3: localStorage fallback (last resort) =====
-      if (!saved) {
-        const regKey = `pos_reg_${booking.groupId}`;
-        const existingRegs = JSON.parse(localStorage.getItem(regKey) || "[]");
-        existingRegs.push(newPassenger);
-        localStorage.setItem(regKey, JSON.stringify(existingRegs));
-
-        const updatedBooking = {
-          ...booking,
-          passengers: [...(booking.passengers || []), newPassenger]
-        };
-        const isFull = updatedBooking.passengers.length >= updatedBooking.paxCount;
-        if (isFull) {
-          updatedBooking.status = "กรอกข้อมูลเรียบร้อย";
-        }
-        setBooking(updatedBooking);
-      }
-
-      if (!saved) {
-        alert("ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง / Registration failed. Please try again.");
-        setIsLoading(false);
-        return;
+      // Check if pax is fulfilled and transition status
+      const updatedPassengersCount = (booking.passengers?.length || 0) + 1;
+      if (updatedPassengersCount >= booking.paxCount && booking.status === "registering") {
+        await updateBookingInFirebase(booking.id, { status: "ready_to_checkout" });
+        console.log("Pax full, auto-transitioned to ready_to_checkout");
       }
 
       setRegSuccess(true);
     } catch (err) {
       console.error("Error during registration submit:", err);
-      alert("การลงทะเบียนล้มเหลว! กรุณาลองใหม่อีกครั้ง / Registration failed: " + err.message);
+      alert(`การลงทะเบียนล้มเหลว: ${err.message}\nกรุณาตรวจสอบอินเทอร์เน็ตหรือติดต่อพนักงานแคชเชียร์`);
     } finally {
       setIsLoading(false);
     }

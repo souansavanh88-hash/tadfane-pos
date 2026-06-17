@@ -691,27 +691,22 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     ? Math.round((totalPriceLAK * Math.min(discountAmount, 100)) / 100)
     : discountAmount;
 
-  // Generate self registration URL
+  // Generate self registration URL (Hardcoded to Vercel as requested)
   const getSelfRegUrl = (grpId, bookingPartnerId = null, bookingPaxCount = null, bookingId = null) => {
-    let origin = customHostUrl.trim() || window.location.origin;
-    if (origin.endsWith("/")) {
-      origin = origin.slice(0, -1);
+    let url = `https://tadfane-pos.vercel.app/register?`;
+    
+    const bid = bookingId || (loadedBooking ? loadedBooking.id : null);
+    if (bid) {
+      url += `bookingId=${bid}&`;
     }
-    let pathname = window.location.pathname;
-    if (!pathname.startsWith("/")) {
-      pathname = "/" + pathname;
+    
+    url += `groupId=${grpId || registrationGroupId}`;
+    
+    const pCount = bookingPaxCount || paxCount;
+    if (pCount) {
+      url += `&pax=${pCount}`;
     }
-    let url = `${origin}${pathname}?mode=self-register&groupId=${grpId || registrationGroupId}`;
-    const pId = bookingPartnerId !== null ? bookingPartnerId : partnerId;
-    if (pId) {
-      url += `&partnerId=${pId}`;
-    }
-    if (bookingPaxCount) {
-      url += `&pax=${bookingPaxCount}`;
-    }
-    if (bookingId) {
-      url += `&bid=${bookingId}`;
-    }
+    
     return url;
   };
 

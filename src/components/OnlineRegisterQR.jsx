@@ -29,9 +29,7 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
   }, []);
 
   const getSelfRegUrl = () => {
-    const origin = customHostUrl.trim() || window.location.origin;
-    const pathname = window.location.pathname;
-    let url = `${origin}${pathname}?mode=self-register&paxCount=${paxCount}`;
+    let url = `https://tadfane-pos.vercel.app/register?pax=${paxCount}`;
     if (selectedPartnerId) {
       url += `&partnerId=${selectedPartnerId}`;
     }
@@ -39,9 +37,11 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
   };
 
   const getSelfRegUrlForBooking = (bk) => {
-    const origin = customHostUrl.trim() || window.location.origin;
-    const pathname = window.location.pathname;
-    let url = `${origin}${pathname}?mode=self-register&groupId=${bk.groupId}&paxCount=${bk.paxCount}`;
+    let url = `https://tadfane-pos.vercel.app/register?`;
+    if (bk.id) {
+      url += `bookingId=${bk.id}&`;
+    }
+    url += `groupId=${bk.groupId}&pax=${bk.paxCount}`;
     if (bk.partnerId) {
       url += `&partnerId=${bk.partnerId}`;
     }
