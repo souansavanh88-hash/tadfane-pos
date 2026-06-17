@@ -1202,6 +1202,19 @@ export default function SelfRegisterPortal() {
 
   return (
     <div style={containerStyle}>
+      {/* Debug Panel (Temporary) */}
+      <div style={{ background: "#000", color: "#0f0", padding: "10px", margin: "10px 0", borderRadius: "8px", fontFamily: "monospace", fontSize: "12px", textAlign: "left", whiteSpace: "pre-wrap" }}>
+        <strong>DEBUG PANEL</strong><br/>
+        Firebase connected: {isFirebaseConfigured() ? "true" : "false"}<br/>
+        bookingId: {booking?.id || "N/A"}<br/>
+        groupId: {booking?.groupId || activeGroupId || "N/A"}<br/>
+        pax: {booking?.paxCount || "N/A"}<br/>
+        registeredCount: {booking?.registeredCount || 0}<br/>
+        status: {booking?.status || "N/A"}<br/>
+        paymentStatus: {booking?.paymentStatus || "N/A"}<br/>
+        last error: {lookupError ? "lookup failed" : "None"}<br/>
+      </div>
+
       {/* Language Switcher */}
       <div style={langBarContainerStyle}>
         <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "700" }}>LANG</span>
