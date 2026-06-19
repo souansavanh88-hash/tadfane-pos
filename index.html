@@ -4,10 +4,53 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>pos</title>
+    <title>TADFANE POS</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
+      // Display UI fallback if React fails to load
+      function showHTMLFallback(message, source, lineno, colno, error) {
+        try {
+          const rootEl = document.getElementById('root');
+          // Only show fallback if React hasn't successfully mounted yet
+          if (rootEl && (!window.__REACT_MOUNTED__ || rootEl.querySelector('#html-loader'))) {
+            rootEl.innerHTML = `
+              <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; color: #f8fafc; padding: 20px; font-family: system-ui, -apple-system, sans-serif; text-align: center;">
+                <div style="max-width: 500px; width: 100%; background: #1e293b; padding: 32px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); border: 1.5px solid #ef4444; box-sizing: border-box;">
+                  <div style="font-size: 3.5rem; margin-bottom: 16px;">⚠️</div>
+                  <h1 style="font-size: 1.5rem; font-weight: 800; color: #f8fafc; margin: 0 0 8px 0;">ເກີດຂໍ້ຜິດພາດໃນການເລີ່ມລະບົບ</h1>
+                  <h2 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0 0 12px 0;">เกิดข้อผิดพลาดในการเริ่มระบบ</h2>
+                  <h3 style="font-size: 1rem; font-weight: 600; color: #cbd5e1; margin: 0 0 20px 0; font-style: italic;">Failed to initialize POS application</h3>
+                  
+                  <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6; margin-bottom: 24px;">
+                    ລະບົບບໍ່ສາມາດໂຫຼດໄຟລ໌ໄດ້ ສຳເລັດ ຫຼື ບຣາວເຊີບໍ່ຮອງຮັບ (ອາດເກີດຈາກເຄືອຂ່າຍອິນເຕີເນັດ ຫຼື Safari/iOS ເວີຊັນເກົ່າ)<br>
+                    ระบบไม่สามารถโหลดไฟล์ได้สำเร็จ หรือเบราว์เซอร์ไม่รองรับ (อาจเกิดจากเครือข่ายอินเทอร์เน็ต หรือ Safari/iOS เวอร์ชันเก่า)
+                  </p>
+                  
+                  <div style="text-align: left; background: #0f172a; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 0.75rem; color: #f87171; overflow-x: auto; margin-bottom: 24px; border: 1px solid #334155; max-height: 120px; box-sizing: border-box; word-break: break-all;">
+                    <strong>Error:</strong> ${message}<br/>
+                    <strong>Source:</strong> ${source || 'bundle'}:${lineno || 0}:${colno || 0}
+                  </div>
+                  
+                  <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="window.location.reload()" style="background: #0f766e; border: none; color: #ffffff; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem; transition: background 0.2s;">
+                      🔄 ໂຫຼດຄືນໃໝ່ / ลองอีกครั้ง
+                    </button>
+                    <button onclick="try { localStorage.clear(); window.location.reload(); } catch(e) {}" style="background: transparent; border: 1.5px solid #475569; color: #cbd5e1; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem;">
+                      🗑️ ລ້າງຂໍ້ມູນ / ล้างแคช
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+        } catch (e) {
+          console.error("Fallback handler failed:", e);
+        }
+      }
+
       window.onerror = function(message, source, lineno, colno, error) {
+        showHTMLFallback(message, source, lineno, colno, error);
+        
         fetch('/api/log', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -21,21 +64,48 @@
           })
         }).catch(err => {});
       };
+
       window.addEventListener('unhandledrejection', function(event) {
+        const errorMsg = event.reason ? event.reason.message : 'Unhandled Promise Rejection';
+        const stack = event.reason ? event.reason.stack : '';
+        
+        showHTMLFallback(errorMsg, 'PromiseRejection', 0, 0, event.reason);
+        
         fetch('/api/log', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             url: window.location.href,
-            message: event.reason ? event.reason.message : 'Unhandled Rejection',
-            stack: event.reason ? event.reason.stack : ''
+            message: errorMsg,
+            stack: stack
           })
         }).catch(err => {});
       });
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Premium CSS Loading Screen (replaced automatically once React mounts) -->
+      <div id="html-loader" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; transition: opacity 0.3s ease;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
+          <div style="position: relative; width: 64px; height: 64px;">
+            <div style="box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 0px; border: 6px solid #0f766e; border-radius: 50%; animation: loader-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #0f766e transparent transparent transparent;"></div>
+            <div style="box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 0px; border: 6px solid #0d9488; border-radius: 50%; animation: loader-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: transparent #0d9488 transparent transparent; animation-delay: -0.15s;"></div>
+            <div style="box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 0px; border: 6px solid #14b8a6; border-radius: 50%; animation: loader-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: transparent transparent transparent #14b8a6; animation-delay: -0.3s;"></div>
+          </div>
+          <style>
+            @keyframes loader-spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          </style>
+          <div style="text-align: center;">
+            <h3 style="margin: 0; font-size: 1.4rem; font-weight: 700; color: #f8fafc; letter-spacing: 0.5px;">ຕາດຟານ ລ່ອງແກ່ງ / TADFANE POS</h3>
+            <p style="margin: 8px 0 0 0; font-size: 0.95rem; color: #94a3b8;">ກຳລັງເລີ່ມລະບົບ... / กำลังเริ่มระบบ... / Starting POS...</p>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

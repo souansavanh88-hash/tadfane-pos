@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import legacy from '@vitejs/plugin-legacy'
 import os from 'os'
 import fs from 'fs'
 import path from 'path'
@@ -150,9 +151,16 @@ const dbSyncPlugin = () => ({
 });
 
 export default defineConfig({
-  plugins: [react(), cloudflareTunnelPlugin(), dbSyncPlugin()],
+  plugins: [
+    react(),
+    legacy({
+      targets: ['defaults', 'not IE 11', 'Android >= 5']
+    }),
+    cloudflareTunnelPlugin(),
+    dbSyncPlugin()
+  ],
   build: {
-    target: 'es2015',
+    target: ['es2015', 'chrome50'],
     chunkSizeWarningLimit: 1000
   },
   server: {
