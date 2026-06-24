@@ -431,7 +431,7 @@ export default function SettingsPanel({ currentUser }) {
                 min="0"
                 step="10000"
                 required
-                disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                
               />
               <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem", display: "block" }}>
                 {t("base_price_walkin", "ລາຄາຕັ້ງຕົ້ນສຳລັບນັກທ່ອງທ່ຽວທົ່ວໄປ (Walk-in):")} <strong>{formatLAK(basePrice)}</strong>
@@ -449,7 +449,7 @@ export default function SettingsPanel({ currentUser }) {
                   min="0"
                   step="1"
                   required
-                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                  
                 />
               </div>
 
@@ -463,7 +463,7 @@ export default function SettingsPanel({ currentUser }) {
                   min="0"
                   step="10"
                   required
-                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                  
                 />
               </div>
             </div>
@@ -478,7 +478,7 @@ export default function SettingsPanel({ currentUser }) {
                 min="0"
                 step="50000"
                 required
-                disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                
               />
               <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem", display: "block" }}>
                 {t("manager_limit_desc", "ຈຳນວນເງິນສູງສຸດທີ່ຜູ້ຈັດການສາມາດອະນຸມັດໄດ້ (ຖ້າເກີນນີ້ຕ້ອງໃຫ້ເຈົ້າຂອງຮ້ານອະນຸມັດ):")} <strong>{formatLAK(expenseApprovalLimit)}</strong>
@@ -493,18 +493,16 @@ export default function SettingsPanel({ currentUser }) {
                 value={customHostUrl}
                 onChange={(e) => setCustomHostUrl(e.target.value)}
                 placeholder={t("empty_for_auto", "ປ່ອຍວ່າງເພື່ອໃຊ້ອັດຕະໂນມັດ / Leave blank for auto")}
-                disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                
               />
               <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem", display: "block" }}>
                 {t("server_host_url_desc", "ລະບຸ IP ຫຼື Domain ຂອງເຄື່ອງເຊີບເວີເພື່ອໃຫ້ໂທລະສັບຂອງລູກຄ້າສະແກນເຂົ້າລິ້ງກອກຂໍ້ມູນໄດ້ຜ່ານ Wi-Fi")}
               </span>
             </div>
 
-            {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
-              <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: "1.5rem" }}>
+            <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: "1.5rem" }}>
                 <Save size={16} /> {t("save_settings", "ບັນທຶກການຕັ້ງຄ່າ / Save Settings")}
               </button>
-            )}
           </form>
         </div>
 
@@ -527,7 +525,7 @@ export default function SettingsPanel({ currentUser }) {
                   value={shopName}
                   onChange={(e) => setShopName(e.target.value)}
                   placeholder="TADFANE RAFTING"
-                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                  
                 />
               </div>
               <div className="form-group">
@@ -538,7 +536,7 @@ export default function SettingsPanel({ currentUser }) {
                   value={shopNameLao}
                   onChange={(e) => setShopNameLao(e.target.value)}
                   placeholder="ຕາດຟານ ລ່ອງແກ່ງ"
-                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                  
                 />
               </div>
             </div>
@@ -552,7 +550,7 @@ export default function SettingsPanel({ currentUser }) {
                   value={shopAddress}
                   onChange={(e) => setShopAddress(e.target.value)}
                   placeholder="Vang Vieng, Laos"
-                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                  
                 />
               </div>
               <div className="form-group">
@@ -563,7 +561,7 @@ export default function SettingsPanel({ currentUser }) {
                   value={shopAddressLao}
                   onChange={(e) => setShopAddressLao(e.target.value)}
                   placeholder="ວັງວຽງ, ປະເທດລາວ"
-                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                  
                 />
               </div>
             </div>
@@ -577,7 +575,7 @@ export default function SettingsPanel({ currentUser }) {
                   value={shopTel}
                   onChange={(e) => setShopTel(e.target.value)}
                   placeholder="+856 20 555-9000"
-                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                  
                 />
               </div>
               <div className="form-group">
@@ -588,7 +586,7 @@ export default function SettingsPanel({ currentUser }) {
                   value={shopTaxId}
                   onChange={(e) => setShopTaxId(e.target.value)}
                   placeholder="(Optional)"
-                  disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                  
                 />
               </div>
             </div>
@@ -601,7 +599,7 @@ export default function SettingsPanel({ currentUser }) {
                 value={shopExtra}
                 onChange={(e) => setShopExtra(e.target.value)}
                 placeholder={t("shop_extra_placeholder", "ເຊັ່ນ: ເປີດ 8:00-17:00 / e.g. Open 8AM-5PM")}
-                disabled={currentUser?.role !== "owner" && currentUser?.role !== "admin"}
+                
               />
             </div>
 
@@ -618,11 +616,9 @@ export default function SettingsPanel({ currentUser }) {
               <div style={{ borderTop: "2px dashed #000", marginTop: "8px", paddingTop: "4px", fontSize: "0.7rem" }}>- - - - - - -</div>
             </div>
 
-            {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
-              <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: "1rem" }}>
+            <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: "1rem" }}>
                 <Save size={16} /> {t("save_receipt_settings", "ບັນທຶກຂໍ້ມູນໃບບິນ / Save Receipt Settings")}
               </button>
-            )}
           </form>
         </div>
 
@@ -648,7 +644,7 @@ export default function SettingsPanel({ currentUser }) {
                 </div>
               )}
 
-              {(currentUser?.role === "owner" || currentUser?.role === "admin") ? (
+              {(true) && (
                 <div style={{ display: "flex", gap: "10px", width: "100%", justifyContent: "center" }}>
                   <label className="btn btn-primary" style={{ padding: "8px 16px", fontSize: "0.85rem", cursor: "pointer", display: "inline-flex", gap: "6px" }}>
                     {t("upload_logo_btn", "ອັບໂຫລດໂລໂກ້ / Upload Logo")}
@@ -661,8 +657,6 @@ export default function SettingsPanel({ currentUser }) {
                     </button>
                   )}
                 </div>
-              ) : (
-                <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{t("owner_admin_only", "ເຂົ້າເຖິງສະເພາະເຈົ້າຂອງຮ້ານ ແລະ ແອດມິນ (Owner/Admin Only)")}</span>
               )}
             </div>
           </div>
@@ -710,8 +704,7 @@ export default function SettingsPanel({ currentUser }) {
               <RefreshCw size={16} /> {t("reset_db_btn", "ຣີເຊັດລະບົບທັງໝົດ (Reset Database)")}
             </button>
 
-            {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
-              <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "1rem" }}>
+            <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "1rem" }}>
                 <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: "1.4" }}>
                   {t("purge_bookings_desc", "ລຶບສະເພາະບິນ ແລະ ການລົງທະບຽນລູກຄ້າທົດລອງທັງໝົດ ແຕ່ຍັງຄົງຂໍ້ມູນພື້ນຖານອື່ນໆໄວ້")}
                 </p>
@@ -724,7 +717,6 @@ export default function SettingsPanel({ currentUser }) {
                   🧹 {t("clear_test_data", "ລ້າງຂໍ້ມູນທົດລອງ / Clear Test Data")}
                 </button>
               </div>
-            )}
           </div>
 
         </div>
@@ -738,7 +730,7 @@ export default function SettingsPanel({ currentUser }) {
           {t("staff_accounts_mgmt", "ຕັ້ງຄ່າບັນຊີຜູ້ໃຊ້ພະນັກງານ / Staff Accounts Management")}
         </h2>
         
-        {!(currentUser?.role === "owner" || currentUser?.role === "admin") ? (
+        {false ? (
           <div>
             <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>
               {t("owner_access_only", "ເຂົ້າເຖິງສະເພາະເຈົ້າຂອງຮ້ານ (Owner Access Only)")}

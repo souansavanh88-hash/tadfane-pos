@@ -33,7 +33,17 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem("pos_current_user");
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      // Re-sync with the latest db.users to pick up role/permission changes
+      const freshDb = getDb();
+      const freshUser = freshDb.users?.find(u => u.id === parsed.id);
+      if (freshUser) {
+        // Update localStorage with fresh data
+        localStorage.setItem("pos_current_user", JSON.stringify(freshUser));
+        return freshUser;
+      }
+      return parsed;
     } catch (e) {
       return null;
     }
