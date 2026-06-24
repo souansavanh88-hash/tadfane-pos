@@ -2100,7 +2100,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                         );
                       };
 
-                      const nickname = g.name.split(" (")[1]?.replace(")", "") || g.name.split(" ")[0];
+                      const nickname = g.name;
 
                       return (
                         <div 
@@ -2173,7 +2173,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                         setVehicleCount(nextDrivers.length || 1);
                       };
 
-                      const nickname = d.name.split(" (")[1]?.replace(")", "") || d.name.split(" ")[0];
+                      const nickname = d.name;
 
                       return (
                         <div 
