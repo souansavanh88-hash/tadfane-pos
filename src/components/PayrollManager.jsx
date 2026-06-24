@@ -410,14 +410,6 @@ export default function PayrollManager() {
                               setTourRate(emp.tourRate || 100000);
                               setRaftingRate(emp.raftingRate || 150000);
                               setSpecialRate(emp.specialRate || 50000);
-                              
-                              // Smooth scroll to the form element so mobile users can see it immediately
-                              setTimeout(() => {
-                                const formCard = document.querySelector(".card form");
-                                if (formCard) {
-                                  formCard.scrollIntoView({ behavior: "smooth", block: "center" });
-                                }
-                              }, 100);
                             }}
                           >
                             ແກ້ໄຂ
