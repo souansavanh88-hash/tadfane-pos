@@ -30,6 +30,7 @@ export default function PayrollManager() {
   const [selectedEmpDetails, setSelectedEmpDetails] = useState(null);
   const [editBonusEmpId, setEditBonusEmpId] = useState("");
   const [bonusValue, setBonusValue] = useState(0);
+  const [deleteConfirmId, setDeleteConfirmId] = useState("");
 
   useEffect(() => {
     const handleDbUpdate = () => setDb(getDb());
@@ -409,13 +410,46 @@ export default function PayrollManager() {
                               setTourRate(emp.tourRate || 100000);
                               setRaftingRate(emp.raftingRate || 150000);
                               setSpecialRate(emp.specialRate || 50000);
+                              
+                              // Smooth scroll to the form element so mobile users can see it immediately
+                              setTimeout(() => {
+                                const formCard = document.querySelector(".card form");
+                                if (formCard) {
+                                  formCard.scrollIntoView({ behavior: "smooth", block: "center" });
+                                }
+                              }, 100);
                             }}
                           >
                             ແກ້ໄຂ
                           </button>
-                          <button className="btn btn-danger" style={{ padding: "4px" }} onClick={() => handleDeleteEmployee(emp.id)}>
-                            <Trash2 size={14} />
-                          </button>
+                          
+                          {deleteConfirmId === emp.id ? (
+                            <button
+                              className="btn btn-danger"
+                              style={{ padding: "4px 8px", fontSize: "0.7rem", fontWeight: "bold", background: "#ef4444" }}
+                              onClick={() => {
+                                const updatedDb = { ...db };
+                                updatedDb.employees = updatedDb.employees.filter(e => e.id !== emp.id);
+                                saveDb(updatedDb);
+                                refreshState();
+                                setDeleteConfirmId("");
+                              }}
+                            >
+                              ยืนยันลบ / Confirm
+                            </button>
+                          ) : (
+                            <button 
+                              className="btn btn-danger" 
+                              style={{ padding: "4px" }} 
+                              onClick={() => {
+                                setDeleteConfirmId(emp.id);
+                                // Auto-reset confirmation state after 4 seconds
+                                setTimeout(() => setDeleteConfirmId(""), 4000);
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
