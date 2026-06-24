@@ -166,7 +166,14 @@ export default function App() {
   }, []);
 
   // Periodically fetch database from server to keep POS cashier in sync with customer registrations
+  // Note: Only run polling on local server networks. On Vercel cloud (production web), the backend file is read-only
+  // so we rely on client-side localStorage and Firebase instead of polling.
   useEffect(() => {
+    if (isProductionWeb) {
+      console.log("[Sync] Production cloud environment detected. Skipping read-only server file polling.");
+      return;
+    }
+
     let active = true;
     const pollServerDb = async () => {
       try {
@@ -191,9 +198,6 @@ export default function App() {
       }
     };
 
-    // Firebase Real-time Sync (Obsolete)
-    // Handled locally in QRBooking.jsx now.
-
     // Initial sync
     pollServerDb();
 
@@ -204,7 +208,7 @@ export default function App() {
       active = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [isProductionWeb]);
 
   // ---------------------------------------------------
   // (Obsolete) listenToRegistrations removed because we now use real-time listeners in QRBooking.jsx
