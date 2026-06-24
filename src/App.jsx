@@ -20,6 +20,12 @@ import { isFirebaseConfigured } from "./db/firebaseSync";
 
 
 export default function App() {
+  const isProductionWeb = typeof window !== "undefined" && 
+    window.location.hostname !== "localhost" && 
+    window.location.hostname !== "127.0.0.1" && 
+    !window.location.hostname.startsWith("192.168.") && 
+    !window.location.hostname.endsWith(".trycloudflare.com");
+
   const { lang, t } = useLanguage();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [tunnelUrl, setTunnelUrl] = useState(localStorage.getItem("pos_custom_host_url") || "");
@@ -342,12 +348,6 @@ export default function App() {
     }
   };
 
-  const isProductionWeb = typeof window !== "undefined" && 
-    window.location.hostname !== "localhost" && 
-    window.location.hostname !== "127.0.0.1" && 
-    !window.location.hostname.startsWith("192.168.") && 
-    !window.location.hostname.endsWith(".trycloudflare.com");
-  
   const showSyncWarning = isProductionWeb && !isFirebaseConfigured();
 
   return (
