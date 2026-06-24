@@ -128,6 +128,18 @@ const safeSetItem = (key, val) => {
 export const migrateDb = (parsed) => {
   let migrated = false;
 
+  // === ONE-TIME FORCED RESET (v2): Clear all old seed employees & partners ===
+  // This runs once per device to wipe old demo data so the owner can add real staff.
+  const resetFlag = safeGetItem("v2_emp_reset_done");
+  if (!resetFlag) {
+    parsed.employees = [];
+    parsed.partners = [
+      { id: "PTN-000", name: "Walk In (ລູກຄ້າທົ່ວໄປ)", type: "agent", commissionRate: 0, contact: "", bankAccount: "" }
+    ];
+    safeSetItem("v2_emp_reset_done", "1");
+    migrated = true;
+  }
+
   // Note: We do NOT auto-merge seed employees anymore.
   // Employees deleted by the user should stay deleted.
   if (parsed.employees && Array.isArray(parsed.employees)) {
