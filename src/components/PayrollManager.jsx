@@ -1,6 +1,6 @@
 // PayrollManager.jsx - Employee payroll ledger and employee settings
 import React, { useState, useEffect } from "react";
-import { getDb, saveDb } from "../db/mockDb";
+import { getDb, saveDb, clearAllEmployees } from "../db/mockDb";
 import { formatLAK } from "../utils/helpers";
 import { useLanguage } from "../utils/LanguageContext";
 import { Plus, Award, CreditCard, Trash2, Printer } from "lucide-react";
@@ -292,9 +292,21 @@ export default function PayrollManager() {
           <h1>{t("payroll_manager_title", "ບັນຊີພະນັກງານ & ເງິນເດືອນ (Employee & Payroll)")}</h1>
           <p>{t("payroll_manager_sub", "ຄຸ້ມຄອງຂໍ້ມູນພະນັກງານ, ໄລ່ເງິນຄ່າທ່ຽວ ແລະ ຄິດໄລ່ເງິນເດືອນ")}</p>
         </div>
-        <button className="btn btn-primary" onClick={triggerPrintPayroll}>
-          <Printer size={16} /> {t("print_payroll_summary", "ພິມສະຫຼຸບໃບເງິນເດືອນລວມ / Print Summary")}
-        </button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            className="btn btn-danger"
+            style={{ fontSize: "0.85rem" }}
+            onClick={() => {
+              clearAllEmployees();
+              refreshState();
+            }}
+          >
+            🗑️ ລ້າງພະນັກງານທັງໝົດ / Clear All Employees
+          </button>
+          <button className="btn btn-primary" onClick={triggerPrintPayroll}>
+            <Printer size={16} /> {t("print_payroll_summary", "ພິມສະຫຼຸບໃບເງິນເດືອນລວມ / Print Summary")}
+          </button>
+        </div>
       </div>
 
       <div className="no-print" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "2rem" }}>

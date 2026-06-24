@@ -34,30 +34,9 @@ const SEED_DATA = {
     { id: 9, name: "ເຮືອ 9 / Boat 9", capacity: 6, status: "available" },
     { id: 10, name: "ເຮືອ 10 / Boat 10", capacity: 6, status: "available" },
   ],
-  employees: [
-    { id: "EMP-001", name: "ສົມພົງ ລາວດີ (Somphong)", role: "guide", type: "permanent", status: "active", salary: 2500000, tripRate: 50000, bonus: 0 },
-    { id: "EMP-002", name: "ບຸນມີ ໄຊຍະເສນ (Bounmy)", role: "guide", type: "permanent", status: "active", salary: 2500000, tripRate: 50000, bonus: 0 },
-    { id: "EMP-003", name: "ແກ້ວ ມະນີວົງ (Keo)", role: "guide", type: "freelance", status: "active", salary: 0, tripRate: 70000, bonus: 0 }, // Freelance OT guide
-    { id: "EMP-004", name: "ຄຳ ສຸວັນນະດີ (Kham)", role: "guide", type: "freelance", status: "active", salary: 0, tripRate: 70000, bonus: 0 }, // Freelance OT guide
-    { id: "EMP-005", name: "ດາວ ເລີດວິໄລ (Dao)", role: "guide", type: "permanent", status: "active", salary: 2500000, tripRate: 50000, bonus: 0 },
-    { id: "EMP-006", name: "ຈັນທອນ ແສງແກ້ວ (Chan)", role: "guide", type: "permanent", status: "active", salary: 2500000, tripRate: 50000, bonus: 0 },
-    { id: "EMP-007", name: "ສົມບັດ ສີຫາລາດ (Sombath)", role: "captain", type: "permanent", status: "active", salary: 3000000, tripRate: 40000, bonus: 0 },
-    { id: "EMP-008", name: "ທອງສຸກ ປ້ອງສີ (Thongsouk)", role: "captain", type: "freelance", status: "active", salary: 0, tripRate: 60000, bonus: 0 }, // Freelance Captain
-    { id: "EMP-013", name: "ສົມສັກ ແກ້ວມະນີ (Somsack)", role: "captain", type: "permanent", status: "active", salary: 3000000, tripRate: 40000, bonus: 0 },
-    { id: "EMP-009", name: "ຈັນຍາ ກິ່ງແກ້ວ (Chanya)", role: "staff", type: "permanent", status: "active", salary: 2200000, tripRate: 0, bonus: 0 },
-    { id: "EMP-010", name: "ສົມຈິດ ວົງສາ (Somchit)", role: "driver", type: "permanent", status: "active", salary: 1800000, tripRate: 30000, bonus: 0 },
-    { id: "EMP-011", name: "ບຸນຕາ ແສງທອງ (Bounta)", role: "driver", type: "permanent", status: "active", salary: 1800000, tripRate: 30000, bonus: 0 },
-    { id: "EMP-012", name: "ສອນໄຊ ວິໄລສັກ (Sonesay)", role: "driver", type: "freelance", status: "active", salary: 0, tripRate: 50000, bonus: 0 },
-    { id: "EMP-014", name: "ນ້ອຍ (Noy)", role: "driver", type: "freelance", status: "active", salary: 0, tripRate: 50000, bonus: 0 },
-    { id: "EMP-015", name: "ຄຳ (Kham)", role: "driver", type: "freelance", status: "active", salary: 0, tripRate: 50000, bonus: 0 },
-  ],
+  employees: [],
   partners: [
-    { id: "PTN-000", name: "Walk In (ລູກຄ້າທົ່ວໄປ)", type: "agent", commissionRate: 0, contact: "" },
-    { id: "PTN-001", name: "Hotel A (ເອເຈນ ໂຮງແຮມ A)", type: "agent", commissionRate: 40000, contact: "+856 20 5551234" },
-    { id: "PTN-002", name: "Agoda (ເອເຈນ ອະໂກດາ)", type: "agent", commissionRate: 30000, contact: "+856 20 7779876" },
-    { id: "PTN-003", name: "Local Agent (ເອເຈນ ທ້ອງຖິ່ນ)", type: "agent", commissionRate: 50000, contact: "+856 20 9993333" },
-    { id: "PTN-004", name: "Noy (ເອເຈນ ນ້ອຍ)", type: "agent", commissionRate: 40000, contact: "+856 20 5551234" },
-    { id: "PTN-005", name: "Seng (ເອເຈນ ແສງ)", type: "agent", commissionRate: 35000, contact: "+856 20 8882222" }
+    { id: "PTN-000", name: "Walk In (ລູກຄ້າທົ່ວໄປ)", type: "agent", commissionRate: 0, contact: "" }
   ],
   customers: [],
   bookings: [],
@@ -149,14 +128,9 @@ const safeSetItem = (key, val) => {
 export const migrateDb = (parsed) => {
   let migrated = false;
 
-  // Automatically merge missing seed employees (like drivers) into parsed list
+  // Note: We do NOT auto-merge seed employees anymore.
+  // Employees deleted by the user should stay deleted.
   if (parsed.employees && Array.isArray(parsed.employees)) {
-    SEED_DATA.employees.forEach(se => {
-      if (!parsed.employees.some(pe => pe.id === se.id)) {
-        parsed.employees.push(se);
-        migrated = true;
-      }
-    });
 
     // Populate missing fields for all employees
     parsed.employees = parsed.employees.map(e => {
@@ -768,5 +742,21 @@ export const purgeTestData = () => {
   if (db.boats && Array.isArray(db.boats)) {
     db.boats = db.boats.map(b => ({ ...b, status: "available" }));
   }
+  saveDb(db);
+};
+
+// Clear All Employees (keeps structure, removes all employee records)
+export const clearAllEmployees = () => {
+  const db = getDb();
+  db.employees = [];
+  saveDb(db);
+};
+
+// Clear All Partners/Agents (keeps Walk-In entry only)
+export const clearAllPartners = () => {
+  const db = getDb();
+  db.partners = [
+    { id: "PTN-000", name: "Walk In (ລູກຄ້າທົ່ວໄປ)", type: "agent", commissionRate: 0, contact: "", bankAccount: "" }
+  ];
   saveDb(db);
 };
