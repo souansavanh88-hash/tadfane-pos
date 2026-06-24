@@ -429,7 +429,7 @@ export default function SettingsPanel({ currentUser }) {
                 value={basePrice}
                 onChange={(e) => setBasePrice(e.target.value)}
                 min="0"
-                step="10000"
+                step="1"
                 required
                 
               />
@@ -461,7 +461,7 @@ export default function SettingsPanel({ currentUser }) {
                   value={rateUSD}
                   onChange={(e) => setRateUSD(e.target.value)}
                   min="0"
-                  step="10"
+                  step="1"
                   required
                   
                 />
@@ -476,7 +476,7 @@ export default function SettingsPanel({ currentUser }) {
                 value={expenseApprovalLimit}
                 onChange={(e) => setExpenseApprovalLimit(e.target.value)}
                 min="0"
-                step="50000"
+                step="1"
                 required
                 
               />
