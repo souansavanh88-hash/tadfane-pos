@@ -1,22 +1,24 @@
 // App.jsx - Main Application Orchestrator (Streamlined Version)
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Sidebar from "./components/Sidebar";
-import Dashboard from "./components/Dashboard";
-import CheckInTickets from "./components/CheckInTickets";
-import AccountingPayroll from "./components/AccountingPayroll";
-import OperatingExpenses from "./components/OperatingExpenses";
-import SettingsPanel from "./components/SettingsPanel";
-import SelfRegisterPortal from "./components/SelfRegisterPortal";
 import LoginScreen from "./components/LoginScreen";
-import TicketManifest from "./components/TicketManifest";
-import OnlineRegisterQR from "./components/OnlineRegisterQR";
-import CommissionTracker from "./components/CommissionTracker";
-import Reports from "./components/Reports";
-import LiveStatusBoard from "./components/LiveStatusBoard";
 import { migrateDb, getDb, saveDb } from "./db/mockDb";
 import { useLanguage } from "./utils/LanguageContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { isFirebaseConfigured } from "./db/firebaseSync";
+
+// Lazy load all heavy components - they will be downloaded only when needed
+const Dashboard = React.lazy(() => import("./components/Dashboard"));
+const CheckInTickets = React.lazy(() => import("./components/CheckInTickets"));
+const AccountingPayroll = React.lazy(() => import("./components/AccountingPayroll"));
+const OperatingExpenses = React.lazy(() => import("./components/OperatingExpenses"));
+const SettingsPanel = React.lazy(() => import("./components/SettingsPanel"));
+const SelfRegisterPortal = React.lazy(() => import("./components/SelfRegisterPortal"));
+const TicketManifest = React.lazy(() => import("./components/TicketManifest"));
+const OnlineRegisterQR = React.lazy(() => import("./components/OnlineRegisterQR"));
+const CommissionTracker = React.lazy(() => import("./components/CommissionTracker"));
+const Reports = React.lazy(() => import("./components/Reports"));
+const LiveStatusBoard = React.lazy(() => import("./components/LiveStatusBoard"));
 
 
 export default function App() {
@@ -286,7 +288,15 @@ export default function App() {
   if (isSelfRegister) {
     return (
       <ErrorBoundary>
-        <SelfRegisterPortal initialPartnerId={partnerIdParam} />
+        <Suspense fallback={
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", flexDirection: "column", gap: "16px" }}>
+            <div style={{ width: "48px", height: "48px", border: "4px solid #e2e8f0", borderTop: "4px solid #0ea5e9", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            <p style={{ color: "#64748b", fontSize: "0.95rem" }}>ກຳລັງໂຫຼດ... / Loading...</p>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        }>
+          <SelfRegisterPortal initialPartnerId={partnerIdParam} />
+        </Suspense>
       </ErrorBoundary>
     );
   }
@@ -408,7 +418,15 @@ export default function App() {
               </div>
             </div>
           )}
-          {renderTabContent()}
+          <Suspense fallback={
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "60vh", flexDirection: "column", gap: "16px" }}>
+              <div style={{ width: "48px", height: "48px", border: "4px solid #e2e8f0", borderTop: "4px solid #0ea5e9", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+              <p style={{ color: "#64748b", fontSize: "0.95rem" }}>ກຳລັງໂຫຼດ... / Loading...</p>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          }>
+            {renderTabContent()}
+          </Suspense>
         </main>
 
         {/* Inactivity Warning Banner Overlay */}
