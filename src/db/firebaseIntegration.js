@@ -1,5 +1,5 @@
 import { fireDb } from "./firebaseConfig";
-import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 
 const POS_DATA_DOC = "pos_main/data";
 
@@ -53,7 +53,6 @@ export const pushToFirebase = async (dbState) => {
       updatedAt: serverTimestamp()
     }, { merge: true });
     
-    // console.log("[Firebase Sync] Successfully pushed state to cloud");
     isPushing = false;
     return true;
   } catch (err) {
@@ -61,4 +60,19 @@ export const pushToFirebase = async (dbState) => {
     isPushing = false;
     return false;
   }
+};
+
+// Force push - bypasses all guards, throws real errors for debugging
+export const forcePushToFirebase = async (dbState) => {
+  if (!fireDb) {
+    throw new Error("Firebase not initialized! fireDb is null. Check firebaseConfig.js");
+  }
+
+  const docRef = doc(fireDb, POS_DATA_DOC);
+  await setDoc(docRef, {
+    dbState: dbState,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+  
+  return true;
 };

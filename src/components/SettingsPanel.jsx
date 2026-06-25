@@ -397,14 +397,12 @@ export default function SettingsPanel({ currentUser }) {
     if (window.confirm("ທ່ານຕ້ອງການອັບໂຫຼດຂໍ້ມູນໃນເຄື່ອງນີ້ຂຶ້ນ Cloud (Firebase) ແມ່ນບໍ່? (Upload local data to Cloud?)")) {
       const currentDb = getDb();
       try {
-        const success = await pushToFirebase(currentDb);
-        if (success) {
-          alert("✅ ອັບໂຫຼດຂໍ້ມູນຂຶ້ນ Cloud ສຳເລັດແລ້ວ! (Successfully migrated data to Cloud)");
-        } else {
-          alert("❌ ບໍ່ສາມາດອັບໂຫຼດໄດ້ ກະລຸນາກວດສອບອິນເຕີເນັດ (Failed to upload, check connection)");
-        }
+        const { forcePushToFirebase } = await import("../db/firebaseIntegration");
+        await forcePushToFirebase(currentDb);
+        alert("✅ ອັບໂຫຼດຂໍ້ມູນຂຶ້ນ Cloud ສຳເລັດແລ້ວ! (Successfully migrated data to Cloud)");
       } catch (err) {
-        alert("Error: " + err.message);
+        alert("❌ Error: " + err.message + "\n\nCode: " + (err.code || "unknown"));
+        console.error("Force sync error:", err);
       }
     }
   };
