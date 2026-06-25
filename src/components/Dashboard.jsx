@@ -63,30 +63,41 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
     const todayStr = new Date().toISOString().split("T")[0];
     const monthStr = todayStr.slice(0, 7); // YYYY-MM
     
+    // O(1) lookup maps to prevent browser freezing
+    const validBookingsMap = new Map();
+    const bookingPricesMap = new Map();
+    
+    (database.bookings || []).forEach(b => {
+      if (b.status !== "ยกเลิก" && b.status !== "ຍົກເລີກ") {
+        validBookingsMap.set(b.id, true);
+        if (b.groupId) validBookingsMap.set(b.groupId, true);
+        bookingPricesMap.set(b.id, (b.pricePaidLAK || 0) / (b.paxCount || 1));
+      }
+    });
+
     const filterValidCustomer = (c) => {
-      const bk = database.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
-      return bk ? bk.status !== "ยกเลิก" : true;
+      if (c.bookingId && validBookingsMap.has(c.bookingId)) return true;
+      if (c.groupId && validBookingsMap.has(c.groupId)) return true;
+      return !c.bookingId && !c.groupId; // walk-in
     };
 
     // 1. Today's customers
-    const todayCusts = database.customers.filter(c => c.checkInDate === todayStr && filterValidCustomer(c));
+    const todayCusts = (database.customers || []).filter(c => c.checkInDate === todayStr && filterValidCustomer(c));
     const paxToday = todayCusts.length;
 
     // 2. Revenue (Assuming basePriceLAK for walk-ins, and specific paid price for bookings)
-    const basePrice = database.settings.basePriceLAK;
+    const basePrice = database.settings?.basePriceLAK || 250000;
     
     const calculateCustomerRev = (cust) => {
-      // If customer has a booking reference, let's check booking
-      if (cust.bookingId) {
-        const bk = database.bookings.find(b => b.id === cust.bookingId);
-        if (bk) return bk.pricePaidLAK / (bk.paxCount || 1); // share per person
+      if (cust.bookingId && bookingPricesMap.has(cust.bookingId)) {
+        return bookingPricesMap.get(cust.bookingId);
       }
       return basePrice;
     };
 
     const revToday = todayCusts.reduce((sum, c) => sum + calculateCustomerRev(c), 0);
     
-    const monthCusts = database.customers.filter(c => c.checkInDate && c.checkInDate.startsWith(monthStr) && filterValidCustomer(c));
+    const monthCusts = (database.customers || []).filter(c => c.checkInDate && c.checkInDate.startsWith(monthStr) && filterValidCustomer(c));
     const revMonth = monthCusts.reduce((sum, c) => sum + calculateCustomerRev(c), 0);
 
     // 3. Trips today
