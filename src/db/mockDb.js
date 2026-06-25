@@ -536,6 +536,9 @@ export const saveDb = (db) => {
   memoryDb = db;
   safeSetItem(DB_KEY, JSON.stringify(db));
   
+  // Create a separate untouchable local backup every time we manually save
+  safeSetItem("pos_local_db_backup", JSON.stringify(db));
+  
   // Push to Firebase Realtime Cloud DB
   pushToFirebase(db).catch(err => console.error("Firebase push error:", err));
 
@@ -550,6 +553,16 @@ export const initFirebase = () => {
   unsubscribeFirebase = startFirebaseSync((cloudData) => {
     // When cloud data arrives, update our memory and localStorage
     if (cloudData) {
+      // 🚨 CLOUD WIPE PROTECTION: Prevent empty cloud data from wiping out local data
+      const localBookings = memoryDb?.bookings?.length || 0;
+      const cloudBookings = cloudData?.bookings?.length || 0;
+      
+      if (cloudBookings === 0 && localBookings > 0) {
+        console.warn("🚨 [PROTECTION] Cloud data is empty but local data exists! Rejecting cloud sync and forcing a cloud overwrite.");
+        pushToFirebase(memoryDb);
+        return;
+      }
+
       memoryDb = cloudData;
       safeSetItem(DB_KEY, JSON.stringify(memoryDb));
       try {

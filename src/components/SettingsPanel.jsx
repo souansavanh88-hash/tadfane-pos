@@ -393,6 +393,25 @@ export default function SettingsPanel({ currentUser }) {
     }
   };
 
+  const handleRestoreBackup = () => {
+    if (window.confirm("🚨 ທ່ານຕ້ອງການກູ້ຄືນຂໍ້ມູນສຳຮອງໃນເຄື່ອງນີ້ແມ່ນບໍ່? (Are you sure you want to restore the local backup? This will overwrite the current data and push it to the cloud.)")) {
+      const backupRaw = localStorage.getItem("pos_local_db_backup");
+      if (backupRaw) {
+        try {
+          const backupDb = JSON.parse(backupRaw);
+          saveDb(backupDb);
+          setDb(backupDb);
+          alert("✅ กู้คืนข้อมูลสำเร็จแล้ว! (Restore successful!)");
+          window.location.reload();
+        } catch (e) {
+          alert("❌ เกิดข้อผิดพลาดในการอ่านไฟล์สำรอง (Backup file is corrupted)");
+        }
+      } else {
+        alert("⚠️ ไม่พบข้อมูลสำรองในเครื่องนี้ (No local backup found on this device)");
+      }
+    }
+  };
+
   const handleForceSync = async () => {
     if (window.confirm("ທ່ານຕ້ອງການອັບໂຫຼດຂໍ້ມູນໃນເຄື່ອງນີ້ຂຶ້ນ Cloud (Firebase) ແມ່ນບໍ່? (Upload local data to Cloud?)")) {
       const currentDb = getDb();
@@ -726,6 +745,15 @@ export default function SettingsPanel({ currentUser }) {
               onClick={handleForceSync}
             >
               <Cloud size={16} /> ອັບໂຫຼດຂໍ້ມູນຂຶ້ນ Cloud (Migrate Data)
+            </button>
+
+            <button 
+              type="button" 
+              className="btn" 
+              style={{ width: "100%", marginBottom: "12px", background: "#f59e0b", color: "white", fontWeight: "bold" }}
+              onClick={handleRestoreBackup}
+            >
+              🕒 ກູ້ຄືນຂໍ້ມູນສຳຮອງ (Restore Local Backup)
             </button>
 
             <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "1rem" }}>
