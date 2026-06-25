@@ -1,9 +1,10 @@
 // SettingsPanel.jsx - System Settings Management
 import React, { useState, useEffect } from "react";
 import { getDb, saveDb, resetDb, purgeTestData } from "../db/mockDb";
+import { pushToFirebase } from "../db/firebaseIntegration";
 import { formatLAK } from "../utils/helpers";
 import { useLanguage } from "../utils/LanguageContext";
-import { Settings, Save, RefreshCw, AlertTriangle, Users, Shield, Trash2, Plus } from "lucide-react";
+import { Settings, Save, RefreshCw, AlertTriangle, Users, Shield, Trash2, Plus, Cloud } from "lucide-react";
 
 const DEFAULT_PERMISSIONS_BY_ROLE = {
   owner: {
@@ -392,6 +393,22 @@ export default function SettingsPanel({ currentUser }) {
     }
   };
 
+  const handleForceSync = async () => {
+    if (window.confirm("ທ່ານຕ້ອງການອັບໂຫຼດຂໍ້ມູນໃນເຄື່ອງນີ້ຂຶ້ນ Cloud (Firebase) ແມ່ນບໍ່? (Upload local data to Cloud?)")) {
+      const currentDb = getDb();
+      try {
+        const success = await pushToFirebase(currentDb);
+        if (success) {
+          alert("✅ ອັບໂຫຼດຂໍ້ມູນຂຶ້ນ Cloud ສຳເລັດແລ້ວ! (Successfully migrated data to Cloud)");
+        } else {
+          alert("❌ ບໍ່ສາມາດອັບໂຫຼດໄດ້ ກະລຸນາກວດສອບອິນເຕີເນັດ (Failed to upload, check connection)");
+        }
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+  };
+
   const handlePurgeTestData = () => {
     if (window.confirm(lang === "en" ? "Are you sure you want to purge all test bookings and customers? (Agents, employees, and settings will not be deleted)" : "ທ່ານຕ້ອງການລ້າງຂໍ້ມູນບິນ ແລະ ລູກຄ້າທົດລອງທັງໝົດແມ່ນບໍ່? (ເອເຈນ, ພະນັກງານ ແລະ ການຕັ້ງຄ່າຈະບໍ່ຖືກລຶບ)")) {
       purgeTestData();
@@ -702,6 +719,15 @@ export default function SettingsPanel({ currentUser }) {
               onClick={handleResetSystem}
             >
               <RefreshCw size={16} /> {t("reset_db_btn", "ຣີເຊັດລະບົບທັງໝົດ (Reset Database)")}
+            </button>
+
+            <button 
+              type="button" 
+              className="btn" 
+              style={{ width: "100%", marginBottom: "12px", background: "#0ea5e9", color: "white", fontWeight: "bold" }}
+              onClick={handleForceSync}
+            >
+              <Cloud size={16} /> ອັບໂຫຼດຂໍ້ມູນຂຶ້ນ Cloud (Migrate Data)
             </button>
 
             <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "1rem" }}>

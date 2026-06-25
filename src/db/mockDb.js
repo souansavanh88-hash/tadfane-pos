@@ -1,4 +1,5 @@
 // mockDb.js - Client-Side Local Database with LocalStorage persistence
+import { startFirebaseSync, pushToFirebase } from "./firebaseIntegration";
 
 const SEED_DATA = {
   settings: {
@@ -103,7 +104,7 @@ const SEED_DATA = {
   customExpenses: []
 };
 
-const DB_KEY = "pos_boat_db";
+const DB_KEY = "pos_tadfane_db";
 
 // In-memory fallback if localStorage is blocked (e.g. mobile Safari private mode or WebView)
 let memoryDb = null;
@@ -534,24 +535,31 @@ export const saveDb = (db) => {
   memoryDb = db;
   safeSetItem(DB_KEY, JSON.stringify(db));
   
-  // Proactively send database state to server sync endpoint
-  if (typeof window !== "undefined" && window.fetch) {
-    window.fetch("/api/db", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(db)
-    }).catch(err => console.warn("Failed to push DB update to server:", err));
-  }
-
   // Push to Firebase Realtime Cloud DB
-  // Local storage only now, Firebase is handled directly in components
+  pushToFirebase(db).catch(err => console.error("Firebase push error:", err));
 
   try {
     window.dispatchEvent(new Event("db-update"));
   } catch (e) {}
 };
+
+// Start Firebase listener immediately
+let unsubscribeFirebase = null;
+export const initFirebase = () => {
+  unsubscribeFirebase = startFirebaseSync((cloudData) => {
+    // When cloud data arrives, update our memory and localStorage
+    if (cloudData) {
+      memoryDb = cloudData;
+      safeSetItem(DB_KEY, JSON.stringify(memoryDb));
+      try {
+        window.dispatchEvent(new Event("db-update"));
+      } catch (e) {}
+    }
+  });
+};
+// Kick off sync
+setTimeout(initFirebase, 100);
+
 
 export const resetDb = () => {
   memoryDb = JSON.parse(JSON.stringify(SEED_DATA));
