@@ -436,8 +436,9 @@ export const getDb = () => {
 const syncTripsWithBookings = (db) => {
   if (!db.bookings) return;
   
-  // Clean up customers created by sync from previous runs to avoid growing indefinitely
-  db.customers = db.customers.filter(c => !c.id.startsWith("CUST-BK-"));
+  // Clean up ALL auto-generated customers from previous sync runs to avoid growing indefinitely
+  // We remove any customer that has a bookingId (they will be recreated from bookings below)
+  db.customers = db.customers.filter(c => !c.bookingId && !c.groupId);
 
   db.trips = db.bookings
     .filter(b => b.status !== "ยกเลิก" && (
