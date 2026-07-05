@@ -238,6 +238,9 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 2px solid var(--border-color);
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 td {
@@ -247,6 +250,9 @@ td {
   font-size: 0.95rem;
   vertical-align: middle;
   transition: background-color 0.2s;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 tr:hover td {
