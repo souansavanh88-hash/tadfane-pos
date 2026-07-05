@@ -453,7 +453,7 @@ export default function Reports() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem" }}>
+      <div className="dashboard-sections-grid" style={{ marginTop: 0 }}>
         
         {/* Graphical P&L Breakdown */}
         <div className="card" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>

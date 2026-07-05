@@ -376,7 +376,7 @@ export default function CommissionTracker() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "2rem" }}>
+      <div className="dashboard-sections-grid" style={{ marginTop: 0 }}>
         
         {/* Commission Summary Table */}
         <div className="card">
