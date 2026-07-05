@@ -1696,14 +1696,15 @@ tr:hover td {
   /* Allow tables to squeeze into screen width */
   table {
     font-size: 0.65rem !important; /* Aggressively reduce to fit 8+ columns */
-    width: 100%;
-    table-layout: auto;
+    width: 100% !important;
+    table-layout: fixed !important;
   }
   
-  th, td {
+  th, td, td * {
     padding: 0.3rem 0.2rem !important; /* Extremely tight padding */
     white-space: normal !important; 
-    word-break: break-word; 
+    word-break: break-all !important; 
+    overflow-wrap: anywhere !important;
     font-size: 0.65rem !important;
     line-height: 1.2 !important;
   }
