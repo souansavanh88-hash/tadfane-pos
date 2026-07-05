@@ -1691,5 +1691,38 @@ tr:hover td {
   }
 }
 
+/* Global Mobile Responsive Tables (Prevent horizontal scroll) */
+@media (max-width: 768px) {
+  /* Allow tables to squeeze into screen width */
+  table {
+    font-size: 0.8rem;
+    width: 100%;
+    table-layout: auto;
+  }
+  
+  th, td {
+    padding: 0.5rem 0.35rem !important; /* Reduce padding significantly */
+    white-space: normal !important; /* Allow text to wrap to new lines */
+    word-break: break-word; /* Break long words if necessary */
+    font-size: 0.8rem !important;
+  }
+  
+  th {
+    font-size: 0.75rem !important;
+  }
 
-
+  /* Reduce overall spacing on mobile */
+  .main-content {
+    padding: 1rem !important;
+  }
+  
+  .card {
+    padding: 1.25rem 1rem !important;
+  }
+  
+  /* Make sure all inputs also fit nicely */
+  .form-control {
+    font-size: 0.85rem !important;
+    padding: 0.6rem 0.8rem !important;
+  }
+}
