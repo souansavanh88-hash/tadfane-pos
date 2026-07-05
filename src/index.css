@@ -1695,20 +1695,21 @@ tr:hover td {
 @media (max-width: 768px) {
   /* Allow tables to squeeze into screen width */
   table {
-    font-size: 0.8rem;
+    font-size: 0.65rem !important; /* Aggressively reduce to fit 8+ columns */
     width: 100%;
     table-layout: auto;
   }
   
   th, td {
-    padding: 0.5rem 0.35rem !important; /* Reduce padding significantly */
-    white-space: normal !important; /* Allow text to wrap to new lines */
-    word-break: break-word; /* Break long words if necessary */
-    font-size: 0.8rem !important;
+    padding: 0.3rem 0.2rem !important; /* Extremely tight padding */
+    white-space: normal !important; 
+    word-break: break-word; 
+    font-size: 0.65rem !important;
+    line-height: 1.2 !important;
   }
   
   th {
-    font-size: 0.75rem !important;
+    font-size: 0.6rem !important;
   }
 
   /* Reduce overall spacing on mobile */
