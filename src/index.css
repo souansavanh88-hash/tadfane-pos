@@ -1745,4 +1745,56 @@ tr:hover td {
     font-size: 0.85rem !important;
     padding: 0.6rem 0.8rem !important;
   }
+
+  /* Collapsed Sidebar on tablet/mobile */
+  :root {
+    --sidebar-width: 76px !important;
+  }
+  
+  .sidebar-logo-text,
+  .sidebar-user-info,
+  .sidebar-footer,
+  .sidebar-label {
+    display: none !important;
+  }
+  
+  .sidebar-role-selector-container {
+    padding: 10px 0 !important;
+    align-items: center !important;
+  }
+
+  .sidebar-header {
+    justify-content: center !important;
+    padding: 0 !important;
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .sidebar-nav {
+    padding: 0 0.5rem !important;
+    align-items: center !important;
+  }
+  
+  .sidebar-btn {
+    padding: 8px !important;
+    justify-content: center !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 10px !important;
+  }
+  
+  .sidebar-icon {
+    margin-right: 0 !important;
+  }
+
+  .sidebar-logout-btn {
+    padding: 8px !important;
+    justify-content: center !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 10px !important;
+  }
+
+  .sidebar-logout-icon {
+    margin-right: 0 !important;
+  }
 }

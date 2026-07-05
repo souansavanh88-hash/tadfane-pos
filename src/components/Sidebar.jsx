@@ -32,7 +32,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
   const logo = db.settings.logo;
 
   return (
-    <div className="sidebar-container" style={{ display: "flex", flexDirection: "column", height: "100%", width: "280px" }}>
+    <div className="sidebar-container" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div className="sidebar-header" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "15px", alignItems: "center" }}>
         {logo ? (
           <img src={logo} alt="Logo" style={{ maxHeight: "35px", maxWidth: "45px", objectFit: "contain", borderRadius: "4px" }} />
@@ -49,7 +49,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
       {/* Logged-In User Profile Info Widget */}
       {currentUser && (
         <div className="sidebar-role-selector-container" style={{ display: "flex", flexDirection: "column", gap: "6px", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "12px 1.25rem", marginBottom: "10px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="sidebar-user-info" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#0f766e", display: "flex", alignItems: "center", justifyCenter: "center", fontSize: "0.85rem", fontWeight: "700", color: "#ffffff", justifyContent: "center" }}>
               {currentUser.name.charAt(0)}
             </div>
@@ -70,6 +70,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
           </div>
           <button 
             type="button"
+            className="sidebar-logout-btn"
             onClick={onLogout}
             style={{ 
               width: "100%", 
@@ -88,7 +89,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               marginTop: "4px"
             }}
           >
-            <LogOut size={12} /> {t("logout", "ອອກຈາກລະບົບ (Log Out)")}
+            <LogOut className="sidebar-logout-icon" size={12} /> <span className="sidebar-label">{t("logout", "ອອກຈາກລະບົບ (Log Out)")}</span>
           </button>
 
         </div>
@@ -118,7 +119,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
                 transition: "all 0.25s ease"
               }}
             >
-              <span style={{ 
+              <span className="sidebar-icon" style={{ 
                 fontSize: "1.1rem", 
                 marginRight: "10px",
                 display: "inline-flex",
@@ -132,7 +133,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
               }}>
                 {item.icon}
               </span>
-              <span style={{ fontSize: "0.825rem", fontWeight: isActive ? "700" : "600", transition: "color 0.2s" }}>
+              <span className="sidebar-label" style={{ fontSize: "0.825rem", fontWeight: isActive ? "700" : "600", transition: "color 0.2s" }}>
                 {item.label}
               </span>
             </button>
