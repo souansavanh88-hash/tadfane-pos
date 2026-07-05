@@ -486,8 +486,8 @@ export default function Reports() {
           )}
 
           {/* P&L Statement Details Table */}
-          <div style={{ marginTop: "1rem" }}>
-            <h3 style={{ fontSize: "1.05rem", color: "var(--text-primary)", marginBottom: "0.75rem" }}>{t("pl_statement_detailed", "ບັນຊີລາຍຮັບ-ລາຍຈ່າຍຢ່າງລະອຽດ / Profit & Loss Statement")}</h3>
+          <div style={{ marginTop: "1rem", overflowX: "auto" }}>
+            <h3 style={{ fontSize: "1.05rem", color: "var(--text-primary)", marginBottom: "0.75rem", whiteSpace: "nowrap" }}>{t("pl_statement_detailed", "ບັນຊີລາຍຮັບ-ລາຍຈ່າຍຢ່າງລະອຽດ / Profit & Loss Statement")}</h3>
             <table style={{ marginTop: 0 }}>
               <thead>
                 <tr>
@@ -540,49 +540,51 @@ export default function Reports() {
           <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "8px" }}>
             💳 {t("payment_breakdown_title", "ສະຫຼຸບຊ່ອງທາງຊຳລະ / Payment Breakdown")}
           </h3>
-          <table className="data-table" style={{ width: "100%" }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left" }}>{t("payment_method_col", "ຊ່ອງທາງ / Method")}</th>
-                <th style={{ textAlign: "center" }}>{t("bill_count_label", "ບິນ / Bills")}</th>
-                <th style={{ textAlign: "right" }}>{t("revenue_label", "ລາຍຮັບ / Revenue")} (LAK)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>💵 {t("cash_label", "ເງິນສົດ / Cash")}</td>
-                <td style={{ textAlign: "center" }}>{pl.cashBills}</td>
-                <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.cashRevenue)}</td>
-              </tr>
-              <tr>
-                <td>📱 {t("transfer_label", "ໂອນ / Transfer")}</td>
-                <td style={{ textAlign: "center" }}>{pl.transferBills}</td>
-                <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.transferRevenue)}</td>
-              </tr>
-              <tr>
-                <td>💳 {t("card_label", "ບັດ / Card")}</td>
-                <td style={{ textAlign: "center" }}>{pl.cardBills}</td>
-                <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.cardRevenue)}</td>
-              </tr>
-              <tr style={{ borderTop: "2px solid var(--border-color)", fontWeight: "900" }}>
-                <td>{t("total_label", "ລວມ / Total")}</td>
-                <td style={{ textAlign: "center" }}>{pl.cashBills + pl.transferBills + pl.cardBills}</td>
-                <td style={{ textAlign: "right" }}>{formatLAK(pl.cashRevenue + pl.transferRevenue + pl.cardRevenue)}</td>
-              </tr>
-              {pl.totalDiscount > 0 && (
-                <tr style={{ color: "#e11d48" }}>
-                  <td colSpan="2">🏷️ {t("total_discount_label", "ສ່ວນຫຼຸດລວມ / Total Discounts")}</td>
-                  <td style={{ textAlign: "right", fontWeight: "700" }}>-{formatLAK(pl.totalDiscount)}</td>
+          <div style={{ overflowX: "auto" }}>
+            <table className="data-table" style={{ width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", whiteSpace: "nowrap" }}>{t("payment_method_col", "ຊ່ອງທາງ / Method")}</th>
+                  <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>{t("bill_count_label", "ບິນ / Bills")}</th>
+                  <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>{t("revenue_label", "ລາຍຮັບ / Revenue")} (LAK)</th>
                 </tr>
-              )}
-              {pl.totalDebt > 0 && (
-                <tr style={{ color: "#ea580c" }}>
-                  <td colSpan="2">⚠️ {t("total_debt_label", "ຄ້າງຊຳລະລວມ / Outstanding Debt")}</td>
-                  <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.totalDebt)}</td>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ whiteSpace: "nowrap" }}>💵 {t("cash_label", "ເງິນສົດ / Cash")}</td>
+                  <td style={{ textAlign: "center" }}>{pl.cashBills}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.cashRevenue)}</td>
                 </tr>
-              )}
-            </tbody>
-          </table>
+                <tr>
+                  <td style={{ whiteSpace: "nowrap" }}>📱 {t("transfer_label", "ໂອນ / Transfer")}</td>
+                  <td style={{ textAlign: "center" }}>{pl.transferBills}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.transferRevenue)}</td>
+                </tr>
+                <tr>
+                  <td style={{ whiteSpace: "nowrap" }}>💳 {t("card_label", "ບັດ / Card")}</td>
+                  <td style={{ textAlign: "center" }}>{pl.cardBills}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.cardRevenue)}</td>
+                </tr>
+                <tr style={{ borderTop: "2px solid var(--border-color)", fontWeight: "900" }}>
+                  <td style={{ whiteSpace: "nowrap" }}>{t("total_label", "ລວມ / Total")}</td>
+                  <td style={{ textAlign: "center" }}>{pl.cashBills + pl.transferBills + pl.cardBills}</td>
+                  <td style={{ textAlign: "right" }}>{formatLAK(pl.cashRevenue + pl.transferRevenue + pl.cardRevenue)}</td>
+                </tr>
+                {pl.totalDiscount > 0 && (
+                  <tr style={{ color: "#e11d48" }}>
+                    <td colSpan="2" style={{ whiteSpace: "nowrap" }}>🏷️ {t("total_discount_label", "ສ່ວນຫຼຸດລວມ / Total Discounts")}</td>
+                    <td style={{ textAlign: "right", fontWeight: "700" }}>-{formatLAK(pl.totalDiscount)}</td>
+                  </tr>
+                )}
+                {pl.totalDebt > 0 && (
+                  <tr style={{ color: "#ea580c" }}>
+                    <td colSpan="2" style={{ whiteSpace: "nowrap" }}>⚠️ {t("total_debt_label", "ຄ້າງຊຳລະລວມ / Outstanding Debt")}</td>
+                    <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.totalDebt)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Operating metrics side pane */}
