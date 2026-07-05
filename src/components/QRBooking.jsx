@@ -1410,7 +1410,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       )}
 
       {/* Main Grid split */}
-      <div className="pos-grid">
+      <div style={posGridStyle}>
         
         {/* Left Column: Form Panel */}
         <div className="card shadow-lg" style={{ display: "flex", flexDirection: "column", gap: "15px", padding: "20px", background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px" }}>
