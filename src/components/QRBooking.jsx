@@ -256,12 +256,14 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   });
   const [isDateManual, setIsDateManual] = useState(false);
   const [isTimeManual, setIsTimeManual] = useState(false);
-
   // Loaded Booking State for Checkout / Crew assignment
   const [loadedBooking, setLoadedBooking] = useState(null);
   const [qrShowModalBooking, setQrShowModalBooking] = useState(null);
 
   // Auto-update Date & Time in the background every 10 seconds (only if in creating-mode and not manually modified)
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [paymentCurrency, setPaymentCurrency] = useState("LAK");
+  
   useEffect(() => {
     if (loadedBooking) return;
     const interval = setInterval(() => {
@@ -283,7 +285,6 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const [selectedServiceId, setSelectedServiceId] = useState("SRV-004");
   const [selectedTier, setSelectedTier] = useState("tier1"); // "tier1" or "tier3"
   const [customPricePerPax, setCustomPricePerPax] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountMode, setDiscountMode] = useState("lak"); // "lak" or "percent"
   const [debtAmount, setDebtAmount] = useState(0);
@@ -350,6 +351,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         selectedTier,
         customPricePerPax,
         paymentMethod,
+        paymentCurrency,
         discountAmount,
         debtAmount,
         registrationGroupId,
@@ -366,6 +368,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     selectedTier,
     customPricePerPax,
     paymentMethod,
+    paymentCurrency,
     registrationGroupId,
     billNumber,
     loadedBooking
@@ -398,6 +401,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
           if (draft.selectedTier !== undefined) setSelectedTier(draft.selectedTier);
           if (draft.customPricePerPax !== undefined) setCustomPricePerPax(draft.customPricePerPax);
           if (draft.paymentMethod !== undefined) setPaymentMethod(draft.paymentMethod);
+          if (draft.paymentCurrency !== undefined) setPaymentCurrency(draft.paymentCurrency);
           if (draft.discountAmount !== undefined) setDiscountAmount(draft.discountAmount);
           if (draft.debtAmount !== undefined) setDebtAmount(draft.debtAmount);
           if (draft.registrationGroupId !== undefined) setRegistrationGroupId(draft.registrationGroupId);
@@ -813,6 +817,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       debtLAK: debtAmount,
       paidLAK: (totalPriceLAK - computedDiscountLAK) - debtAmount,
       paymentMethod,
+      paymentCurrency,
       billNumber,
       status: "registering", // Enforce standard status
       paymentStatus: "pending",
@@ -1055,6 +1060,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       status: "completed",
       paymentStatus: "paid",
       paymentMethod: paymentMethod,
+      paymentCurrency: paymentCurrency,
       discountLAK: computedDiscountLAK,
       netPriceLAK: (loadedBooking.pricePaidLAK || totalPriceLAK) - computedDiscountLAK,
       debtLAK: debtAmount,
@@ -2384,9 +2390,24 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       />
                     </div>
                   </div>
-                  <div>
-                    <label style={receiptFieldLabelStyle}>{rt.paymentMethodLabel}</label>
-                    <div style={{ display: "flex", gap: "5px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div>
+                      <label style={receiptFieldLabelStyle}>{t("received_currency", "ສະກຸນເງິນທີ່ຮັບ / Received Currency")}</label>
+                      <div style={{ display: "flex", gap: "5px" }}>
+                        {["LAK", "THB", "USD"].map(cur => (
+                          <button
+                            key={cur}
+                            onClick={() => setPaymentCurrency(cur)}
+                            style={paymentCurrency === cur ? activePaymentBtnStyle : inactivePaymentBtnStyle}
+                          >
+                            {cur === "LAK" ? "₭" : cur === "THB" ? "฿" : "$"} {cur}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label style={receiptFieldLabelStyle}>{rt.paymentMethodLabel}</label>
+                      <div style={{ display: "flex", gap: "5px" }}>
                       <button
                         onClick={() => setPaymentMethod("cash")}
                         style={paymentMethod === "cash" ? activePaymentBtnStyle : inactivePaymentBtnStyle}
@@ -2405,6 +2426,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       >
                         <CreditCard size={14} /> ບັດ
                       </button>
+                    </div>
                     </div>
                   </div>
                   <button
