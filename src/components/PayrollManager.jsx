@@ -309,7 +309,7 @@ export default function PayrollManager() {
         </div>
       </div>
 
-      <div className="no-print" style={{ display: "grid", gridTemplateColumns: "minmax(0, 2.5fr) minmax(0, 1fr)", gap: "2rem", alignItems: "start" }}>
+      <div className="dashboard-sections-grid no-print" style={{ marginTop: 0, alignItems: "start" }}>
         <div className="card">
           <h2 style={{ fontSize: "1.25rem", marginBottom: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <CreditCard size={20} color="var(--primary)" />

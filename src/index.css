@@ -1173,7 +1173,7 @@ tr:hover td {
   margin-top: 2.25rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .dashboard-sections-grid {
     grid-template-columns: 1fr;
   }
@@ -1692,7 +1692,7 @@ tr:hover td {
 }
 
 /* Global Mobile Responsive Tables (Prevent horizontal scroll) */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   /* Allow tables to squeeze into screen width */
   table {
     font-size: 0.65rem !important; /* Aggressively reduce to fit 8+ columns */
