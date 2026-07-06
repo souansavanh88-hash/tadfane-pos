@@ -53,12 +53,9 @@ export default function OperatingExpenses() {
 
   // Trigger statement print
   const triggerPrintExpenses = () => {
-    const originalClass = document.body.className;
-    document.body.classList.add("print-dashboard-mode"); // reusing print layout overlay style
     setTimeout(() => {
       window.print();
-      document.body.className = originalClass;
-    }, 100);
+    }, 150);
   };
 
   // Computations for the selected month
@@ -131,6 +128,7 @@ export default function OperatingExpenses() {
 
   return (
     <div>
+      <div className="no-print">
       {/* Title */}
       <div className="page-header no-print" style={{ marginBottom: "1.5rem" }}>
         <div className="page-title">
@@ -340,6 +338,7 @@ export default function OperatingExpenses() {
             </tr>
           </tbody>
         </table>
+      </div>
       </div>
 
       {/* --------------------- HIGH FIDELITY PRINTABLE STATEMENT --------------------- */}

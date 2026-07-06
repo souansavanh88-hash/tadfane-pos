@@ -97,7 +97,10 @@ const TRANSLATIONS = {
     cameraAccessing: "ກຳລັງເປີດກ້ອງ... / Accessing Camera...",
     alertCameraError: "ບໍ່ສາມາດເປີດກ້ອງໄດ້ ກະລຸນາອະນຸຍາດສິດການນຳໃຊ້ກ້ອງໃນບຣາວເຊີຂອງທ່ານ / Cannot open camera. Please allow camera permissions.",
     alertMrzNotFound: "ບໍ່ພົບຂໍ້ມູນ MRZ ຫຼື ພາບຖ່າຍບໍ່ຊັດເຈນ ກະລຸນາປັບມຸມຖ່າຍພາບໃຫ້ກົງຕາມຄຳແນະນຳ ຫຼື ປ້ອນຂໍ້ມູນດ້ວຍຕົນເອງ / Could not detect MRZ or photo is blurry.",
-    alertOcrError: "ລະບົບ OCR ບໍ່ພ້ອມໃຊ້ງານຊົ່ວຄາວ ກະລຸນາປ້ອນຂໍ້ມູນດ້ວຍຕົນເອງ / OCR Engine is temporarily unavailable. Please enter details manually."
+    alertOcrError: "ລະບົບ OCR ບໍ່ພ້ອມໃຊ້ງານຊົ່ວຄາວ ກະລຸນາປ້ອນຂໍ້ມູນດ້ວຍຕົນເອງ / OCR Engine is temporarily unavailable. Please enter details manually.",
+    signatureLabel: "ລາຍເຊັນລູກຄ້າ / Customer Signature",
+    clearBtn: "ລຶບລາຍເຊັນ",
+    alertSignatureRequired: "ກະລຸນາເຊັນຊື່ຂອງທ່ານກ່ອນສົ່ງຂໍ້ມູນ"
   },
   en: {
     welcome: "Welcome to TADFANE RAFTING",
@@ -168,7 +171,10 @@ const TRANSLATIONS = {
     cameraAccessing: "Accessing Camera...",
     alertCameraError: "Cannot open camera. Please allow camera permissions in your browser.",
     alertMrzNotFound: "Could not detect MRZ or photo is blurry. Please check guide or enter details manually.",
-    alertOcrError: "OCR Engine is temporarily unavailable. Please enter details manually."
+    alertOcrError: "OCR Engine is temporarily unavailable. Please enter details manually.",
+    signatureLabel: "Customer Signature",
+    clearBtn: "Clear Signature",
+    alertSignatureRequired: "Please sign your signature before submitting"
   },
   th: {
     welcome: "ยินดีต้อนรับสู่ ตาดฟาน ล่องแก่ง",
@@ -240,7 +246,10 @@ const TRANSLATIONS = {
     cameraAccessing: "กำลังเปิดกล้อง... / Accessing Camera...",
     alertCameraError: "ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตสิทธิ์การใช้งานกล้องในบราวเซอร์ของคุณ / Cannot open camera. Please allow camera permissions.",
     alertMrzNotFound: "ไม่พบข้อมูล MRZ หรือภาพถ่ายไม่ชัดเจน กรุณาปรับมุมถ่ายภาพให้ตรงตามคำแนะนำ หรือป้อนข้อมูลด้วยตนเอง / Could not detect MRZ or photo is blurry.",
-    alertOcrError: "ระบบ OCR ไม่พร้อมใช้งานชั่วคราว กรุณาป้อนข้อมูลด้วยตนเอง / OCR Engine is temporarily unavailable. Please enter details manually."
+    alertOcrError: "ระบบ OCR ไม่พร้อมใช้งานชั่วคราว กรุณาป้อนข้อมูลด้วยตนเอง / OCR Engine is temporarily unavailable. Please enter details manually.",
+    signatureLabel: "ลายเซ็นลูกค้า / Customer Signature",
+    clearBtn: "ล้างลายเซ็น",
+    alertSignatureRequired: "กรุณาเซ็นชื่อของคุณก่อนส่งข้อมูล"
   }
 };
 
@@ -608,6 +617,78 @@ export default function SelfRegisterPortal() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const t = TRANSLATIONS[lang];
+
+  // Signature canvas states & handlers
+  const sigCanvasRef = useRef(null);
+  const [isSigned, setIsSigned] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  const getCoordinates = (e) => {
+    if (!sigCanvasRef.current) return { x: 0, y: 0 };
+    const canvas = sigCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    // Scale coordinate points based on actual rendering dimensions vs internal canvas resolution
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
+  const startDrawing = (e) => {
+    e.preventDefault();
+    const coords = getCoordinates(e);
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    ctx.beginPath();
+    ctx.moveTo(coords.x, coords.y);
+    setIsDrawing(true);
+  };
+
+  const draw = (e) => {
+    if (!isDrawing || !sigCanvasRef.current) return;
+    e.preventDefault();
+    const coords = getCoordinates(e);
+    const canvas = sigCanvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    ctx.lineTo(coords.x, coords.y);
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    setIsSigned(true);
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearSignature = () => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setIsSigned(false);
+  };
 
   // Listen for database updates in real-time
   useEffect(() => {
@@ -1109,6 +1190,12 @@ export default function SelfRegisterPortal() {
   const handleSubmitRegistration = async (e) => {
     e.preventDefault();
 
+    // Validate signature is present
+    if (!isSigned) {
+      alert(t.alertSignatureRequired);
+      return;
+    }
+
     // Validate: Single passenger details
     const p = passenger;
     if (!p.firstName?.trim() || !p.lastName?.trim() || !p.nationality?.trim() || !p.gender || !p.phone?.trim() || !p.dob || !p.emergencyName?.trim() || !p.emergencyRelation?.trim() || !p.emergencyPhone?.trim()) {
@@ -1124,10 +1211,17 @@ export default function SelfRegisterPortal() {
     setIsLoading(true);
 
     try {
+      // Capture signature data url
+      let signatureBase64 = "";
+      if (sigCanvasRef.current) {
+        signatureBase64 = sigCanvasRef.current.toDataURL("image/png");
+      }
+
       const newPassenger = {
         ...passenger,
         name: `${p.firstName} ${p.lastName}`.trim(),
-        registeredAt: new Date().toISOString()
+        registeredAt: new Date().toISOString(),
+        signature: signatureBase64
       };
 
       if (!isFirebaseConfigured()) {
@@ -1726,6 +1820,50 @@ export default function SelfRegisterPortal() {
                           />
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Signature Section */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "15px", marginBottom: "15px" }}>
+                    <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#334155", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span>{t.signatureLabel} <span style={{ color: "#be123c" }}>*</span></span>
+                      {isSigned && (
+                        <button
+                          type="button"
+                          onClick={clearSignature}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "#e11d48",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            padding: "0"
+                          }}
+                        >
+                          🔄 {t.clearBtn}
+                        </button>
+                      )}
+                    </label>
+                    <div style={{ border: "2px dashed #cbd5e1", borderRadius: "8px", overflow: "hidden", background: "#f8fafc", position: "relative" }}>
+                      <canvas
+                        ref={sigCanvasRef}
+                        width={500}
+                        height={180}
+                        onMouseDown={startDrawing}
+                        onMouseMove={draw}
+                        onMouseUp={stopDrawing}
+                        onMouseLeave={stopDrawing}
+                        onTouchStart={startDrawing}
+                        onTouchMove={draw}
+                        onTouchEnd={stopDrawing}
+                        style={{
+                          width: "100%",
+                          height: "150px",
+                          display: "block",
+                          touchAction: "none"
+                        }}
+                      />
                     </div>
                   </div>
 

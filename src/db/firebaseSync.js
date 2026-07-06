@@ -15,7 +15,8 @@ import {
   serverTimestamp,
   updateDoc,
   arrayUnion,
-  orderBy
+  orderBy,
+  deleteDoc
 } from "firebase/firestore";
 
 const BOOKINGS_COLLECTION = "pos_bookings";
@@ -164,3 +165,88 @@ export const addPassengerToFirebaseBooking = async (bookingId, passengerData) =>
     throw err;
   }
 };
+
+// ============================================================
+// SYSTEM/CASHIER SIDE: Clear all bookings documents from Firestore
+// ============================================================
+export const clearAllBookingsFromFirebase = async () => {
+  if (!isFirebaseConfigured()) return false;
+  try {
+    const q = query(collection(fireDb, BOOKINGS_COLLECTION));
+    const querySnapshot = await getDocs(q);
+    
+    const deletePromises = [];
+    querySnapshot.forEach((document) => {
+      const docRef = doc(fireDb, BOOKINGS_COLLECTION, document.id);
+      deletePromises.push(deleteDoc(docRef));
+    });
+    
+    await Promise.all(deletePromises);
+    console.log(`[Firebase] Successfully deleted ${querySnapshot.size} booking documents.`);
+    return true;
+  } catch (err) {
+    console.error("[Firebase] Failed to clear bookings collection:", err);
+    throw err;
+  }
+};
+
+const EMPLOYEE_REG_COLLECTION = "pos_employee_registrations";
+
+// ============================================================
+// EMPLOYEE SIDE: Add employee registration to Firebase
+// ============================================================
+export const addEmployeeRegistrationToFirebase = async (empData) => {
+  if (!isFirebaseConfigured()) return null;
+  try {
+    const docRef = await addDoc(collection(fireDb, EMPLOYEE_REG_COLLECTION), {
+      ...empData,
+      createdAt: new Date().toISOString(),
+      _serverTimestamp: serverTimestamp()
+    });
+    console.log("[Firebase] Employee registration added successfully:", docRef.id);
+    return docRef.id;
+  } catch (err) {
+    console.error("[Firebase] Failed to add employee registration:", err);
+    throw err;
+  }
+};
+
+// ============================================================
+// CASHIER SIDE: Listen for incoming employee registrations
+// ============================================================
+export const listenToEmployeeRegistrations = (callback) => {
+  if (!isFirebaseConfigured()) return null;
+  try {
+    const q = query(collection(fireDb, EMPLOYEE_REG_COLLECTION));
+    return onSnapshot(q, (snapshot) => {
+      const registrations = [];
+      snapshot.forEach((doc) => {
+        registrations.push({ id: doc.id, ...doc.data() });
+      });
+      callback(registrations);
+    }, (err) => {
+      console.warn("[Firebase] Employee listener error:", err);
+    });
+  } catch (err) {
+    console.warn("[Firebase] Failed to set up employee listener:", err);
+    return null;
+  }
+};
+
+// ============================================================
+// CASHIER SIDE: Delete employee registration after processing
+// ============================================================
+export const deleteEmployeeRegistrationFromFirebase = async (regId) => {
+  if (!isFirebaseConfigured()) return false;
+  try {
+    const docRef = doc(fireDb, EMPLOYEE_REG_COLLECTION, regId);
+    await deleteDoc(docRef);
+    console.log(`[Firebase] Deleted employee registration ${regId}`);
+    return true;
+  } catch (err) {
+    console.error(`[Firebase] Failed to delete registration ${regId}:`, err);
+    return false;
+  }
+};
+
+

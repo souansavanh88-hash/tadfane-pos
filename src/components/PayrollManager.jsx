@@ -1,13 +1,18 @@
 // PayrollManager.jsx - Employee payroll ledger and employee settings
 import React, { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { getDb, saveDb, clearAllEmployees } from "../db/mockDb";
 import { formatLAK } from "../utils/helpers";
 import { useLanguage } from "../utils/LanguageContext";
-import { Plus, Award, CreditCard, Trash2, Printer } from "lucide-react";
+import { Plus, Award, CreditCard, Trash2, Printer, QrCode, X, Copy, ExternalLink, CheckCircle, Edit3 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function PayrollManager() {
   const { lang, t } = useLanguage();
   const [db, setDb] = useState(getDb());
+  const [printTemplate, setPrintTemplate] = useState(null); // 'payroll', 'payslip', or null
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const [empName, setEmpName] = useState("");
   const [empRole, setEmpRole] = useState("guide");
@@ -24,6 +29,14 @@ export default function PayrollManager() {
   const [tourRate, setTourRate] = useState(100000);
   const [raftingRate, setRaftingRate] = useState(150000);
   const [specialRate, setSpecialRate] = useState(50000);
+  
+  // New employee states
+  const [empAddress, setEmpAddress] = useState("");
+  const [empEmergencyContactName, setEmpEmergencyContactName] = useState("");
+  const [empEmergencyContactPhone, setEmpEmergencyContactPhone] = useState("");
+  const [empEmergencyRelationship, setEmpEmergencyRelationship] = useState("");
+  const [empFacePhoto, setEmpFacePhoto] = useState("");
+  const [empAllowance, setEmpAllowance] = useState(0);
 
   const [editingEmpId, setEditingEmpId] = useState("");
   const [empBankAccount, setEmpBankAccount] = useState("");
@@ -31,6 +44,7 @@ export default function PayrollManager() {
   const [editBonusEmpId, setEditBonusEmpId] = useState("");
   const [bonusValue, setBonusValue] = useState(0);
   const [deleteConfirmId, setDeleteConfirmId] = useState("");
+  const [showAddEditModal, setShowAddEditModal] = useState(false);
 
   useEffect(() => {
     const handleDbUpdate = () => setDb(getDb());
@@ -58,7 +72,52 @@ export default function PayrollManager() {
     setTourRate(100000);
     setRaftingRate(150000);
     setSpecialRate(50000);
+    setEmpAddress("");
+    setEmpEmergencyContactName("");
+    setEmpEmergencyContactPhone("");
+    setEmpEmergencyRelationship("");
+    setEmpFacePhoto("");
+    setEmpAllowance(0);
     setEditingEmpId("");
+  };
+
+  const handleAdminPhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 200;
+        const MAX_HEIGHT = 200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+        setEmpFacePhoto(dataUrl);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveEmployee = (e) => {
@@ -75,6 +134,7 @@ export default function PayrollManager() {
     const finalTourRate = parseInt(tourRate) || 0;
     const finalRaftingRate = parseInt(raftingRate) || 0;
     const finalSpecialRate = parseInt(specialRate) || 0;
+    const finalAllowance = parseInt(empAllowance) || 0;
 
     if (editingEmpId) {
       updatedDb.employees = updatedDb.employees.map(emp =>
@@ -96,7 +156,13 @@ export default function PayrollManager() {
               daysWorked: finalDaysWorked,
               tourRate: finalTourRate,
               raftingRate: finalRaftingRate,
-              specialRate: finalSpecialRate
+              specialRate: finalSpecialRate,
+              allowance: finalAllowance,
+              address: empAddress.trim(),
+              emergencyContactName: empEmergencyContactName.trim(),
+              emergencyContactPhone: empEmergencyContactPhone.trim(),
+              emergencyRelationship: empEmergencyRelationship.trim(),
+              facePhoto: empFacePhoto
             }
           : emp
       );
@@ -129,6 +195,12 @@ export default function PayrollManager() {
         tourRate: finalTourRate,
         raftingRate: finalRaftingRate,
         specialRate: finalSpecialRate,
+        allowance: finalAllowance,
+        address: empAddress.trim(),
+        emergencyContactName: empEmergencyContactName.trim(),
+        emergencyContactPhone: empEmergencyContactPhone.trim(),
+        emergencyRelationship: empEmergencyRelationship.trim(),
+        facePhoto: empFacePhoto,
         bonus: 0
       };
 
@@ -138,6 +210,7 @@ export default function PayrollManager() {
 
     saveDb(updatedDb);
     resetEmployeeForm();
+    setShowAddEditModal(false);
     refreshState();
   };
 
@@ -217,11 +290,12 @@ export default function PayrollManager() {
       }
     });
 
-    const isFreelance = emp.type === "freelance";
+     const isFreelance = emp.type === "freelance";
     const tripPay = tripsDetail.reduce((sum, td) => sum + td.payout, 0);
     const salaryAmt = isFreelance ? 0 : emp.salary;
     const dailyWagePay = (emp.dailyWage || 0) * (emp.daysWorked !== undefined ? emp.daysWorked : 26);
-    const totalPayout = salaryAmt + dailyWagePay + tripPay + (emp.bonus || 0) + (emp.commission || 0) + (emp.ot || 0);
+    const allowanceAmt = isFreelance ? 0 : (emp.allowance || 0);
+    const totalPayout = salaryAmt + dailyWagePay + allowanceAmt + tripPay + (emp.bonus || 0) + (emp.commission || 0) + (emp.ot || 0);
 
     return { tripCount, tripPay, totalPayout, tripsDetail };
   };
@@ -245,21 +319,43 @@ export default function PayrollManager() {
   };
 
   const triggerPrintPayslip = () => {
-    const originalClass = document.body.className;
-    document.body.classList.add("print-payslip-mode");
+    flushSync(() => {
+      setPrintTemplate("payslip");
+    });
+
+    const handleAfterPrint = () => {
+      setPrintTemplate(null);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+
     setTimeout(() => {
       window.print();
-      document.body.className = originalClass;
-    }, 100);
+    }, 150);
+
+    setTimeout(() => {
+      setPrintTemplate(null);
+    }, 5000);
   };
 
   const triggerPrintPayroll = () => {
-    const originalClass = document.body.className;
-    document.body.classList.add("print-payroll-mode");
+    flushSync(() => {
+      setPrintTemplate("payroll");
+    });
+
+    const handleAfterPrint = () => {
+      setPrintTemplate(null);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+
     setTimeout(() => {
       window.print();
-      document.body.className = originalClass;
-    }, 100);
+    }, 150);
+
+    setTimeout(() => {
+      setPrintTemplate(null);
+    }, 5000);
   };
 
   let grandBaseSalary = 0;
@@ -270,6 +366,7 @@ export default function PayrollManager() {
   let grandDailyWagePay = 0;
   let grandOTPay = 0;
   let grandCommission = 0;
+  let grandAllowance = 0;
 
   db.employees.forEach(emp => {
     const calc = calculatePayout(emp);
@@ -278,6 +375,7 @@ export default function PayrollManager() {
     grandTripPay += calc.tripPay;
     grandBonus += emp.bonus || 0;
     grandTotal += calc.totalPayout;
+    grandAllowance += emp.type === "freelance" ? 0 : (emp.allowance || 0);
     
     // Add additional grand totals computation
     grandDailyWagePay += (emp.dailyWage || 0) * (emp.daysWorked !== undefined ? emp.daysWorked : 26);
@@ -287,219 +385,493 @@ export default function PayrollManager() {
 
   return (
     <div>
-      <div className="page-header no-print">
-        <div className="page-title">
-          <h1>{t("payroll_manager_title", "ບັນຊີພະນັກງານ & ເງິນເດືອນ (Employee & Payroll)")}</h1>
-          <p>{t("payroll_manager_sub", "ຄຸ້ມຄອງຂໍ້ມູນພະນັກງານ, ໄລ່ເງິນຄ່າທ່ຽວ ແລະ ຄິດໄລ່ເງິນເດືອນ")}</p>
-        </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button
-            className="btn btn-danger"
-            style={{ fontSize: "0.85rem" }}
-            onClick={() => {
-              clearAllEmployees();
-              refreshState();
-            }}
-          >
-            🗑️ ລ້າງພະນັກງານທັງໝົດ / Clear All Employees
-          </button>
-          <button className="btn btn-primary" onClick={triggerPrintPayroll}>
-            <Printer size={16} /> {t("print_payroll_summary", "ພິມສະຫຼຸບໃບເງິນເດືອນລວມ / Print Summary")}
-          </button>
-        </div>
-      </div>
-
-      <div className="dashboard-sections-grid no-print" style={{ marginTop: 0, alignItems: "start" }}>
-        <div className="card">
-          <h2 style={{ fontSize: "1.25rem", marginBottom: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <CreditCard size={20} color="var(--primary)" />
-            {t("payroll_ledger_title", "ລາຍຊື່ພະນັກງານ & ບັນຊີເງິນເດືອນ / Payroll Ledger")}
-          </h2>
-
-          <div style={{ overflowX: "auto" }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>ພະນັກງານ / ຕຳແໜ່ງ</th>
-                  <th>ປະເພດ</th>
-                  <th>ເງິນເດືອນພື້ນຖານ</th>
-                  <th>ຈຳນວນທ່ຽວ</th>
-                  <th>ເງິນທ່ຽວ (OT)</th>
-                  <th>ໂບນັດ</th>
-                  <th>ລວມສຸດທິ</th>
-                  <th>ຈັດການ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {db.employees.map(emp => {
-                  const calc = calculatePayout(emp);
-                  const roleLabel =
-                    emp.role === "guide" ? " ໄກ້ດນຳທ່ຽວ" :
-                    emp.role === "captain" ? " ກັປຕັນເຮືອ" :
-                    emp.role === "driver" ? " ພະນັກງານຂັບລົດ" :
-                    " ພະນັກງານຕ້ອນຮັບ";
-
-                  const typeLabel = emp.type === "freelance" ? "ອິດສະຫຼະ (OT)" : "ປະຈຳ";
-                  const typeBadge = emp.type === "freelance" ? "badge badge-warning" : "badge badge-success";
-
-                  return (
-                    <tr key={emp.id}>
-                      <td>
-                        <div style={{ fontWeight: "600", color: "var(--text-primary)" }}>{emp.name}</div>
-                        <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{roleLabel}</span>
-                      </td>
-                      <td><span className={typeBadge}>{typeLabel}</span></td>
-                      <td>
-                        {emp.type === "freelance" ? "0 ₭ (ບໍ່ມີເງິນເດືອນ)" : formatLAK(emp.salary)}
-                        {emp.dailyWage > 0 && (
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-                            {formatLAK(emp.dailyWage)}/ວັນ ({emp.daysWorked || 26} ວັນ)
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <span className="badge badge-success" style={{ padding: "3px 8px" }}>{calc.tripCount} ທ່ຽວ</span>
-                      </td>
-                      <td>
-                        <div>{formatLAK(calc.tripPay)}</div>
-                        {(emp.ot > 0 || emp.commission > 0) && (
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-                            {emp.ot > 0 && <div>OT: +{formatLAK(emp.ot)}</div>}
-                            {emp.commission > 0 && <div>Comm: +{formatLAK(emp.commission)}</div>}
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                          <span>{formatLAK(emp.bonus || 0)}</span>
-                          <button
-                            className="btn btn-secondary"
-                            style={{ padding: "2px 6px", fontSize: "0.7rem", background: "var(--bg-tertiary)" }}
-                            onClick={() => {
-                              setEditBonusEmpId(emp.id);
-                              setBonusValue(emp.bonus || 0);
-                            }}
-                          >
-                            ໂບນັດ
-                          </button>
-                        </div>
-                      </td>
-                      <td style={{ fontWeight: "bold", color: "var(--primary)" }}>{formatLAK(calc.totalPayout)}</td>
-                      <td>
-                        <div style={{ display: "flex", gap: "4px" }}>
-                          <button
-                            className="btn btn-secondary"
-                            style={{ padding: "4px 8px", fontSize: "0.75rem", background: "var(--bg-tertiary)" }}
-                            onClick={() => setSelectedEmpDetails(emp)}
-                          >
-                            ລາຍລະອຽດ
-                          </button>
-                          <button
-                            className="btn btn-success"
-                            style={{ padding: "4px 8px", fontSize: "0.75rem" }}
-                            onClick={() => handleTriggerPayout(emp)}
-                          >
-                            ຈ່າຍ
-                          </button>
-                          <button
-                            className="btn btn-secondary"
-                            style={{ padding: "4px 8px", fontSize: "0.75rem" }}
-                            onClick={() => {
-                              setEditingEmpId(emp.id);
-                              setEmpName(emp.name);
-                              setEmpRole(emp.role);
-                              setEmpType(emp.type || "permanent");
-                              setBaseSalary(emp.salary || 0);
-                              setTripRate(emp.tripRate || 0);
-                              setEmpPhone(emp.phone || "");
-                              setEmpBankAccount(emp.bankAccount || "");
-                              setEmpHireDate(emp.hireDate || "2025-01-01");
-                              setEmpStatus(emp.status || "active");
-                              setEmpDailyWage(emp.dailyWage || 0);
-                              setEmpCommission(emp.commission || 0);
-                              setEmpOT(emp.ot || 0);
-                              setEmpDaysWorked(emp.daysWorked !== undefined ? emp.daysWorked : 26);
-                              setTourRate(emp.tourRate || 100000);
-                              setRaftingRate(emp.raftingRate || 150000);
-                              setSpecialRate(emp.specialRate || 50000);
-                            }}
-                          >
-                            ແກ້ໄຂ
-                          </button>
-                          
-                          {deleteConfirmId === emp.id ? (
-                            <button
-                              className="btn btn-danger"
-                              style={{ padding: "4px 8px", fontSize: "0.7rem", fontWeight: "bold", background: "#ef4444" }}
-                              onClick={() => {
-                                const updatedDb = { ...db };
-                                updatedDb.employees = updatedDb.employees.filter(e => e.id !== emp.id);
-                                saveDb(updatedDb);
-                                refreshState();
-                                setDeleteConfirmId("");
-                              }}
-                            >
-                              ยืนยันลบ / Confirm
-                            </button>
-                          ) : (
-                            <button 
-                              className="btn btn-danger" 
-                              style={{ padding: "4px" }} 
-                              onClick={() => {
-                                setDeleteConfirmId(emp.id);
-                                // Auto-reset confirmation state after 4 seconds
-                                setTimeout(() => setDeleteConfirmId(""), 4000);
-                              }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      <div className="no-print">
+        {/* Premium Page Header styled exactly like the screenshot */}
+        <div className="page-header no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "12px" }}>
+          <div className="page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "1.8rem" }}>👥</span>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: "800", color: "var(--text-primary)", margin: 0 }}>
+              {t("payroll_manager_title", "ພະນັກງານ / Employees")}
+            </h1>
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              className="btn"
+              style={{ fontSize: "0.85rem", background: "white", color: "#1e293b", border: "1px solid #cbd5e1", display: "flex", alignItems: "center", gap: "6px", fontWeight: "600", padding: "8px 14px", borderRadius: "6px" }}
+              onClick={() => setShowQrModal(true)}
+            >
+              📱 {t("create_employee_qr", "ສ້າງ QR Code ຮັບພະນັກງານ")}
+            </button>
+            <button 
+              className="btn"
+              style={{ fontSize: "0.85rem", background: "white", color: "#1e293b", border: "1px solid #cbd5e1", display: "flex", alignItems: "center", gap: "6px", fontWeight: "600", padding: "8px 14px", borderRadius: "6px" }}
+              onClick={triggerPrintPayroll}
+            >
+              🖨️ {t("print_all_reports", "ພິມລາຍງານທັງໝົດ")}
+            </button>
+            <button 
+              className="btn btn-primary" 
+              style={{ fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "6px", background: "var(--primary)", border: "none", fontWeight: "600", padding: "8px 14px", borderRadius: "6px", color: "white" }}
+              onClick={() => {
+                resetEmployeeForm();
+                setShowAddEditModal(true);
+              }}
+            >
+              + {t("add_employee_btn", "ເພີ່ມພະນັກງານ")}
+            </button>
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          {editBonusEmpId ? (
-            <div className="card" style={{ borderColor: "var(--warning)", background: "var(--warning-light)" }}>
-              <h3 style={{ fontSize: "1.1rem", color: "var(--warning)", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "5px" }}>
-                <Award size={18} />
-                {t("add_bonus_title", "ປ້ອນໂບນັດພິເສດ / Add Bonus")}
-              </h3>
-              <form onSubmit={handleUpdateBonus}>
-                <div className="form-group">
-                  <label>{t("employee_colon", "ພະນັກງານ:")} {db.employees.find(e => e.id === editBonusEmpId)?.name}</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={bonusValue}
-                    onChange={(e) => setBonusValue(e.target.value)}
-                    min="0"
-                    required
-                  />
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                  <button type="submit" className="btn btn-warning" style={{ flex: 1 }}>บันทึก / Save</button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setEditBonusEmpId("")}>
-                    {t("cancel_btn", "ຍົກເລີກ / Cancel")}
-                  </button>
-                </div>
-              </form>
+        {/* Aggregate Summary Info Cards (Collapsible or compact grid) */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "20px"
+        }}>
+          <div className="card" style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "4px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)" }}>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: "600" }}>ເງິນເດືອນພື້ນຖານລວມ</span>
+            <span style={{ fontSize: "1.1rem", fontWeight: "800", color: "var(--text-primary)" }}>{formatLAK(grandBaseSalary)}</span>
+          </div>
+          {grandAllowance > 0 && (
+            <div className="card" style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "4px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)" }}>
+              <span style={{ fontSize: "0.72rem", color: "#0f766e", fontWeight: "600" }}>ເງິນປະຈຳຕຳແໜ່ງລວມ</span>
+              <span style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f766e" }}>{formatLAK(grandAllowance)}</span>
             </div>
-          ) : null}
+          )}
+          <div className="card" style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "4px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)" }}>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: "600" }}>ຈຳນວນທ່ຽວ / ເງິນທ່ຽວລວມ</span>
+            <span style={{ fontSize: "1.1rem", fontWeight: "800", color: "var(--text-primary)" }}>{grandTripCount} ທ່ຽວ ({formatLAK(grandTripPay)})</span>
+          </div>
+          <div className="card" style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "4px", border: "1px solid var(--border-color)", background: "var(--bg-secondary)" }}>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: "600" }}>ໂບນັດ / ລາຍຈ່າຍລວມທັງໝົດ</span>
+            <span style={{ fontSize: "1.1rem", fontWeight: "800", color: "var(--primary)" }}>{formatLAK(grandTotal)}</span>
+          </div>
+        </div>
 
-          <div className="card">
-            <h2 style={{ fontSize: "1.25rem", marginBottom: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        {/* Screen View: Grid of Employee Profile Cards matching the screenshot */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+          gap: "20px",
+          marginBottom: "30px"
+        }}>
+          {db.employees.map(emp => {
+            const calc = calculatePayout(emp);
+            
+            let roleColor = "#0f766e";
+            let roleBg = "rgba(15, 118, 110, 0.1)";
+            let roleLabel = emp.role || "staff";
+            
+            if (emp.role === "guide") {
+              roleColor = "#0284c7";
+              roleBg = "rgba(2, 132, 199, 0.1)";
+            } else if (emp.role === "captain") {
+              roleColor = "#7c3aed";
+              roleBg = "rgba(124, 58, 237, 0.1)";
+            } else if (emp.role === "driver") {
+              roleColor = "#ea580c";
+              roleBg = "rgba(234, 88, 12, 0.1)";
+            } else if (emp.role === "cashier") {
+              roleColor = "#059669";
+              roleBg = "rgba(5, 150, 105, 0.1)";
+            } else if (emp.role === "waiter") {
+              roleColor = "#db2777";
+              roleBg = "rgba(219, 39, 119, 0.1)";
+            } else if (emp.role === "office") {
+              roleColor = "#2563eb";
+              roleBg = "rgba(37, 99, 235, 0.1)";
+            }
+
+            const initials = (emp.name || "U").charAt(0);
+
+            return (
+              <div className="card" key={emp.id} style={{
+                display: "flex",
+                flexDirection: "column",
+                padding: "20px",
+                borderRadius: "16px",
+                boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02)",
+                background: "white",
+                border: "1px solid var(--border-color)",
+                position: "relative",
+                gap: "14px"
+              }}>
+                {/* Avatar & Name & Role Badge & Actions */}
+                <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                  {/* Photo container */}
+                  <div style={{
+                    width: "60px",
+                    height: "60px",
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    background: "#0f766e",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.3rem",
+                    fontWeight: "800",
+                    color: "#ffffff",
+                    border: "2px solid #f1f5f9",
+                    flexShrink: 0
+                  }}>
+                    {emp.facePhoto ? (
+                      <img src={emp.facePhoto} alt={emp.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+
+                  {/* Name & Role Badge */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{
+                      fontSize: "1.1rem",
+                      fontWeight: "750",
+                      color: "var(--text-primary)",
+                      margin: 0,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      lineHeight: "1.2"
+                    }}>
+                      {emp.name}
+                    </h3>
+                    <span style={{
+                      display: "inline-block",
+                      fontSize: "0.72rem",
+                      fontWeight: "700",
+                      color: roleColor,
+                      background: roleBg,
+                      padding: "2px 8px",
+                      borderRadius: "6px",
+                      marginTop: "5px",
+                      letterSpacing: "0.5px"
+                    }}>
+                      {roleLabel}
+                    </span>
+                  </div>
+
+                  {/* Actions Header Group */}
+                  <div style={{ display: "flex", gap: "4px", alignSelf: "flex-start" }}>
+                    {/* Print Payslip */}
+                    <button 
+                      className="btn" 
+                      style={{
+                        padding: "6px",
+                        background: "transparent",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "6px",
+                        color: "#64748b",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: "auto"
+                      }}
+                      onClick={() => handlePrintIndividual(emp)}
+                      title="Print Payslip"
+                    >
+                      <Printer size={14} />
+                    </button>
+
+                    {/* Edit Employee */}
+                    <button 
+                      className="btn" 
+                      style={{
+                        padding: "6px",
+                        background: "transparent",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "6px",
+                        color: "#64748b",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: "auto"
+                      }}
+                      onClick={() => {
+                        setEditingEmpId(emp.id);
+                        setEmpName(emp.name);
+                        setEmpRole(emp.role);
+                        setEmpType(emp.type || "permanent");
+                        setBaseSalary(emp.salary || 0);
+                        setTripRate(emp.tripRate || 0);
+                        setEmpPhone(emp.phone || "");
+                        setEmpBankAccount(emp.bankAccount || "");
+                        setEmpHireDate(emp.hireDate || "2025-01-01");
+                        setEmpStatus(emp.status || "active");
+                        setEmpDailyWage(emp.dailyWage || 0);
+                        setEmpCommission(emp.commission || 0);
+                        setEmpOT(emp.ot || 0);
+                        setEmpDaysWorked(emp.daysWorked !== undefined ? emp.daysWorked : 26);
+                        setTourRate(emp.tourRate || 100000);
+                        setRaftingRate(emp.raftingRate || 150000);
+                        setSpecialRate(emp.specialRate || 50000);
+                        setEmpAddress(emp.address || "");
+                        setEmpEmergencyContactName(emp.emergencyContactName || "");
+                        setEmpEmergencyContactPhone(emp.emergencyContactPhone || "");
+                        setEmpEmergencyRelationship(emp.emergencyRelationship || "");
+                        setEmpFacePhoto(emp.facePhoto || "");
+                        setEmpAllowance(emp.allowance || 0);
+                        setShowAddEditModal(true);
+                      }}
+                      title="Edit Profile"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+
+                    {/* Delete Employee */}
+                    {deleteConfirmId === emp.id ? (
+                      <button
+                        className="btn btn-danger"
+                        style={{ padding: "4px 8px", fontSize: "0.68rem", fontWeight: "bold", background: "#ef4444", border: "none", minWidth: "auto" }}
+                        onClick={() => {
+                          const updatedDb = { ...db };
+                          updatedDb.employees = updatedDb.employees.filter(e => e.id !== emp.id);
+                          saveDb(updatedDb);
+                          refreshState();
+                          setDeleteConfirmId("");
+                        }}
+                      >
+                        Confirm
+                      </button>
+                    ) : (
+                      <button 
+                        className="btn" 
+                        style={{
+                          padding: "6px",
+                          background: "transparent",
+                          border: "1px solid #fee2e2",
+                          borderRadius: "6px",
+                          color: "#ef4444",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          minWidth: "auto"
+                        }}
+                        onClick={() => {
+                          setDeleteConfirmId(emp.id);
+                          setTimeout(() => setDeleteConfirmId(""), 4000);
+                        }}
+                        title="Delete Profile"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Salary breakdown details */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", color: "var(--text-secondary)" }}>
+                    <span>ເງິນເດືອນ (Gross):</span>
+                    <span style={{ fontWeight: "600", color: "#1e293b" }}>{emp.type === "freelance" ? "0 ₭" : formatLAK(emp.salary)}</span>
+                  </div>
+                  {emp.allowance > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", color: "#0284c7" }}>
+                      <span>ເງິນປະຈຳຕຳແໜ່ງ:</span>
+                      <span style={{ fontWeight: "700" }}>+ {formatLAK(emp.allowance)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Net payout row */}
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "0.92rem",
+                    color: "#0f766e",
+                    background: "rgba(16, 185, 129, 0.08)",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    fontWeight: "800"
+                  }}>
+                    <span>ເງິນເດືອນຮັບຈິງ (Net):</span>
+                    <span>{formatLAK(calc.totalPayout)}</span>
+                  </div>
+                </div>
+
+                {/* Contact info list with icons */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.82rem", color: "#475569", margin: "4px 0" }}>
+                  {emp.phone && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>📞</span>
+                      <span>{emp.phone}</span>
+                    </div>
+                  )}
+                  {emp.bankAccount && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>🏦</span>
+                      <span style={{ fontWeight: "600", color: "#0f766e" }}>{emp.bankAccount}</span>
+                    </div>
+                  )}
+                  {emp.address && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>🏠</span>
+                      <span>{emp.address}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Emergency Contact block */}
+                {(emp.emergencyContactName || emp.emergencyContactPhone) && (
+                  <div style={{
+                    background: "rgba(239, 68, 68, 0.04)",
+                    border: "1px dashed rgba(239, 68, 68, 0.15)",
+                    borderRadius: "10px",
+                    padding: "10px 12px",
+                    fontSize: "0.8rem",
+                    color: "#b91c1c",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    marginTop: "auto"
+                  }}>
+                    <div style={{ fontWeight: "750", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span>🚨</span> ຕິດຕໍ່ສຸກເສີນ
+                    </div>
+                    <div style={{ fontWeight: "600", paddingLeft: "2px" }}>
+                      {emp.emergencyContactName} {emp.emergencyRelationship ? `(${emp.emergencyRelationship})` : ""}
+                    </div>
+                    {emp.emergencyContactPhone && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", opacity: 0.95, paddingLeft: "2px" }}>
+                        <span>📞</span> {emp.emergencyContactPhone}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Edit Bonus Modal */}
+      {editBonusEmpId && (
+        <div className="modal-overlay no-print" style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+          background: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(4px)",
+          display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1010
+        }}>
+          <div className="card" style={{ maxWidth: "420px", width: "100%", padding: "24px" }}>
+            <h3 style={{ fontSize: "1.1rem", color: "var(--warning)", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "5px" }}>
+              <Award size={18} />
+              {t("add_bonus_title", "ປ້ອນໂບນັດພິເສດ / Add Bonus")}
+            </h3>
+            <form onSubmit={handleUpdateBonus}>
+              <div className="form-group">
+                <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                  {t("employee_colon", "ພະນັກງານ:")} {db.employees.find(e => e.id === editBonusEmpId)?.name}
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={bonusValue}
+                  onChange={(e) => setBonusValue(e.target.value)}
+                  min="0"
+                  required
+                />
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.25rem" }}>
+                <button type="submit" className="btn btn-warning" style={{ flex: 1 }}>บันทึก / Save</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setEditBonusEmpId("")}>
+                  {t("cancel_btn", "ຍົກເລີກ / Cancel")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Employee Form Modal Backdrop */}
+      {showAddEditModal && (
+        <div className="modal-overlay no-print" style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          background: "rgba(0, 0, 0, 0.4)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 1000,
+          padding: "20px",
+          boxSizing: "border-box"
+        }}>
+          <div className="card" style={{
+            maxWidth: "600px",
+            width: "100%",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            padding: "28px 24px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            position: "relative"
+          }}>
+            <button 
+              type="button" 
+              onClick={() => {
+                setShowAddEditModal(false);
+                resetEmployeeForm();
+              }}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                background: "transparent",
+                border: "none",
+                fontSize: "1.35rem",
+                cursor: "pointer",
+                color: "var(--text-secondary)",
+                padding: "4px"
+              }}
+            >
+              ✕
+            </button>
+            <h2 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <Plus size={20} color="var(--primary)" />
               {editingEmpId ? "ແກ້ໄຂຂໍ້ມູນພະນັກງານ / Edit Employee" : "ເພີ່ມພະນັກງານໃໝ່ / Add Employee"}
             </h2>
 
             <form onSubmit={handleSaveEmployee}>
+              {/* Photo Selector */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "20px" }}>
+                <div 
+                  style={{
+                    width: "80px",
+                    height: "80px",
+                    borderRadius: "50%",
+                    border: "2px dashed var(--border-color)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    overflow: "hidden",
+                    position: "relative",
+                    background: "var(--bg-tertiary)"
+                  }}
+                  onClick={() => document.getElementById("admin-photo-upload").click()}
+                >
+                  {empFacePhoto ? (
+                    <img src={empFacePhoto} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "4px", color: "var(--text-secondary)" }}>
+                      <span style={{ fontSize: "1.3rem" }}>📷</span>
+                      <div style={{ fontSize: "0.6rem", marginTop: "2px", fontWeight: "600" }}>ຮູບພະນັກງານ</div>
+                    </div>
+                  )}
+                </div>
+                <input 
+                  id="admin-photo-upload"
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleAdminPhotoChange}
+                  style={{ display: "none" }}
+                />
+              </div>
+
               <div className="form-group">
                 <label>{t("employee_name_label", "ຊື່ ແລະ ນາມສະກຸນ / Employee Name")} *</label>
                 <input type="text" className="form-control" value={empName} onChange={(e) => setEmpName(e.target.value)} placeholder="ຕົວຢ່າງ: ສົມດີ ມີໄຊ" required />
@@ -527,6 +899,11 @@ export default function PayrollManager() {
                 />
               </div>
 
+              <div className="form-group">
+                <label>ທີ່ຢູ່ປະຈຸບັນ / Current Address</label>
+                <input type="text" className="form-control" value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} placeholder="ບ້ານ, ເມືອງ, ແຂວງ" />
+              </div>
+
               <div className="form-row">
                 <div className="form-group">
                   <label>{t("role_label", "ບົດບາດໜ້າທີ່ / Role")}</label>
@@ -536,7 +913,7 @@ export default function PayrollManager() {
                     onChange={(e) => {
                       const role = e.target.value;
                       setEmpRole(role);
-                      if (role === "staff") setTripRate(0);
+                      if (role === "staff" || role === "cashier" || role === "waiter" || role === "office") setTripRate(0);
                       else if (role === "driver") setTripRate(100000);
                       else setTripRate(50000);
                     }}
@@ -544,7 +921,10 @@ export default function PayrollManager() {
                     <option value="guide">ໄກ້ດນຳທ່ຽວ (Tour Guide)</option>
                     <option value="captain">ກັປຕັນເຮືອ (Boat Captain)</option>
                     <option value="driver">ພະນັກງານຂັບລົດ (Driver)</option>
-                    <option value="staff">ພະນັກງານຕ້ອນຮັບ (Staff)</option>
+                    <option value="cashier">ພະນັກງານເກັບເງິນ (Cashier)</option>
+                    <option value="waiter">ພະນັກງານເສີບ (Waiter)</option>
+                    <option value="staff">ພະນັກງານທົ່ວໄປ (Staff)</option>
+                    <option value="office">ພະນັກງານຫ້ອງການ (Office)</option>
                   </select>
                 </div>
 
@@ -596,6 +976,8 @@ export default function PayrollManager() {
                   <input type="number" className="form-control" value={empOT} onChange={(e) => setEmpOT(e.target.value)} min="0" step="10000" />
                 </div>
                 <div className="form-group">
+                  <label>ເງິນປະຈຳຕຳແໜ່ງ / Allowance (LAK)</label>
+                  <input type="number" className="form-control" value={empAllowance} onChange={(e) => setEmpAllowance(e.target.value)} min="0" step="50000" />
                 </div>
               </div>
 
@@ -630,20 +1012,134 @@ export default function PayrollManager() {
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1, marginTop: "0.5rem" }}>
-                  <Plus size={16} /> {editingEmpId ? "ບັນທຶກການແກ້ໄຂ / Save Changes" : "ບັນທຶກພະນັກງານ / Save Employee"}
+              {/* Emergency Contact Group */}
+              <div style={{ background: "rgba(239, 68, 68, 0.03)", padding: "12px", borderRadius: "8px", border: "1px dashed rgba(239, 68, 68, 0.2)", marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#b91c1c" }}>🚨 ຕິດຕໍ່ສຸກເສີນ / Emergency Contact</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>ຊື່ຜູ້ຕິດຕໍ່ສຸກເສີນ / Name</label>
+                    <input type="text" className="form-control" value={empEmergencyContactName} onChange={(e) => setEmpEmergencyContactName(e.target.value)} placeholder="ຕົວຢ່າງ: ສົມປອງ" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>ພົວພັນເປັນ / Relationship</label>
+                    <input type="text" className="form-control" value={empEmergencyRelationship} onChange={(e) => setEmpEmergencyRelationship(e.target.value)} placeholder="ເຊັ່ນ: ພໍ່, ແມ່, ສາມີ" />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>ເບີໂທສຸກເສີນ / Phone</label>
+                  <input type="tel" className="form-control" value={empEmergencyContactPhone} onChange={(e) => setEmpEmergencyContactPhone(e.target.value)} placeholder="e.g. 020 555-XXXX" />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                  {editingEmpId ? "ບັນທຶກການແກ້ໄຂ / Save Changes" : "ບັນທຶກພະນັກງານ / Save Employee"}
                 </button>
-                {editingEmpId && (
-                  <button type="button" className="btn btn-secondary" style={{ marginTop: "0.5rem" }} onClick={resetEmployeeForm}>
-                    {t("cancel_btn", "ຍົກເລີກ / Cancel")}
-                  </button>
-                )}
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => {
+                    setShowAddEditModal(false);
+                    resetEmployeeForm();
+                  }}
+                >
+                  {t("cancel_btn", "ຍົກເລີກ / Cancel")}
+                </button>
               </div>
             </form>
           </div>
         </div>
-      </div>
+      )}
+
+      {showQrModal && (
+        <div className="modal-overlay no-print">
+          <div className="modal-content" style={{ maxWidth: "480px", textAlign: "center", padding: "24px" }}>
+            <div className="modal-header" style={{ borderBottom: "1px solid var(--border-color)", paddingBottom: "12px", marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "1.25rem", color: "var(--text-primary)", fontWeight: "bold" }}>
+                QR Code ລົງທະບຽນພະນັກງານ
+              </h3>
+              <button 
+                className="btn btn-secondary" 
+                style={{ padding: "4px 8px", background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem" }} 
+                onClick={() => setShowQrModal(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
+              <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                ໃຫ້ພະນັກງານສະແກນ QR Code ນີ້ ເພື່ອກອກຂໍ້ມູນປະຫວັດ (ຊື່, ເບີໂທ, ຕຳແໜ່ງ, ບັນຊີທະນາຄານ) ເຂົ້າໃນລະບົບດ້ວຍຕົນເອງ
+              </p>
+              
+              <div style={{
+                background: "white",
+                padding: "20px",
+                borderRadius: "16px",
+                border: "1px solid var(--border-color)",
+                boxShadow: "var(--shadow-sm)",
+                display: "inline-block"
+              }}>
+                <QRCodeSVG 
+                  value={(() => {
+                    const host = localStorage.getItem("pos_custom_host_url") || window.location.origin;
+                    return `${host}/register-employee`;
+                  })()}
+                  size={220}
+                />
+              </div>
+
+              <div style={{ width: "100%", display: "flex", gap: "10px", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    background: copied ? "var(--success)" : "var(--bg-tertiary)",
+                    color: copied ? "white" : "var(--text-primary)",
+                    border: "1px solid var(--border-color)",
+                    fontWeight: "600",
+                    fontSize: "0.9rem"
+                  }}
+                  onClick={() => {
+                    const host = localStorage.getItem("pos_custom_host_url") || window.location.origin;
+                    navigator.clipboard.writeText(`${host}/register-employee`);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
+                  {copied ? "ຄັດລອກແລ້ວ!" : "ຄັດລອກລິ້ງ / Copy Link"}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    fontSize: "0.9rem"
+                  }}
+                  onClick={() => {
+                    const host = localStorage.getItem("pos_custom_host_url") || window.location.origin;
+                    window.open(`${host}/register-employee`, "_blank");
+                  }}
+                >
+                  <ExternalLink size={16} />
+                  ທົດລອງເປີດ / Open Link
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedEmpDetails && (() => {
         const emp = selectedEmpDetails;
@@ -770,7 +1266,8 @@ export default function PayrollManager() {
       })()}
 
       <div className="printable-area">
-        <div className="payroll-print">
+        {printTemplate === "payroll" && (
+          <div className="payroll-print">
           <div style={{ textAlign: "center", borderBottom: "2px solid #000", paddingBottom: "10px", marginBottom: "20px" }}>
             <h2 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>ລາຍງານສະຫຼຸບເງິນເດືອນ ແລະ ໂອທີພະນັກງານ / MONTHLY PAYROLL</h2>
             <span style={{ fontSize: "11px" }}>TADFANE RAFTING / ຕາດຟານ ລ່ອງແກ່ງ - ACCOUNTING DEPARTMENT</span>
@@ -805,7 +1302,16 @@ export default function PayrollManager() {
                     <td style={{ border: "1px solid #000", padding: "6px" }}>{roleLabel}</td>
                     <td style={{ border: "1px solid #000", padding: "6px" }}>{emp.type === "freelance" ? "ອິດສະຫຼະ (OT)" : "ປະຈຳ"}</td>
                     <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>
-                      {emp.type === "freelance" ? "0 ₭" : formatLAK(emp.salary)}
+                      {emp.type === "freelance" ? "0 ₭" : (
+                        <div>
+                          {formatLAK(emp.salary)}
+                          {emp.allowance > 0 && (
+                            <div style={{ fontSize: "8.5px", color: "#0f766e", fontWeight: "600" }}>
+                              +{formatLAK(emp.allowance)} (ຕຳແໜ່ງ)
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {emp.dailyWage > 0 && (
                         <div style={{ fontSize: "8px", color: "#64748b", marginTop: "2px" }}>
                           {formatLAK(emp.dailyWage)}/ວັນ ({emp.daysWorked || 26} ວັນ)
@@ -830,6 +1336,11 @@ export default function PayrollManager() {
                 <td colSpan="4" style={{ border: "1px solid #000", padding: "6px", textAlign: "center" }}>ຍອດລວມທັງໝົດ (Grand Total)</td>
                 <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>
                   {formatLAK(grandBaseSalary)}
+                  {grandAllowance > 0 && (
+                    <div style={{ fontSize: "8.5px", color: "#0f766e" }}>
+                      +{formatLAK(grandAllowance)} (ຕຳແໜ່ງ)
+                    </div>
+                  )}
                   {grandDailyWagePay > 0 && (
                     <div style={{ fontSize: "8px", color: "#64748b", marginTop: "2px" }}>
                       ລາຍວັນ: {formatLAK(grandDailyWagePay)}
@@ -850,9 +1361,10 @@ export default function PayrollManager() {
               </tr>
             </tbody>
           </table>
-        </div>
+          </div>
+        )}
 
-        {selectedEmpDetails && (() => {
+        {printTemplate === "payslip" && selectedEmpDetails && (() => {
           const emp = selectedEmpDetails;
           const calc = calculatePayout(emp);
           const roleLabel =
@@ -896,6 +1408,12 @@ export default function PayrollManager() {
                     <td style={{ border: "1px solid #000", padding: "6px", width: "75%" }}>{t("base_salary_label", "ເງິນເດືອນພື້ນຖານ / Base Salary")}:</td>
                     <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{emp.type === "freelance" ? "0 ₭" : formatLAK(emp.salary)}</td>
                   </tr>
+                  {emp.allowance > 0 && (
+                    <tr>
+                      <td style={{ border: "1px solid #000", padding: "6px" }}>ເງິນປະຈຳຕຳແໜ່ງ / Position Allowance:</td>
+                      <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>{formatLAK(emp.allowance)}</td>
+                    </tr>
+                  )}
                   {emp.dailyWage > 0 && (
                     <tr>
                       <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າແຮງງານລາຍວັນ / Daily Wage Pay ({emp.daysWorked || 26} ວັນ):</td>

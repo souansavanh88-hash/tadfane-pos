@@ -10,6 +10,14 @@ export const formatLAK = (amount) => {
   }).format(amount).replace("LAK", "₭").trim();
 };
 
+// Get timezone-adjusted local date string (YYYY-MM-DD)
+export const getLocalDateStr = () => {
+  const d = new Date();
+  const offset = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - (offset * 60 * 1000));
+  return local.toISOString().split("T")[0];
+};
+
 // Format numbers as Thai Baht (฿)
 export const formatTHB = (amount) => {
   return new Intl.NumberFormat("th-TH", {

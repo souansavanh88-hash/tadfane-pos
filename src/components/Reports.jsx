@@ -2,25 +2,23 @@
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "../utils/LanguageContext";
 import { getDb } from "../db/mockDb";
-import { formatLAK } from "../utils/helpers";
+import { formatLAK, formatTHB, formatUSD, getLocalDateStr } from "../utils/helpers";
 import { BarChart3, TrendingUp, TrendingDown, DollarSign, Calendar } from "lucide-react";
 
 export default function Reports() {
   const { lang, t } = useLanguage();
   const [db, setDb] = useState(getDb());
   const [reportType, setReportType] = useState("daily"); // daily, monthly, yearly
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
+  const localDateStr = getLocalDateStr();
+  const [selectedDate, setSelectedDate] = useState(localDateStr);
+  const [selectedMonth, setSelectedMonth] = useState(localDateStr.slice(0, 7)); // YYYY-MM
+  const [selectedYear, setSelectedYear] = useState(localDateStr.slice(0, 4));
 
   // Trigger P&L report print
   const triggerPrintReports = () => {
-    const originalClass = document.body.className;
-    document.body.classList.add("print-reports-mode");
     setTimeout(() => {
       window.print();
-      document.body.className = originalClass;
-    }, 100);
+    }, 150);
   };
 
   const handleExportCSV = () => {
@@ -105,7 +103,7 @@ export default function Reports() {
 
     const filterValidCustomer = (c) => {
       const bk = db.bookings?.find(b => b.id === c.bookingId || b.groupId === c.groupId);
-      return bk ? bk.status !== "ยกเลิก" : true;
+      return bk ? (bk.status !== "ยกเลิก" && bk.status !== "cancelled") : true;
     };
 
     if (reportType === "daily") {
@@ -309,9 +307,13 @@ export default function Reports() {
       .map(name => ({ name, count: sources[name] }))
       .sort((a, b) => b.count - a.count);
 
-    // Payment Method Breakdown
+    // Payment Method Breakdown & Currency Breakdown
     let cashRevenue = 0, transferRevenue = 0, cardRevenue = 0;
     let cashBills = 0, transferBills = 0, cardBills = 0;
+    let lakRevenue = 0, thbRevenue = 0, usdRevenue = 0;
+    let lakBills = 0, thbBills = 0, usdBills = 0;
+    const rateTHB = db.settings.rateTHB || 700;
+    const rateUSD = db.settings.rateUSD || 21500;
     let totalDiscount = 0, totalDebt = 0;
 
     const activePeriodBookings = periodBookings.filter(bk => bk.status !== "cancelled");
@@ -329,6 +331,20 @@ export default function Reports() {
         cashRevenue += rev || 0;
         cashBills += 1;
       }
+
+      // Currency Breakdown
+      const cur = bk.paymentCurrency || "LAK";
+      if (cur === "THB") {
+        thbRevenue += rev || 0;
+        thbBills += 1;
+      } else if (cur === "USD") {
+        usdRevenue += rev || 0;
+        usdBills += 1;
+      } else {
+        lakRevenue += rev || 0;
+        lakBills += 1;
+      }
+
       totalDiscount += bk.discountLAK || 0;
       totalDebt += bk.debtLAK || 0;
     });
@@ -354,6 +370,14 @@ export default function Reports() {
       cashBills,
       transferBills,
       cardBills,
+      lakRevenue,
+      thbRevenue,
+      usdRevenue,
+      lakBills,
+      thbBills,
+      usdBills,
+      rateTHB,
+      rateUSD,
       totalDiscount,
       totalDebt,
       demographics: {
@@ -372,7 +396,8 @@ export default function Reports() {
 
   return (
     <div>
-      <div className="page-header no-print">
+      <div className="no-print">
+        <div className="page-header no-print">
         <div className="page-title">
           <h1>Business Reports & Profit & Loss (ລາຍງານ ແລະ ກໍາໄລ-ຂາດທຶນ)</h1>
           <p>ກວດສອບລາຍຮັບ, ລາຍຈ່າຍ, ແລະ ກໍາໄລສຸດທິ ປະຈຳວັນ, ປະຈຳເດືອນ ຫຼື ປະຈຳປີ</p>
@@ -382,7 +407,7 @@ export default function Reports() {
             Export to CSV
           </button>
           <button className="btn btn-primary" onClick={triggerPrintReports}>
-            ພິມລາຍງານກຳໄລ-ຂາດທຶນ (Print P&L Report)
+            ພິມລາຍງານກຳໄລ-ຂາດທຶນ (Print P&L Report V3.1)
           </button>
         </div>
       </div>
@@ -584,6 +609,54 @@ export default function Reports() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Revenue Currency Breakdown Table */}
+        <div className="card" style={{ marginTop: "20px" }}>
+          <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "8px" }}>
+            💵 {t("currency_breakdown_title", "ສະຫຼຸບລາຍຮັບແຍກຕາມສະກຸນເງິນ / Revenue by Currency")}
+          </h3>
+          <div style={{ overflowX: "auto" }}>
+            <table className="data-table" style={{ width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left" }}>{t("currency_col", "ສະກຸນເງິນ / Currency")}</th>
+                  <th style={{ textAlign: "center" }}>{t("bill_count_label", "ບິນ / Bills")}</th>
+                  <th style={{ textAlign: "right" }}>{t("collected_amount_col", "ຍອດເງິນທີ່ເກັບໄດ້ / Collected Amount")}</th>
+                  <th style={{ textAlign: "right" }}>{t("equivalent_lak_col", "ມູນຄ່າທຽบເທົ່າ (LAK)")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>₭ LAK (ກີບ / กีบ)</td>
+                  <td style={{ textAlign: "center" }}>{pl.lakBills}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700" }}>{formatLAK(pl.lakRevenue)}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700", color: "var(--success)" }}>{formatLAK(pl.lakRevenue)}</td>
+                </tr>
+                <tr>
+                  <td>฿ THB (ບາດ / บาท)</td>
+                  <td style={{ textAlign: "center" }}>{pl.thbBills}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700" }}>฿{formatTHB(pl.thbRevenue / pl.rateTHB)}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700", color: "var(--success)" }}>{formatLAK(pl.thbRevenue)}</td>
+                </tr>
+                <tr>
+                  <td>$ USD (ໂດລາ / ดอลลาร์)</td>
+                  <td style={{ textAlign: "center" }}>{pl.usdBills}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700" }}>{formatUSD(pl.usdRevenue / pl.rateUSD)}</td>
+                  <td style={{ textAlign: "right", fontWeight: "700", color: "var(--success)" }}>{formatLAK(pl.usdRevenue)}</td>
+                </tr>
+                <tr style={{ borderTop: "2px solid var(--border-color)", fontWeight: "900" }}>
+                  <td>{t("total_label", "ລວມ / Total")}</td>
+                  <td style={{ textAlign: "center" }}>{pl.lakBills + pl.thbBills + pl.usdBills}</td>
+                  <td style={{ textAlign: "right" }}>-</td>
+                  <td style={{ textAlign: "right", color: "var(--primary)" }}>{formatLAK(pl.lakRevenue + pl.thbRevenue + pl.usdRevenue)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "8px", fontStyle: "italic" }}>
+            * {t("exchange_rates_used", "อัตราแลกเปลี่ยนอ้างอิง:")} 1 THB = {pl.rateTHB} LAK | 1 USD = {pl.rateUSD} LAK
           </div>
         </div>
 
@@ -899,6 +972,7 @@ export default function Reports() {
           </div>
 
         </div>
+      </div>
       </div>
       
       {/* --------------------- HIDDEN PRINTABLE PROFIT & LOSS REPORT --------------------- */}

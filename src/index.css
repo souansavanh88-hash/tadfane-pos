@@ -711,11 +711,15 @@ tr:hover td {
 
 /* Print Layout Overrides - Maintain standard high fidelity printing */
 @media print {
+  /* Hide all screen layout elements instantly without O(N^2) selectors */
   .sidebar-container,
-  .app-container > :not(.main-content),
-  .main-content *:not(:has(.printable-area)):not(.printable-area):not(.printable-area *),
-  .modal-overlay:not(:has(.printable-area)),
-  .no-print {
+  .no-print,
+  .page-header,
+  .card,
+  .tabs-container,
+  .modal-overlay,
+  button,
+  .btn {
     display: none !important;
   }
 
@@ -767,62 +771,7 @@ tr:hover td {
     color: #000000 !important;
   }
 
-  /* Template-specific printing display controls */
-  .receipt-print,
-  .manifest-print,
-  .payroll-print,
-  .individual-tickets-print,
-  .payslip-print,
-  .commission-print,
-  .reports-print,
-  .dashboard-print,
-  .qr-sign-print,
-  .qr-slip-print,
-  .monthly-summary-print {
-    display: none !important;
-  }
-
-  body.print-receipt-mode .receipt-print {
-    display: block !important;
-  }
-
-  body.print-qr-slip-mode .qr-slip-print {
-    display: block !important;
-  }
-
-  body.print-qr-sign-mode .qr-sign-print {
-    display: block !important;
-  }
-
-  body.print-manifest-mode .manifest-print {
-    display: block !important;
-  }
-
-  body.print-payroll-mode .payroll-print {
-    display: block !important;
-  }
-
-  body.print-tickets-mode .individual-tickets-print {
-    display: block !important;
-  }
-
-  body.print-payslip-mode .payslip-print {
-    display: block !important;
-  }
-
-  body.print-commission-mode .commission-print {
-    display: block !important;
-  }
-
-  body.print-reports-mode .reports-print {
-    display: block !important;
-  }
-
-  body.print-dashboard-mode .dashboard-print {
-    display: block !important;
-  }
-
-  body.print-monthly-summary-mode .monthly-summary-print {
+  .printable-area > * {
     display: block !important;
   }
 

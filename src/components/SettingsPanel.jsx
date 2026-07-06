@@ -1,7 +1,8 @@
 // SettingsPanel.jsx - System Settings Management
 import React, { useState, useEffect } from "react";
 import { getDb, saveDb, resetDb, purgeTestData } from "../db/mockDb";
-import { pushToFirebase } from "../db/firebaseIntegration";
+import { pushToFirebase, forcePushToFirebase } from "../db/firebaseIntegration";
+import { clearAllBookingsFromFirebase } from "../db/firebaseSync";
 import { formatLAK } from "../utils/helpers";
 import { useLanguage } from "../utils/LanguageContext";
 import { Settings, Save, RefreshCw, AlertTriangle, Users, Shield, Trash2, Plus, Cloud } from "lucide-react";
@@ -381,14 +382,21 @@ export default function SettingsPanel({ currentUser }) {
     }
   };
 
-  const handleResetSystem = () => {
+  const handleResetSystem = async () => {
     if (window.confirm(lang === "en" ? "Warning: All bookings, customers, and manifest history will be deleted and reset. Confirm reset?" : "ຄຳເຕືອນ: ຂໍ້ມູນການຈອງ, ລູກຄ້າ ແລະ ປະຫວັດການທ່ອງທ່ຽວທັງໝົດຈະຖືກລຶບ ແລະ ຣີເຊັດກັບເປັນຄ່າເລີ່ມຕົ້ນ. ຢືນຢັນການຣີເຊັດລະບົບແມ່ນບໍ່?")) {
       const reseted = resetDb();
       setDb(reseted);
       setBasePrice(reseted.settings.basePriceLAK);
       setRateTHB(reseted.settings.rateTHB);
       setRateUSD(reseted.settings.rateUSD);
-    alert(lang === "en" ? "System database reset successful." : "ຣີເຊັດລະບົບຮຽບຮ້ອຍແລ້ວ.");
+      
+      try {
+        await forcePushToFirebase(reseted);
+      } catch (err) {
+        console.error("Failed to push reset to firebase", err);
+      }
+      
+      alert(lang === "en" ? "System database reset successful." : "ຣີເຊັດລະບົບຮຽບຮ້ອຍແລ້ວ.");
       window.location.reload();
     }
   };
@@ -426,11 +434,19 @@ export default function SettingsPanel({ currentUser }) {
     }
   };
 
-  const handlePurgeTestData = () => {
-    if (window.confirm(lang === "en" ? "Are you sure you want to purge all test bookings and customers? (Agents, employees, and settings will not be deleted)" : "ທ່ານຕ້ອງການລ້າງຂໍ້ມູນບິນ ແລະ ລູກຄ້າທົດລອງທັງໝົດແມ່ນບໍ່? (ເອເຈນ, ພະນັກງານ ແລະ ການຕັ້ງຄ່າຈະບໍ່ຖືກລຶບ)")) {
+  const handlePurgeTestData = async () => {
+    if (window.confirm(lang === "en" ? "Are you sure you want to clear all sales data? (Agents, employees, and settings will not be deleted)" : "ທ່ານຕ້ອງການລຶບຂໍ້ມູນການຂາຍທັງໝົດແມ່ນບໍ່? (ເອເຈນ, ພະນັກງານ ແລະ ການຕັ້ງຄ່າຈະບໍ່ຖືກລຶບ)")) {
       purgeTestData();
       const data = getDb();
       setDb(data);
+      
+      try {
+        await forcePushToFirebase(data);
+        await clearAllBookingsFromFirebase();
+      } catch (err) {
+        console.error("Failed to push purge to firebase", err);
+      }
+
       alert(lang === "en" ? "Test data purged successfully!" : "ລ້າງຂໍ້ມູນການທົດລອງຮຽບຮ້ອຍແລ້ວ!");
       window.location.reload();
     }
@@ -758,7 +774,7 @@ export default function SettingsPanel({ currentUser }) {
 
             <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "1rem" }}>
                 <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: "1.4" }}>
-                  {t("purge_bookings_desc", "ລຶບສະເພາະບິນ ແລະ ການລົງທະບຽນລູກຄ້າທົດລອງທັງໝົດ ແຕ່ຍັງຄົງຂໍ້ມູນພື້ນຖານອື່ນໆໄວ້")}
+                  {t("purge_bookings_desc", "ລຶບສະເພາະຂໍ້ມູນການຂາຍທັງໝົດ ແຕ່ຍັງຄົງຂໍ້ມູນພື້ນຖານອື່ນໆໄວ້")}
                 </p>
                 <button 
                   type="button" 
@@ -766,7 +782,7 @@ export default function SettingsPanel({ currentUser }) {
                   style={{ width: "100%", background: "#be123c", color: "#ffffff", fontWeight: "bold" }}
                   onClick={handlePurgeTestData}
                 >
-                  🧹 {t("clear_test_data", "ລ້າງຂໍ້ມູນທົດລອງ / Clear Test Data")}
+                  🧹 {t("clear_test_data", "ລຶບຂໍ້ມູນການຂາຍທັງໝົດ / Clear All Sales Data")}
                 </button>
               </div>
           </div>

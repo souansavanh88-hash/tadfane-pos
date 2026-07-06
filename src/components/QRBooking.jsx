@@ -1,5 +1,6 @@
 // QRBooking.jsx - Cashier POS Terminal (Staff Assignment & QR Scanner Updates)
 import React, { useState, useEffect, useRef } from "react";
+import { flushSync } from "react-dom";
 import { useLanguage } from "../utils/LanguageContext";
 import { getDb, addBooking, saveDb, purgeTestData } from "../db/mockDb";
 import { fireDb } from "../db/firebaseConfig";
@@ -375,6 +376,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   ]);
 
   // Restore draft from localStorage on mount
+  const [printTemplate, setPrintTemplate] = useState(null); // 'receipt', 'qr_slip', 'qr_sign', or null
+
   useEffect(() => {
     const draftStr = localStorage.getItem("pos_pos_booking_draft");
     if (draftStr) {
@@ -714,75 +717,38 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     return url;
   };
 
-  // Universal print helper - works in ALL browsers including Safari
-  // Opens a new window with the printable content to bypass user gesture restrictions
+  // Universal print helper - works in ALL browsers including Chrome, Safari, and iPadOS.
+  // Direct printing hides main UI and displays printable-area using @media print rules,
+  // preventing popup blocker issues and printing dialog cutoff delays.
   const printByClassName = (className) => {
     setIsPrintLoading(true);
 
-    // Find the element to print
-    const el = document.querySelector(`.${className}`);
-    if (!el) {
-      console.error(`Print element .${className} not found`);
-      setIsPrintLoading(false);
-      return;
+    let template = 'receipt';
+    if (className === 'qr-slip-print') {
+      template = 'qr_slip';
+    } else if (className === 'qr-sign-print') {
+      template = 'qr_sign';
     }
 
-    // Get all stylesheets from the current page
-    const styles = Array.from(document.styleSheets)
-      .map(sheet => {
-        try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); }
-        catch(e) { return ''; }
-      }).join('\n');
+    flushSync(() => {
+      setPrintTemplate(template);
+    });
 
-    // Build printable HTML
-    const printHtml = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Print</title>
-<style>
-  @page { size: 80mm auto !important; margin: 0 !important; }
-  body { margin: 0 !important; padding: 0 !important; font-family: monospace; }
-  * { color: #000000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  ${styles}
-  .${className} { display: block !important; }
-</style></head>
-<body>${el.outerHTML}</body></html>`;
-
-    // Open a new window for printing
-    const printWin = window.open('', '_blank', 'width=400,height=600');
-    if (!printWin) {
-      // Popup blocked - fallback to direct print
-      console.warn('Popup blocked, falling back to direct print');
-      const originalClass = document.body.className;
-      document.body.classList.add(className === 'receipt-print' ? 'print-receipt-mode' : 
-                                   className === 'qr-slip-print' ? 'print-qr-slip-mode' : 
-                                   'print-receipt-mode');
-      window.print();
-      document.body.className = originalClass;
+    const handleAfterPrint = () => {
+      setPrintTemplate(null);
       setIsPrintLoading(false);
-      return;
-    }
-
-    printWin.document.open();
-    printWin.document.write(printHtml);
-    printWin.document.close();
-
-    // Wait for content to load then print
-    printWin.onload = () => {
-      printWin.focus();
-      printWin.print();
-      // Close after a short delay to allow print dialog to process
-      setTimeout(() => { printWin.close(); }, 1000);
-      setIsPrintLoading(false);
+      window.removeEventListener('afterprint', handleAfterPrint);
     };
+    window.addEventListener('afterprint', handleAfterPrint);
 
-    // Fallback if onload doesn't fire
     setTimeout(() => {
-      try {
-        printWin.focus();
-        printWin.print();
-        setTimeout(() => { printWin.close(); }, 1000);
-      } catch(e) {}
+      window.print();
+    }, 150);
+
+    setTimeout(() => {
+      setPrintTemplate(null);
       setIsPrintLoading(false);
-    }, 500);
+    }, 5000);
   };
 
   const triggerReceiptPrint = () => printByClassName('receipt-print');
@@ -829,24 +795,22 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       driverId: "",
     };
 
-    setLoadedBooking(newBooking);
+    // Synchronously update React state before printing to ensure DOM is flushed
+    flushSync(() => {
+      setLoadedBooking(newBooking);
+    });
 
-    // Save to Firebase asynchronously (don't block print)
+    // Save to Firebase asynchronously in the background
     addBookingToFirebase(newBooking).catch(err => {
       console.error("Failed to create booking in cloud:", err);
     });
 
-    // Use requestAnimationFrame to allow React to flush the DOM first,
-    // while still preserving the user gesture chain (Safari requires this)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        triggerQrSlipPrint();
+    // Trigger print synchronously to preserve user gesture context
+    triggerQrSlipPrint();
 
-        // Generate new group ID and bill number for next customer
-        setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
-        setBillNumber(generateBillId());
-      });
-    });
+    // Generate new group ID and bill number for next customer
+    setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
+    setBillNumber(generateBillId());
   };
 
   // Loads a booking to details pane
@@ -1079,18 +1043,24 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       paidAt: new Date().toISOString()
     };
 
-    // Optimistically update local state for printing
-    setLoadedBooking({ ...loadedBooking, ...updates });
+    // Synchronously update local database and state before printing to ensure DOM is flushed
+    flushSync(() => {
+      setLoadedBooking({ ...loadedBooking, ...updates });
+      const currentDb = getDb();
+      currentDb.bookings = currentDb.bookings.map(b => b.id === loadedBooking.id ? { ...b, ...updates } : b);
+      saveDb(currentDb);
+      setDb(currentDb);
+    });
 
-    // Synchronous print bypasses Chrome block
-    setTimeout(() => {
-      triggerReceiptPrint();
-      
-      // Sync to cloud asynchronously
-      updateBookingInFirebase(loadedBooking.id, updates).catch(err => {
-        alert("Failed to checkout in cloud");
-      });
-    }, 50);
+    window.dispatchEvent(new Event("db-update"));
+
+    // Trigger print synchronously to preserve user gesture context
+    triggerReceiptPrint();
+    
+    // Sync to cloud asynchronously in the background
+    updateBookingInFirebase(loadedBooking.id, updates).catch(err => {
+      alert("Failed to checkout in cloud");
+    });
   };
 
   // Unlock paid bill for editing
@@ -1293,8 +1263,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
   return (
     <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "20px", color: "var(--text-primary)" }}>
-      {/* Print Loading Overlay */}
-      {isPrintLoading && (
+      <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        {/* Print Loading Overlay */}
+        {isPrintLoading && (
         <div style={{
           position: "fixed",
           top: 0,
@@ -1894,11 +1865,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       </button>
                       <button
                         onClick={() => {
-                          setLoadedBooking(bk);
-                          setRegistrationGroupId(bk.groupId);
-                          setTimeout(() => {
-                            triggerQrSlipPrint();
-                          }, 100);
+                          flushSync(() => {
+                            setLoadedBooking(bk);
+                            setRegistrationGroupId(bk.groupId);
+                          });
+                          triggerQrSlipPrint();
                         }}
                         style={queueActionBtnStyle("#0d9488")}
                         title={t("print_qr_slip", "ພິມໃບ QR / Print QR Slip")}
@@ -1949,10 +1920,10 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       </button>
                       <button
                         onClick={() => {
-                          setLoadedBooking(bk);
-                          setTimeout(() => {
-                            triggerReceiptPrint();
-                          }, 200);
+                          flushSync(() => {
+                            setLoadedBooking(bk);
+                          });
+                          triggerReceiptPrint();
                         }}
                         style={queueActionBtnStyle("#3b82f6")}
                       >
@@ -2047,11 +2018,19 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   <div style={{ maxHeight: "110px", overflowY: "auto", fontSize: "0.95rem", display: "flex", flexDirection: "column", gap: "4px" }}>
                     {loadedBooking.passengers && loadedBooking.passengers.length > 0 ? (
                       loadedBooking.passengers.map((p, idx) => (
-                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-                          <span style={{ flex: 1, wordBreak: "break-word" }}>{idx + 1}. {p?.name || "N/A"}</span>
-                          <span style={{ color: "#475569", whiteSpace: "nowrap" }}>
-                            ({p?.age || "-"} {rt.ageUnit} | {getGenderLabel(p?.gender, lang)} | {p?.nationality || "-"} | {p?.phone || "-"})
-                          </span>
+                        <div key={idx} style={{ display: "flex", flexDirection: "column", gap: "2px", borderBottom: "1px dotted #e2e8f0", paddingBottom: "4px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+                            <span style={{ flex: 1, wordBreak: "break-word" }}>{idx + 1}. {p?.name || "N/A"}</span>
+                            <span style={{ color: "#475569", whiteSpace: "nowrap" }}>
+                              ({p?.age || "-"} {rt.ageUnit} | {getGenderLabel(p?.gender, lang)} | {p?.nationality || "-"} | {p?.phone || "-"})
+                            </span>
+                          </div>
+                          {p?.signature && (
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "15px", marginTop: "2px" }}>
+                              <span style={{ fontSize: "0.75rem", color: "#64748b" }}>✍️ {lang === "en" ? "Signature" : lang === "la" ? "ລາຍເຊັນ" : "ลายเซ็น"}:</span>
+                              <img src={p.signature} alt="signature" style={{ maxHeight: "28px", maxWidth: "100px", objectFit: "contain", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "1px" }} />
+                            </div>
+                          )}
                         </div>
                       ))
                     ) : (
@@ -2324,28 +2303,116 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   </div>
                 )}
                 {/* Net total */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "6px" }}>
-                  <span style={{ fontWeight: "bold", fontSize: "1.05rem" }}>{computedDiscountLAK > 0 || debtAmount > 0 ? rt.netTotal : rt.totalLAK}</span>
-                  <span style={{ fontWeight: "900", fontSize: "1.5rem", color: "#0f766e" }}>{formatLAK(loadedBooking.pricePaidLAK - computedDiscountLAK)} LAK</span>
-                </div>
-                {/* Debt line */}
-                {debtAmount > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.95rem", color: "#ea580c", marginTop: "4px", borderTop: "1px dotted #cbd5e1", paddingTop: "4px" }}>
-                    <span>⚠️ {rt.debt}</span>
-                    <span style={{ fontWeight: "700" }}>-{formatLAK(debtAmount)} LAK</span>
-                  </div>
-                )}
-                {/* Actual paid (if discount or debt) */}
-                {(computedDiscountLAK > 0 || debtAmount > 0) && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "6px", borderTop: "2px solid #000000", paddingTop: "4px" }}>
-                    <span style={{ fontWeight: "900", fontSize: "1.05rem" }}>{rt.actualPaid}</span>
-                    <span style={{ fontWeight: "900", fontSize: "1.5rem", color: "#15803d" }}>{formatLAK((loadedBooking.pricePaidLAK - computedDiscountLAK) - debtAmount)} LAK</span>
-                  </div>
-                )}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", color: "#475569", marginTop: "4px" }}>
-                  <span>≈ {formatTHB((loadedBooking.pricePaidLAK - computedDiscountLAK) / db.settings.rateTHB)} THB</span>
-                  <span>≈ {formatUSD((loadedBooking.pricePaidLAK - computedDiscountLAK) / db.settings.rateUSD)} USD</span>
-                </div>
+                {(() => {
+                  const netTotalLAK = loadedBooking.pricePaidLAK - computedDiscountLAK;
+                  const actualPaidLAK = netTotalLAK - debtAmount;
+                  const rateTHB = db.settings.rateTHB || 700;
+                  const rateUSD = db.settings.rateUSD || 21500;
+
+                  const netTotalTHB = netTotalLAK / rateTHB;
+                  const netTotalUSD = netTotalLAK / rateUSD;
+
+                  const actualPaidTHB = actualPaidLAK / rateTHB;
+                  const actualPaidUSD = actualPaidLAK / rateUSD;
+
+                  let netLabel = computedDiscountLAK > 0 || debtAmount > 0 ? rt.netTotal : rt.totalLAK;
+                  let netValueStr = `${formatLAK(netTotalLAK)} LAK`;
+                  let netSubs = (
+                    <>
+                      <span>≈ {formatTHB(netTotalTHB)} THB</span>
+                      <span>≈ {formatUSD(netTotalUSD)} USD</span>
+                    </>
+                  );
+
+                  if (paymentCurrency === "THB") {
+                    netLabel = lang === "en" ? "Total THB:" : lang === "la" ? "ຍອດລວມ THB:" : "ยอดรวม THB:";
+                    netValueStr = `฿${formatTHB(netTotalTHB)} THB`;
+                    netSubs = (
+                      <>
+                        <span>≈ {formatLAK(netTotalLAK)} LAK</span>
+                        <span>≈ {formatUSD(netTotalUSD)} USD</span>
+                      </>
+                    );
+                  } else if (paymentCurrency === "USD") {
+                    netLabel = lang === "en" ? "Total USD:" : lang === "la" ? "ຍອດລວມ USD:" : "ยอดรวม USD:";
+                    netValueStr = `${formatUSD(netTotalUSD)} USD`;
+                    netSubs = (
+                      <>
+                        <span>≈ {formatLAK(netTotalLAK)} LAK</span>
+                        <span>≈ {formatTHB(netTotalTHB)} THB</span>
+                      </>
+                    );
+                  }
+
+                  let actualLabel = rt.actualPaid;
+                  let actualValueStr = `${formatLAK(actualPaidLAK)} LAK`;
+                  let actualSubs = (
+                    <>
+                      <span>≈ {formatTHB(actualPaidTHB)} THB</span>
+                      <span>≈ {formatUSD(actualPaidUSD)} USD</span>
+                    </>
+                  );
+
+                  if (paymentCurrency === "THB") {
+                    actualLabel = lang === "en" ? "Actual Paid THB:" : lang === "la" ? "ຈ່າຍຕົວຈິງ THB:" : "จ่ายจริง THB:";
+                    actualValueStr = `฿${formatTHB(actualPaidTHB)} THB`;
+                    actualSubs = (
+                      <>
+                        <span>≈ {formatLAK(actualPaidLAK)} LAK</span>
+                        <span>≈ {formatUSD(actualPaidUSD)} USD</span>
+                      </>
+                    );
+                  } else if (paymentCurrency === "USD") {
+                    actualLabel = lang === "en" ? "Actual Paid USD:" : lang === "la" ? "ຈ່າຍຕົວຈິງ USD:" : "จ่ายจริง USD:";
+                    actualValueStr = `${formatUSD(actualPaidUSD)} USD`;
+                    actualSubs = (
+                      <>
+                        <span>≈ {formatLAK(actualPaidLAK)} LAK</span>
+                        <span>≈ {formatTHB(actualPaidTHB)} THB</span>
+                      </>
+                    );
+                  }
+
+                  const hasDiscountOrDebt = computedDiscountLAK > 0 || debtAmount > 0;
+
+                  return (
+                    <>
+                      {/* Main Display for Net Total */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "6px" }}>
+                        <span style={{ fontWeight: "bold", fontSize: "1.05rem" }}>{netLabel}</span>
+                        <span style={{ fontWeight: "900", fontSize: "1.5rem", color: "#0f766e" }}>{netValueStr}</span>
+                      </div>
+                      
+                      {/* Show equivalents for Net Total if there is no discount/debt */}
+                      {!hasDiscountOrDebt && (
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", color: "#475569", marginTop: "4px" }}>
+                          {netSubs}
+                        </div>
+                      )}
+
+                      {/* Debt line */}
+                      {debtAmount > 0 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.95rem", color: "#ea580c", marginTop: "4px", borderTop: "1px dotted #cbd5e1", paddingTop: "4px" }}>
+                          <span>⚠️ {rt.debt}</span>
+                          <span style={{ fontWeight: "700" }}>-{formatLAK(debtAmount)} LAK</span>
+                        </div>
+                      )}
+
+                      {/* Actual paid (if discount or debt) */}
+                      {hasDiscountOrDebt && (
+                        <>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "6px", borderTop: "2px solid #000000", paddingTop: "4px" }}>
+                            <span style={{ fontWeight: "900", fontSize: "1.05rem" }}>{actualLabel}</span>
+                            <span style={{ fontWeight: "900", fontSize: "1.5rem", color: "#15803d" }}>{actualValueStr}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", color: "#475569", marginTop: "4px" }}>
+                            {actualSubs}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Payment Method Selector & Checkout Actions */}
@@ -3191,9 +3258,10 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
           </div>
         </div>
       )}
+      </div>
 
       {/* ---------------- HIDDEN PRINTABLE DOM (Only Visible to @media print) ---------------- */}
-      {loadedBooking && (() => {
+      {loadedBooking && printTemplate === 'receipt' && (() => {
         const rt = receiptTranslations[lang] || receiptTranslations.la;
         return (
           <div className="printable-area">
@@ -3358,8 +3426,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         );
       })()}
 {/* ---------------- HIDDEN PRINTABLE SIGN STANDEE (Only Visible to @media print in print-qr-sign-mode) ---------------- */}
-      <div className="printable-area">
-        <div className="qr-sign-print" style={{ color: "#000000", textAlign: "center", padding: "40px", fontFamily: "sans-serif" }}>
+      {printTemplate === 'qr_sign' && (
+        <div className="printable-area">
+          <div className="qr-sign-print" style={{ color: "#000000", textAlign: "center", padding: "40px", fontFamily: "sans-serif" }}>
           <h1 style={{ fontWeight: "900", fontSize: "2.4rem", color: "#000000", margin: "0 0 5px 0" }}>{db.settings.shopName || "TADFANE RAFTING"}</h1>
           {db.settings.shopNameLao && <h2 style={{ fontWeight: "900", fontSize: "1.8rem", color: "#000000", margin: "0 0 15px 0" }}>{db.settings.shopNameLao}</h2>}
           <h3 style={{ fontSize: "1.3rem", color: "#475569", marginBottom: "1.5rem" }}>ລົງທະບຽນຜູ້ໂດຍສານ / Customer Registration</h3>
@@ -3380,8 +3449,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
           </div>
         </div>
       </div>
+      )}
 {/* ---------------- HIDDEN PRINTABLE QR SLIP (Only Visible to @media print in print-qr-slip-mode) ---------------- */}
-      {loadedBooking && (
+      {loadedBooking && printTemplate === 'qr_slip' && (
         <div className="printable-area">
           <div className="qr-slip-print" style={{ color: "#000000", width: "260px", margin: "0 auto", padding: "12px", textAlign: "center", fontFamily: "monospace", lineHeight: "1.5" }}>
             <h3 style={{ fontSize: "16px", fontWeight: "900", color: "#000000", margin: "0" }}>{db.settings.shopName || "TADFANE RAFTING"}</h3>
@@ -3412,7 +3482,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       )}
 {/* ---------------- SCREEN QR DISPLAY MODAL (Show QR to Customer at Counter) ---------------- */}
       {qrShowModalBooking && (
-        <div style={{
+        <div className="no-print" style={{
           position: "fixed",
           top: 0, left: 0, right: 0, bottom: 0,
           background: "rgba(15, 23, 42, 0.75)",

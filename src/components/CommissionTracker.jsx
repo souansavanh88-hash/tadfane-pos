@@ -128,12 +128,9 @@ export default function CommissionTracker() {
 
   // Trigger partner statement print
   const triggerPrintCommission = () => {
-    const originalClass = document.body.className;
-    document.body.classList.add("print-commission-mode");
     setTimeout(() => {
       window.print();
-      document.body.className = originalClass;
-    }, 100);
+    }, 150);
   };
 
   const [partnerName, setPartnerName] = useState("");
@@ -369,7 +366,8 @@ export default function CommissionTracker() {
 
   return (
     <div>
-      <div className="page-header">
+      <div className="no-print">
+        <div className="page-header">
         <div className="page-title">
           <h1>Partner Commission (ລະບົບຄ່າຄອມມິດຊັນຄູ່ຄ້າ)</h1>
           <p>ຈັດການຂໍ້ມູນ ແລະ ກວດສອບລາຍງານຄ່າຄອມມິດຊັນຂອງ ບໍລິສັດທົວ, ເອເຈນ ແລະ ໄກ້ດນຳທ່ຽວ</p>
@@ -847,6 +845,7 @@ export default function CommissionTracker() {
           </div>
 
         </div>
+      </div>
       </div>
       {/* --------------------- HIDDEN PRINTABLE PARTNER COMMISSION REPORT --------------------- */}
       <div className="printable-area">

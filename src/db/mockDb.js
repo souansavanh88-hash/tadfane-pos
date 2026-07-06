@@ -441,16 +441,20 @@ const syncTripsWithBookings = (db) => {
   db.customers = db.customers.filter(c => !c.bookingId && !c.groupId);
 
   db.trips = db.bookings
-    .filter(b => b.status !== "ยกเลิก" && (
+    .filter(b => b.status !== "ยกเลิก" && b.status !== "cancelled" && (
       b.status === "ชำระเงินแล้ว / ออกบิลแล้ว" || 
       b.status === "ชำระแล้ว" || 
       b.status === "ออกบิลแล้ว" || 
       b.status === "ออกเรือแล้ว" || 
       b.status === "เสร็จสิ้น" || 
+      b.status === "completed" ||
+      b.status === "dispatched" ||
       b.status === "พร้อมชำระเงิน / พร้อมพิมพ์" || 
       b.status === "พร้อมชำระเงิน" || 
       b.status === "กรอกข้อมูลเรียบร้อย" || 
       b.status === "รอชำระเงิน" ||
+      b.status === "registering" ||
+      b.status === "ready_to_checkout" ||
       b.guideId || b.captainId || b.driverId || b.boatId || 
       (b.assignedBoats && b.assignedBoats.length > 0) || 
       (b.guideIds && b.guideIds.length > 0)
@@ -557,6 +561,16 @@ export const initFirebase = () => {
       const localBookings = memoryDb?.bookings?.length || 0;
       const cloudBookings = cloudData?.bookings?.length || 0;
       
+      // If the cloud explicitly says it was intentionally wiped, accept it and bypass protection
+      if (cloudData.isWiped) {
+        memoryDb = cloudData;
+        safeSetItem(DB_KEY, JSON.stringify(memoryDb));
+        try {
+          window.dispatchEvent(new Event("db-update"));
+        } catch (e) {}
+        return;
+      }
+
       if (cloudBookings === 0 && localBookings > 0) {
         console.warn("🚨 [PROTECTION] Cloud data is empty but local data exists! Rejecting cloud sync and forcing a cloud overwrite.");
         pushToFirebase(memoryDb);
@@ -577,7 +591,8 @@ setTimeout(initFirebase, 100);
 
 export const resetDb = () => {
   memoryDb = JSON.parse(JSON.stringify(SEED_DATA));
-  safeSetItem(DB_KEY, JSON.stringify(SEED_DATA));
+  memoryDb.isWiped = true;
+  safeSetItem(DB_KEY, JSON.stringify(memoryDb));
   return memoryDb;
 };
 
@@ -773,6 +788,7 @@ export const purgeTestData = () => {
   db.customers = [];
   db.trips = [];
   db.customExpenses = [];
+  db.isWiped = true;
   if (db.boats && Array.isArray(db.boats)) {
     db.boats = db.boats.map(b => ({ ...b, status: "available" }));
   }

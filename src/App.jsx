@@ -5,7 +5,7 @@ import LoginScreen from "./components/LoginScreen";
 import { migrateDb, getDb, saveDb } from "./db/mockDb";
 import { useLanguage } from "./utils/LanguageContext";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { isFirebaseConfigured } from "./db/firebaseSync";
+import { isFirebaseConfigured, listenToAllBookings, listenToEmployeeRegistrations, deleteEmployeeRegistrationFromFirebase } from "./db/firebaseSync";
 
 // Lazy load all heavy components - they will be downloaded only when needed
 const Dashboard = React.lazy(() => import("./components/Dashboard"));
@@ -14,6 +14,7 @@ const AccountingPayroll = React.lazy(() => import("./components/AccountingPayrol
 const OperatingExpenses = React.lazy(() => import("./components/OperatingExpenses"));
 const SettingsPanel = React.lazy(() => import("./components/SettingsPanel"));
 const SelfRegisterPortal = React.lazy(() => import("./components/SelfRegisterPortal"));
+const SelfRegisterEmployeePortal = React.lazy(() => import("./components/SelfRegisterEmployeePortal"));
 const TicketManifest = React.lazy(() => import("./components/TicketManifest"));
 const OnlineRegisterQR = React.lazy(() => import("./components/OnlineRegisterQR"));
 const CommissionTracker = React.lazy(() => import("./components/CommissionTracker"));
@@ -59,6 +60,7 @@ export default function App() {
   // Check if we are in customer self-registration portal mode
   const params = new URLSearchParams(window.location.search);
   const isSelfRegister = window.location.pathname === "/register" || params.get("mode") === "self-register";
+  const isSelfRegisterEmployee = window.location.pathname === "/register-employee" || params.get("mode") === "register-employee";
   const partnerIdParam = params.get("partnerId") || "";
 
   const handleLoginSuccess = (user) => {
@@ -158,29 +160,133 @@ export default function App() {
     window.addEventListener("storage", handleStorageChange);
 
     // Auto-detect public Cloudflare tunnel host if running locally
-    fetch("/host-ip.json?t=" + Date.now())
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error("No host-ip.json");
-      })
-      .then(data => {
-        if (data && data.hostIp) {
-          const currentHost = localStorage.getItem("pos_custom_host_url");
-          if (currentHost !== data.hostIp) {
-            console.log("[Tunnel] Auto-updating custom host URL to:", data.hostIp);
-            localStorage.setItem("pos_custom_host_url", data.hostIp);
-            setTunnelUrl(data.hostIp);
-            window.dispatchEvent(new Event("db-update"));
-          } else {
-            setTunnelUrl(data.hostIp);
+    if (!isProductionWeb) {
+      fetch("/host-ip.json?t=" + Date.now())
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error("No host-ip.json");
+        })
+        .then(data => {
+          if (data && data.hostIp) {
+            const currentHost = localStorage.getItem("pos_custom_host_url");
+            if (currentHost !== data.hostIp) {
+              console.log("[Tunnel] Auto-updating custom host URL to:", data.hostIp);
+              localStorage.setItem("pos_custom_host_url", data.hostIp);
+              setTunnelUrl(data.hostIp);
+              window.dispatchEvent(new Event("db-update"));
+            } else {
+              setTunnelUrl(data.hostIp);
+            }
           }
-        }
-      })
-      .catch(err => {
-        // Safe to ignore on standalone/static Vercel deployments
-      });
+        })
+        .catch(err => {
+          // Safe to ignore on standalone/static Vercel deployments
+        });
+    } else {
+      // In production, force host URL to current origin
+      const currentHost = localStorage.getItem("pos_custom_host_url");
+      if (currentHost !== window.location.origin) {
+        localStorage.setItem("pos_custom_host_url", window.location.origin);
+        setTunnelUrl(window.location.origin);
+        window.dispatchEvent(new Event("db-update"));
+      } else if (!tunnelUrl) {
+        setTunnelUrl(window.location.origin);
+      }
+    }
 
     return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  // Real-time sync from Firebase Firestore to local storage (mockDb)
+  useEffect(() => {
+    if (!isFirebaseConfigured()) {
+      console.log("[Sync] Firebase is not configured, skipping real-time cloud sync.");
+      return;
+    }
+
+    console.log("[Sync] Setting up global Firebase bookings listener...");
+    const unsubscribe = listenToAllBookings((bookings) => {
+      const currentDb = getDb();
+      currentDb.bookings = bookings;
+      saveDb(currentDb);
+      window.dispatchEvent(new Event("db-update"));
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // Real-time sync for employee registrations
+  useEffect(() => {
+    if (!isFirebaseConfigured()) return;
+
+    console.log("[Sync] Setting up global Firebase employee registrations listener...");
+    const unsubscribeEmployees = listenToEmployeeRegistrations((registrations) => {
+      if (registrations.length === 0) return;
+      
+      const currentDb = getDb();
+      let updated = false;
+      
+      registrations.forEach(reg => {
+        // Check if already exists by name and phone
+        const exists = (currentDb.employees || []).some(e => e.name === reg.name && e.phone === reg.phone);
+        if (!exists) {
+          const maxIdNum = (currentDb.employees || []).reduce((max, emp) => {
+            const match = emp?.id?.match(/EMP-(\d+)/);
+            if (match) {
+              const num = parseInt(match[1]);
+              return num > max ? num : max;
+            }
+            return max;
+          }, 0);
+          
+          const newEmp = {
+            id: `EMP-${String(maxIdNum + 1).padStart(3, "0")}`,
+            name: reg.name,
+            role: reg.role || "crew",
+            type: reg.type || "daily",
+            status: "active",
+            salary: 0,
+            tripRate: 0,
+            phone: reg.phone || "",
+            bankAccount: reg.bankAccount || "",
+            address: reg.address || "",
+            emergencyContactName: reg.emergencyContactName || "",
+            emergencyContactPhone: reg.emergencyContactPhone || "",
+            emergencyRelationship: reg.emergencyRelationship || "",
+            facePhoto: reg.facePhoto || "",
+            allowance: 0,
+            hireDate: new Date().toISOString().split("T")[0],
+            dailyWage: 0,
+            commission: 0,
+            ot: 0,
+            daysWorked: 0,
+            tourRate: reg.role === "guide" ? 100000 : 0,
+            raftingRate: reg.role === "guide" ? 150000 : 0,
+            specialRate: reg.role === "guide" ? 50000 : 0,
+            bonus: 0,
+            note: reg.note || ""
+          };
+          
+          if (!currentDb.employees) currentDb.employees = [];
+          currentDb.employees.push(newEmp);
+          updated = true;
+        }
+        
+        // Delete registration doc from Firebase queue
+        deleteEmployeeRegistrationFromFirebase(reg.id);
+      });
+      
+      if (updated) {
+        saveDb(currentDb);
+        window.dispatchEvent(new Event("db-update"));
+      }
+    });
+
+    return () => {
+      if (unsubscribeEmployees) unsubscribeEmployees();
+    };
   }, []);
 
   // Periodically fetch database from server to keep POS cashier in sync with customer registrations
@@ -284,6 +390,22 @@ export default function App() {
     }
   }, [activeTab, currentUser]);
 
+
+  if (isSelfRegisterEmployee) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", flexDirection: "column", gap: "16px" }}>
+            <div style={{ width: "48px", height: "48px", border: "4px solid #e2e8f0", borderTop: "4px solid #0ea5e9", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            <p style={{ color: "#64748b", fontSize: "0.95rem" }}>ກຳລັງໂຫຼດ... / Loading...</p>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        }>
+          <SelfRegisterEmployeePortal />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
 
   if (isSelfRegister) {
     return (

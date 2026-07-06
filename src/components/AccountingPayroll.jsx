@@ -1,10 +1,11 @@
 // AccountingPayroll.jsx - Consolidated Accounting & Operating Expenses Dashboard
 import React, { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 import PayrollManager from "./PayrollManager";
 import Reports from "./Reports";
 import CommissionTracker from "./CommissionTracker";
 import { getDb, saveDb, addCustomExpense, deleteCustomExpense, approveExpense, rejectExpense } from "../db/mockDb";
-import { formatLAK, formatTHB } from "../utils/helpers";
+import { formatLAK, formatTHB, getLocalDateStr } from "../utils/helpers";
 import { useLanguage } from "../utils/LanguageContext";
 import { 
   Users, BarChart3, Coins, ArrowLeft, ArrowRight, Wallet, Printer, 
@@ -14,18 +15,20 @@ import {
 export default function AccountingPayroll({ currentUser }) {
   const { lang, t } = useLanguage();
   const [db, setDb] = useState(getDb());
+  const [printTemplate, setPrintTemplate] = useState(null); // 'statement', 'summary', or null
   const [activeTab, setActiveTab] = useState("income"); // income, expenses, pl, reports, payroll_manager, commission_manager
   
   // Date & Period Filter States
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-  const [summaryMonth, setSummaryMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
+  const localDateStr = getLocalDateStr();
+  const [selectedDate, setSelectedDate] = useState(localDateStr);
+  const [selectedMonth, setSelectedMonth] = useState(localDateStr.slice(0, 7)); // YYYY-MM
+  const [summaryMonth, setSummaryMonth] = useState(localDateStr.slice(0, 7)); // YYYY-MM
+  const [selectedYear, setSelectedYear] = useState(localDateStr.slice(0, 4));
   const [incomeFilterType, setIncomeFilterType] = useState("month"); // day, month, year
   const [plFilterType, setPlFilterType] = useState("month"); // day, month, year
 
   // Expense Logger form states
-  const [expDate, setExpDate] = useState(new Date().toISOString().split("T")[0]);
+  const [expDate, setExpDate] = useState(getLocalDateStr());
   const [expCategory, setExpCategory] = useState("Fuel");
   const [expDescription, setExpDescription] = useState("");
   const [expAmount, setExpAmount] = useState("");
@@ -317,12 +320,23 @@ export default function AccountingPayroll({ currentUser }) {
 
   // Trigger Print Statement
   const handlePrintStatement = () => {
-    const originalClass = document.body.className;
-    document.body.classList.add("print-dashboard-mode");
+    flushSync(() => {
+      setPrintTemplate("statement");
+    });
+
+    const handleAfterPrint = () => {
+      setPrintTemplate(null);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+
     setTimeout(() => {
       window.print();
-      document.body.className = originalClass;
-    }, 100);
+    }, 150);
+
+    setTimeout(() => {
+      setPrintTemplate(null);
+    }, 5000);
   };
 
   // Helper label CSS styles
@@ -466,17 +480,29 @@ export default function AccountingPayroll({ currentUser }) {
   };
 
   const triggerPrintMonthlySummary = () => {
-    const originalClass = document.body.className;
-    document.body.classList.add("print-monthly-summary-mode");
+    flushSync(() => {
+      setPrintTemplate("summary");
+    });
+
+    const handleAfterPrint = () => {
+      setPrintTemplate(null);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+
     setTimeout(() => {
       window.print();
-      document.body.className = originalClass;
-    }, 100);
+    }, 150);
+
+    setTimeout(() => {
+      setPrintTemplate(null);
+    }, 5000);
   };
 
   return (
     <div className="fade-in">
-      {/* Top Header */}
+      <div className="no-print">
+        {/* Top Header */}
       <div className="page-header no-print" style={{ marginBottom: "1.5rem" }}>
         <div className="page-title">
           <h1>📊 ລະບົບບັນຊີ ແລະ ລາຍຈ່າຍ / Accounting & Expenses Portal</h1>
@@ -1548,9 +1574,11 @@ export default function AccountingPayroll({ currentUser }) {
         </div>
       )}
 
+      </div>
       {/* --------------------- HIGH FIDELITY PRINTABLE STATEMENT (EXPENSES MONTHLY PRINT OUT OVERLAY) --------------------- */}
       <div className="printable-area">
-        <div className="dashboard-print">
+        {printTemplate === "statement" && (
+          <div className="dashboard-print">
           <div style={{ textAlign: "center", marginBottom: "20px", borderBottom: "2px solid #000", paddingBottom: "10px" }}>
             <h2 style={{ fontSize: "18px", fontWeight: "bold" }}>ໃບບິນລາຍຈ່າຍປະຈຳເດືອນ / MONTHLY OPERATING EXPENSE STATEMENT</h2>
             <p style={{ fontSize: "12px", color: "#666" }}>TADFANE RAFTING / ຕາດຟານ ລ່ອງແກ່ງ BOAT TRIP MANAGER</p>
@@ -1648,10 +1676,11 @@ export default function AccountingPayroll({ currentUser }) {
               )}
             </tbody>
           </table>
-        </div>
+          </div>
+        )}
 
         {/* --------------------- MONTHLY SUMMARY PRINT OUT OVERLAY --------------------- */}
-        {(() => {
+        {printTemplate === "summary" && (() => {
           const data = calculateMonthlySummaryData(summaryMonth);
           return (
             <div className="monthly-summary-print" style={{ padding: "10mm" }}>

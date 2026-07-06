@@ -1,5 +1,6 @@
 // TicketManifest.jsx - Receipt and Passenger Manifest printable system
 import React, { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { useLanguage } from "../utils/LanguageContext";
 
 const formatLocalDate = (dateStr) => {
@@ -20,6 +21,7 @@ export default function TicketManifest({ activeTripId, onBack }) {
   const [db, setDb] = useState(getDb());
   const [selectedTripId, setSelectedTripId] = useState(activeTripId || "");
   const [previewTab, setPreviewTab] = useState("receipt"); // receipt, individual
+  const [printTemplate, setPrintTemplate] = useState(null); // 'receipt', 'manifest', 'tickets', or null
 
   useEffect(() => {
     const handleDbUpdate = () => {
@@ -41,22 +43,23 @@ export default function TicketManifest({ activeTripId, onBack }) {
 
   // Print controllers
   const triggerPrint = (mode) => {
-    // Mode can be 'receipt', 'manifest' or 'tickets'
-    const originalClass = document.body.className;
-    
-    if (mode === "receipt") {
-      document.body.classList.add("print-receipt-mode");
-    } else if (mode === "tickets") {
-      document.body.classList.add("print-tickets-mode");
-    } else {
-      document.body.classList.add("print-manifest-mode");
-    }
-    
-    // Tiny delay to allow DOM styles to apply
+    flushSync(() => {
+      setPrintTemplate(mode);
+    });
+
+    const handleAfterPrint = () => {
+      setPrintTemplate(null);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+
     setTimeout(() => {
       window.print();
-      document.body.className = originalClass; // Restore state
-    }, 100);
+    }, 150);
+
+    setTimeout(() => {
+      setPrintTemplate(null);
+    }, 5000);
   };
 
   // Compute receipt variables if trip is selected
@@ -103,7 +106,8 @@ export default function TicketManifest({ activeTripId, onBack }) {
 
   return (
     <div>
-      <div className="page-header no-print">
+      <div className="no-print">
+        <div className="page-header no-print">
         <div className="page-title" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           {onBack && (
             <button className="btn btn-secondary" style={{ padding: "6px" }} onClick={onBack}>
@@ -417,13 +421,15 @@ export default function TicketManifest({ activeTripId, onBack }) {
           (Please select a trip above to preview documents)
         </div>
       )}
+      </div>
 
       {/* ---------------- HIDDEN PRINTABLE DOMS (Only Visible to @media print) ---------------- */}
-      {currentTrip && (
+      {currentTrip && printTemplate && (
         <div className="printable-area">
           
           {/* 1. Epson Thermal Receipt Print Container (Group Bill) */}
-          <div className="receipt-print" style={{ color: "#000000", fontFamily: "monospace", fontSize: "14px", width: "260px", margin: "0 auto", padding: "12px", lineHeight: "1.5", fontWeight: "700" }}>
+          {printTemplate === "receipt" && (
+            <div className="receipt-print" style={{ color: "#000000", fontFamily: "monospace", fontSize: "14px", width: "260px", margin: "0 auto", padding: "12px", lineHeight: "1.5", fontWeight: "700" }}>
             <div style={{ textAlign: "center", borderBottom: "2px dashed #000000", paddingBottom: "8px", marginBottom: "8px" }}>
               <h4 style={{ margin: 0, fontWeight: "900", fontSize: "18px", color: "#000" }}>TADFANE RAFTING</h4>
               <h5 style={{ margin: "2px 0 0 0", fontWeight: "900", fontSize: "14px", color: "#000" }}>ຕາດຟານ ລ່ອງແກ່ງ</h5>
@@ -495,9 +501,11 @@ export default function TicketManifest({ activeTripId, onBack }) {
               <p style={{ fontSize: "8px", margin: "3px 0 0 0" }}>{t("thank_you_short", "ຂອບໃຈ / THANK YOU")}</p>
             </div>
           </div>
+          )}
 
           {/* 2. Individual Boarding Passes (TKT per passenger) print wrapper */}
-          <div className="individual-tickets-print" style={{ color: "#000" }}>
+          {printTemplate === "tickets" && (
+            <div className="individual-tickets-print" style={{ color: "#000" }}>
             {tripCustomers.map((cust) => (
               <div key={cust.id} className="individual-ticket">
                 <div style={{ textAlign: "center", borderBottom: "1px dashed #000", paddingBottom: "6px", marginBottom: "8px" }}>
@@ -564,9 +572,11 @@ export default function TicketManifest({ activeTripId, onBack }) {
               </div>
             ))}
           </div>
+          )}
 
           {/* 3. A4 Landscape Manifest Print Container */}
-          <div className="manifest-print" style={{ color: "#000" }}>
+          {printTemplate === "manifest" && (
+            <div className="manifest-print" style={{ color: "#000" }}>
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "2px solid #000", paddingBottom: "10px", marginBottom: "15px" }}>
               <div>
                 <h2 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>PASSENGER MANIFEST / ບັນຊີລາຍຊື່ຜູ້ໂດຍສານ</h2>
@@ -657,9 +667,10 @@ export default function TicketManifest({ activeTripId, onBack }) {
               <div style={{ textAlign: "right" }}>
                 Captain Signature: _______________________<br />
                 {tripCaptain ? tripCaptain.name : "Captain"}
-              </div>
             </div>
           </div>
+        </div>
+        )}
 
         </div>
       )}

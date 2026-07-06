@@ -1,7 +1,7 @@
 import { fireDb } from "./firebaseConfig";
 import { doc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 
-const POS_DATA_DOC = "pos_main/data";
+const POS_DATA_DOC = "pos_main/data_v2";
 
 // Keep track of the last time we received an update from cloud
 // so we don't overwrite our own writes with older local data

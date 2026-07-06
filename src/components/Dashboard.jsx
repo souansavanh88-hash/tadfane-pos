@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useLanguage } from "../utils/LanguageContext";
 import { getDb } from "../db/mockDb";
-import { formatLAK, formatTHB, formatUSD, formatDate } from "../utils/helpers";
+import { formatLAK, formatTHB, formatUSD, formatDate, getLocalDateStr } from "../utils/helpers";
 import { 
   Users, 
   CircleDollarSign, 
@@ -21,12 +21,13 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
   const { lang, t } = useLanguage();
   const [db, setDb] = useState(getDb());
   const [activeModal, setActiveModal] = useState(null);
-  const [conStartMonth, setConStartMonth] = useState(new Date().toISOString().slice(0, 7));
-  const [conEndMonth, setConEndMonth] = useState(new Date().toISOString().slice(0, 7));
+  const localDateStr = getLocalDateStr();
+  const [conStartMonth, setConStartMonth] = useState(localDateStr.slice(0, 7));
+  const [conEndMonth, setConEndMonth] = useState(localDateStr.slice(0, 7));
   const [conAccountType, setConAccountType] = useState("all");
   const [hideInactiveDays, setHideInactiveDays] = useState(true);
-  const [modalDate, setModalDate] = useState(new Date().toISOString().split("T")[0]);
-  const [modalMonth, setModalMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [modalDate, setModalDate] = useState(localDateStr);
+  const [modalMonth, setModalMonth] = useState(localDateStr.slice(0, 7));
   const [stats, setStats] = useState({
     paxToday: 0,
     revToday: 0,
@@ -60,7 +61,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
   }, []);
 
   const calculateStats = (database) => {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getLocalDateStr();
     const monthStr = todayStr.slice(0, 7); // YYYY-MM
     
     // O(1) lookup maps to prevent browser freezing
@@ -411,7 +412,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
 
   const getSystemAlerts = () => {
     const alerts = [];
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getLocalDateStr();
     
     // 1. Ready bookings count
     const readyBks = (db.bookings || []).filter(
@@ -459,7 +460,8 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
 
   return (
     <div>
-      <div className="page-header">
+      <div className="no-print">
+        <div className="page-header">
         <div className="page-title">
           <h1>{t("dashboard_title", "ແຜງຄວບຄຸມ")}</h1>
           <p>ພາບລວມການດຳເນີນງານປະຈຳວัน ແລະ ລາຍຮັບເຮືອທ່ອງທ່ຽວ</p>
@@ -890,13 +892,14 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
         </div>
  
       </div>
+      </div>
       {/* --------------------- DASHBOARD INTERACTIVE DETAILS MODALS --------------------- */}
       {activeModal && (() => {
         let title = "";
         let headerRow = null;
         let rows = [];
 
-        const todayStr = new Date().toISOString().split("T")[0];
+        const todayStr = getLocalDateStr();
         const monthStr = todayStr.slice(0, 7);
         const basePrice = db.settings.basePriceLAK;
 
@@ -1466,12 +1469,9 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
         }
 
         const triggerPrint = () => {
-          const originalClass = document.body.className;
-          document.body.classList.add("print-dashboard-mode");
           setTimeout(() => {
             window.print();
-            document.body.className = originalClass;
-          }, 100);
+          }, 150);
         };
 
         return (

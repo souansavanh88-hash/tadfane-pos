@@ -51,7 +51,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         <div className="sidebar-role-selector-container" style={{ display: "flex", flexDirection: "column", gap: "6px", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "12px 1.25rem", marginBottom: "10px" }}>
           <div className="sidebar-user-info" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#0f766e", display: "flex", alignItems: "center", justifyCenter: "center", fontSize: "0.85rem", fontWeight: "700", color: "#ffffff", justifyContent: "center" }}>
-              {currentUser.name.charAt(0)}
+              {(currentUser.name || currentUser.email || "U").charAt(0)}
             </div>
             <div style={{ flex: 1, overflow: "hidden" }}>
               <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "#ffffff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>

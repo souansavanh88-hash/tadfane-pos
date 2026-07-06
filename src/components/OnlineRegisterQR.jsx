@@ -1,5 +1,6 @@
 // OnlineRegisterQR.jsx - Customer Self-Service QR Generator & Live Group Status Board
 import React, { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { getDb, saveDb } from "../db/mockDb";
 import { useLanguage } from "../utils/LanguageContext";
 import { QRCodeSVG } from "qrcode.react";
@@ -61,27 +62,29 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
   };
 
   const triggerQrSignPrint = () => {
-    setIsPrintLoading(true);
-    const originalClass = document.body.className;
-    document.body.classList.add("print-qr-sign-mode");
     setTimeout(() => {
       window.print();
-      document.body.className = originalClass;
-      setIsPrintLoading(false);
-    }, 800);
+    }, 150);
   };
 
   const handlePrintBookingQrSign = (bk) => {
-    setPrintBooking(bk);
-    setIsPrintLoading(true);
-    const originalClass = document.body.className;
-    document.body.classList.add("print-qr-sign-mode");
+    flushSync(() => {
+      setPrintBooking(bk);
+    });
+
+    const handleAfterPrint = () => {
+      setPrintBooking(null);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+
     setTimeout(() => {
       window.print();
-      document.body.className = originalClass;
+    }, 150);
+
+    setTimeout(() => {
       setPrintBooking(null);
-      setIsPrintLoading(false);
-    }, 800);
+    }, 5000);
   };
 
   const handleSetReadyToPay = (bk) => {
@@ -208,6 +211,7 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
 
   return (
     <div>
+      <div className="no-print">
       <div className="page-header">
         <div className="page-title">
           <h1>ຈັດການລົງທະບຽນລູກຄ້າ / Customer Registration Management</h1>
@@ -526,6 +530,7 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
           </div>
         </div>
       )}
+      </div>
 
       {/* ---------------- HIDDEN PRINTABLE SIGN STANDEE ---------------- */}
       <div className="printable-area">
