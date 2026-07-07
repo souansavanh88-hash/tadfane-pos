@@ -14,11 +14,10 @@ export default function Reports() {
   const [selectedMonth, setSelectedMonth] = useState(localDateStr.slice(0, 7)); // YYYY-MM
   const [selectedYear, setSelectedYear] = useState(localDateStr.slice(0, 4));
 
-  // Trigger P&L report print
   const triggerPrintReports = () => {
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    // Force synchronous layout reflow
+    const forceReflow = document.body.offsetHeight;
+    window.print();
   };
 
   const handleExportCSV = () => {

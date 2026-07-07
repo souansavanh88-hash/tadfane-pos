@@ -697,59 +697,36 @@ tr:hover td {
   }
 }
 
-/* Hide printable areas by default on screen view, but keep them in layout/DOM tree for instant print engine rendering */
+/* Hide printable areas by default on screen view */
 .printable-area {
-  position: absolute !important;
-  left: -99999px !important;
-  top: -99999px !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
+  display: none;
 }
 
 /* Print Layout Overrides - Maintain standard high fidelity printing */
 @media print {
-  /* Hide all screen layout elements instantly without O(N^2) selectors */
-  .sidebar-container,
-  .no-print,
-  .page-header,
-  .card,
-  .tabs-container,
-  .modal-overlay,
-  button,
-  .btn {
+  @page {
+    margin: 0;
+  }
+
+  /* === CORE PRINT STRATEGY ===
+   * Two types of .printable-area exist:
+   * 1. Portal-rendered: injected directly as body > .printable-area (QRBooking receipts)
+   * 2. In-tree: rendered inside the component tree inside #root (Dashboard, etc.)
+   *
+   * Strategy:
+   * - Hide body > * with display:none (hides both #root and any non-printable portals)
+   * - Re-show body > .printable-area (portal type) with display:block
+   * - For in-tree type: restore #root display, but hide everything inside using visibility:hidden,
+   *   then reveal .printable-area and its children with visibility:visible
+   */
+
+  /* Step 1: Hide everything at the body level */
+  body > *:not(.printable-area) {
     display: none !important;
   }
 
-  /* Make sure html, body, and parents of printable-area take up 100% size and have standard static/block display */
-  html, body {
-    width: 100% !important;
-    height: auto !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    overflow: visible !important;
-  }
-
-  .app-container,
-  .main-content,
-  .main-content > div {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
-    height: auto !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-  }
-
-  /* Force display of the printable area */
-  .printable-area {
+  /* Step 2: Show portal-rendered printable areas (direct body children) */
+  body > .printable-area {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
@@ -763,7 +740,42 @@ tr:hover td {
     background: #ffffff !important;
     color: #000000 !important;
     overflow: visible !important;
-    pointer-events: auto !important;
+  }
+
+  /* Step 3: For in-tree printable areas — #root must be block but all content hidden */
+  body > #root {
+    display: block !important;
+    visibility: hidden !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  /* Step 4: Reveal in-tree .printable-area and ALL its descendants */
+  .printable-area {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  /* Make html/body non-clipping so content is fully visible */
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
   }
 
   .printable-area * {
@@ -771,9 +783,7 @@ tr:hover td {
     color: #000000 !important;
   }
 
-  .printable-area > * {
-    display: block !important;
-  }
+
 
   /* Specific styling for dashboard details print */
   .dashboard-print {
@@ -866,8 +876,8 @@ tr:hover td {
 
   /* Specific styling for thermal receipt */
   .receipt-print {
-    width: 76mm !important;
-    max-width: 76mm !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
     padding: 4mm 4mm 0 4mm !important; /* bottom padding removed */
     margin: 0 !important;
     height: auto !important;

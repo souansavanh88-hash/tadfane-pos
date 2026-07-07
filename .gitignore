@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 chrome/
 .vercel
+.env*
+scratch/

@@ -1469,9 +1469,9 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
         }
 
         const triggerPrint = () => {
-          setTimeout(() => {
-            window.print();
-          }, 150);
+          // Force synchronous layout reflow
+          const forceReflow = document.body.offsetHeight;
+          window.print();
         };
 
         return (

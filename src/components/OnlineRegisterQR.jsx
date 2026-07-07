@@ -62,9 +62,9 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
   };
 
   const triggerQrSignPrint = () => {
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    // Force synchronous layout reflow
+    const forceReflow = document.body.offsetHeight;
+    window.print();
   };
 
   const handlePrintBookingQrSign = (bk) => {
@@ -73,14 +73,17 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
     });
 
     const handleAfterPrint = () => {
-      setPrintBooking(null);
+      setTimeout(() => {
+        setPrintBooking(null);
+      }, 1000);
       window.removeEventListener("afterprint", handleAfterPrint);
     };
     window.addEventListener("afterprint", handleAfterPrint);
 
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    // Force synchronous layout reflow
+    const forceReflow = document.body.offsetHeight;
+
+    window.print();
 
     setTimeout(() => {
       setPrintBooking(null);

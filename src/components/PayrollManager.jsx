@@ -324,14 +324,19 @@ export default function PayrollManager() {
     });
 
     const handleAfterPrint = () => {
-      setPrintTemplate(null);
+      setTimeout(() => {
+        setPrintTemplate(null);
+      }, 1000);
       window.removeEventListener("afterprint", handleAfterPrint);
     };
     window.addEventListener("afterprint", handleAfterPrint);
 
+    // Force synchronous layout reflow then wait for DOM paint
+    const forceReflow = document.body.offsetHeight;
+
     setTimeout(() => {
       window.print();
-    }, 150);
+    }, 300);
 
     setTimeout(() => {
       setPrintTemplate(null);
@@ -344,14 +349,19 @@ export default function PayrollManager() {
     });
 
     const handleAfterPrint = () => {
-      setPrintTemplate(null);
+      setTimeout(() => {
+        setPrintTemplate(null);
+      }, 1000);
       window.removeEventListener("afterprint", handleAfterPrint);
     };
     window.addEventListener("afterprint", handleAfterPrint);
 
+    // Force synchronous layout reflow then wait for DOM paint
+    const forceReflow = document.body.offsetHeight;
+
     setTimeout(() => {
       window.print();
-    }, 150);
+    }, 300);
 
     setTimeout(() => {
       setPrintTemplate(null);

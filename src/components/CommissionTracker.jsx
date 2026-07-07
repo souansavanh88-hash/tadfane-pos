@@ -126,11 +126,10 @@ export default function CommissionTracker() {
     };
   };
 
-  // Trigger partner statement print
   const triggerPrintCommission = () => {
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    // Force synchronous layout reflow
+    const forceReflow = document.body.offsetHeight;
+    window.print();
   };
 
   const [partnerName, setPartnerName] = useState("");

@@ -717,42 +717,338 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     return url;
   };
 
-  // Universal print helper - works in ALL browsers including Chrome, Safari, and iPadOS.
-  // Direct printing hides main UI and displays printable-area using @media print rules,
-  // preventing popup blocker issues and printing dialog cutoff delays.
-  const printByClassName = (className) => {
+  // Universal print helper using hidden isolated iframe - prevents popup blockers and media style leakage
+  const printViaIframe = (templateType) => {
+    if (!loadedBooking) return;
     setIsPrintLoading(true);
 
-    let template = 'receipt';
-    if (className === 'qr-slip-print') {
-      template = 'qr_slip';
-    } else if (className === 'qr-sign-print') {
-      template = 'qr_sign';
+    // Get QR SVGs dynamically from rendered hidden SVG elements
+    const qrSignSvg = document.querySelector('#print-qr-svg-sign-node svg')?.outerHTML || '';
+    const qrSlipSvg = document.querySelector('#print-qr-svg-slip-node svg')?.outerHTML || '';
+
+    const rt = receiptTranslations[lang] || receiptTranslations.la;
+
+    let contentHtml = '';
+
+    if (templateType === 'receipt') {
+      const driversNames = loadedBooking.driverIds && loadedBooking.driverIds.length > 0
+        ? loadedBooking.driverIds.map(id => getDriverName(id).split(" (")[1]?.replace(")", "") || getDriverName(id).split(" ")[0]).join(", ")
+        : (loadedBooking.driverId ? getDriverName(loadedBooking.driverId) : rt.unassigned);
+      const vehCount = loadedBooking.vehicleCount !== undefined ? loadedBooking.vehicleCount : 1;
+      const driverStr = `${driversNames} (รถ: ${vehCount} คัน)`;
+      const guideStr = loadedBooking.guideIds?.map(gId => getGuideName(gId).split(" ")[0]).join(" & ") || rt.unassigned;
+
+      let boatsHtml = '';
+      if (loadedBooking.assignedBoats && loadedBooking.assignedBoats.length > 0) {
+        boatsHtml = loadedBooking.assignedBoats.map((ab, index) => `
+          <div style="padding-left: 6px; font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; margin-bottom: 2px;">
+            <span>${rt.boatLabel} ${index + 1}: ${getBoatName(ab.boatId)}</span>
+            <span>(${ab.paxCount} ${rt.paxUnit})</span>
+          </div>
+        `).join('') + `
+          <div style="padding-left: 6px; font-size: 12px; font-weight: 700; border-top: 1px dashed #000000; margin-top: 4px; padding-top: 4px; display: flex; justify-content: space-between;">
+            <strong>จำนวนเรือ / Boats:</strong>
+            <span>${loadedBooking.boatCount !== undefined ? loadedBooking.boatCount : loadedBooking.assignedBoats.length} ລຳ / Boats</span>
+          </div>
+        `;
+      } else {
+        boatsHtml = `<div style="padding-left: 6px; font-size: 12px;">${rt.unassigned}</div>`;
+      }
+
+      let passengersHtml = '';
+      if (loadedBooking.passengers && loadedBooking.passengers.length > 0) {
+        passengersHtml = loadedBooking.passengers.map((pax, idx) => `
+          <div style="padding-left: 6px; font-weight: 700; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 2px; font-size: 13px;">
+            <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
+              ${idx + 1}. ${pax?.name || "N/A"}
+            </span>
+            <span style="white-space: nowrap; text-align: right;">
+              (${pax?.age || "-"} ${rt.ageUnit} | ${getGenderLabel(pax?.gender, lang)} | ${pax?.nationality || "-"})
+            </span>
+          </div>
+        `).join('');
+      } else {
+        passengersHtml = `<div style="padding-left: 6px; font-style: italic; color: #000000; font-size: 13px;">${rt.waitingReg}</div>`;
+      }
+
+      contentHtml = `
+        <div style="color: #000000; font-family: monospace; font-size: 14px; width: 100%; box-sizing: border-box; padding: 8px; line-height: 1.4; font-weight: 700;">
+          <div style="text-align: center; border-bottom: 2px dashed #000000; padding-bottom: 8px; margin-bottom: 8px;">
+            ${db.settings.logo ? `<img src="${db.settings.logo}" alt="Logo" style="max-height: 80px; max-width: 220px; object-fit: contain; margin-bottom: 8px;" />` : ''}
+            <h3 style="margin: 4px 0 0 0; font-weight: 900; font-size: 18px; color: #000000; letter-spacing: 1px;">${db.settings.shopName || "TADFANE RAFTING"}</h3>
+            ${db.settings.shopNameLao ? `<h4 style="margin: 2px 0 0 0; font-weight: 900; font-size: 15px; color: #000000;">${db.settings.shopNameLao}</h4>` : ''}
+            <p style="font-size: 12px; margin: 4px 0 2px 0; font-weight: bold;">${lang === "en" ? (db.settings.shopAddress || "Vang Vieng, Laos") : (db.settings.shopAddressLao || db.settings.shopAddress || rt.address)}</p>
+            <p style="font-size: 12px; margin: 0; font-weight: bold;">Tel: ${db.settings.shopTel || "+856 20 555-9000"}</p>
+            ${db.settings.shopTaxId ? `<p style="font-size: 11px; margin: 2px 0 0 0; font-weight: bold;">Tax ID: ${db.settings.shopTaxId}</p>` : ''}
+            ${db.settings.shopExtra ? `<p style="font-size: 11px; margin: 2px 0 0 0; font-weight: bold;">${db.settings.shopExtra}</p>` : ''}
+          </div>
+
+          <div style="font-size: 14px; margin-bottom: 6px;">
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${rt.billNumber}</strong>
+              <span>${loadedBooking.billNumber}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${rt.date}</strong>
+              <span>${formatLocalDate(loadedBooking.date)} ${loadedBooking.time}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${rt.payment}</strong>
+              <span>
+                ${loadedBooking.paymentMethod === "cash"
+                  ? rt.cash
+                  : loadedBooking.paymentMethod === "transfer"
+                  ? rt.transfer
+                  : loadedBooking.paymentMethod === "card"
+                  ? rt.card
+                  : loadedBooking.paymentMethod?.toUpperCase()}
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${rt.agent}</strong>
+              <span>${loadedBooking.partnerName}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${rt.passengers}</strong>
+              <span>${loadedBooking.paxCount} ${rt.paxUnit}</span>
+            </div>
+
+            <div style="border-top: 2px dashed #000000; margin: 6px 0;"></div>
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${rt.driver}</strong>
+              <span>${driverStr}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <strong>${rt.guides}</strong>
+              <span>${guideStr}</span>
+            </div>
+
+            <div style="border-top: 2px dotted #000000; margin: 4px 0; padding-top: 4px;">
+              <strong>${rt.boats}</strong>
+            </div>
+            ${boatsHtml}
+          </div>
+
+          <div style="border-top: 2px dashed #000000; margin: 6px 0;"></div>
+          <div style="font-size: 13px; margin-bottom: 6px;">
+            <div style="font-weight: 900; margin-bottom: 4px; font-size: 14px;">
+              ${rt.passengerListHeader} (${loadedBooking.paxCount} ${rt.paxUnit}):
+            </div>
+            ${passengersHtml}
+          </div>
+
+          <div style="border-top: 2px dashed #000000; margin: 6px 0;"></div>
+          <div style="font-size: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
+              <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
+                ${loadedBooking.serviceName} x${loadedBooking.paxCount}:
+              </span>
+              <span style="white-space: nowrap; text-align: right;">
+                ${formatLAK(loadedBooking.pricePaidLAK)} LAK
+              </span>
+            </div>
+            ${(loadedBooking.discountLAK || 0) > 0 ? `
+              <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px;">
+                <span>${rt.discount}</span>
+                <span>-${formatLAK(loadedBooking.discountLAK)} LAK</span>
+              </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 900; font-size: 18px; margin-top: 8px; border-top: 2px solid #000000; padding-top: 6px;">
+              <span style="flex: 1; text-align: left;">${(loadedBooking.discountLAK || 0) > 0 || (loadedBooking.debtLAK || 0) > 0 ? rt.netTotal : rt.total}</span>
+              <span style="white-space: nowrap; text-align: right;">
+                ${formatLAK((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK))} LAK
+              </span>
+            </div>
+            ${(loadedBooking.debtLAK || 0) > 0 ? `
+              <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px; border-top: 1px dotted #000000; padding-top: 4px;">
+                <span>⚠️ ${rt.debt}</span>
+                <span>-${formatLAK(loadedBooking.debtLAK)} LAK</span>
+              </div>
+            ` : ''}
+            ${((loadedBooking.discountLAK || 0) > 0 || (loadedBooking.debtLAK || 0) > 0) ? `
+              <div style="display: flex; justify-content: space-between; font-weight: 900; font-size: 16px; margin-top: 6px; border-top: 2px solid #000000; padding-top: 6px;">
+                <span>${rt.actualPaid}</span>
+                <span>${formatLAK(loadedBooking.paidLAK !== undefined ? loadedBooking.paidLAK : loadedBooking.pricePaidLAK)} LAK</span>
+              </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-top: 6px; font-weight: 700; border-top: 1px dotted #000000; padding-top: 4px;">
+              <span>THB:</span>
+              <span>${formatTHB((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK) / db.settings.rateTHB)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700;">
+              <span>USD:</span>
+              <span>${formatUSD((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK) / db.settings.rateUSD)}</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px; text-align: center; border-top: 2px dashed #000000; padding-top: 8px;">
+            <p style="font-size: 13px; margin: 0; font-weight: 900; color: #000000;">${rt.thankYou}</p>
+          </div>
+        </div>
+      `;
+    } else if (templateType === 'qr_sign') {
+      contentHtml = `
+        <div style="color: #000000; text-align: center; padding: 20px; font-family: sans-serif;">
+          <h1 style="font-weight: 900; font-size: 2.2rem; color: #000000; margin: 0 0 5px 0;">${db.settings.shopName || "TADFANE RAFTING"}</h1>
+          ${db.settings.shopNameLao ? `<h2 style="font-weight: 900; font-size: 1.6rem; color: #000000; margin: 0 0 15px 0;">${db.settings.shopNameLao}</h2>` : ''}
+          <h3 style="font-size: 1.2rem; color: #475569; margin-bottom: 1.5rem;">ລົງທະບຽນຜູ້ໂດຍສານ / Customer Registration</h3>
+          
+          <div style="margin: 20px 0; display: flex; justify-content: center;">
+            ${qrSignSvg}
+          </div>
+
+          <div style="font-size: 1.2rem; font-weight: 900; margin: 20px 0; color: #000000;">
+            Group Code / ລະຫັດກຸ່ມ: <span style="text-decoration: underline;">${loadedBooking?.groupId || registrationGroupId}</span>
+          </div>
+
+          <div style="text-align: left; max-width: 440px; margin: 0 auto; font-size: 0.9rem; line-height: 1.6; font-weight: 700;">
+            <p>1. Scan the QR Code using your mobile phone camera.</p>
+            <p>2. Agree to safety rules & terms.</p>
+            <p>3. Enter name, nationality, age, gender, phone details and submit.</p>
+            <p>4. Please notify cashier after submit.</p>
+          </div>
+        </div>
+      `;
+    } else if (templateType === 'qr_slip') {
+      contentHtml = `
+        <div style="color: #000000; width: 100%; box-sizing: border-box; padding: 8px; text-align: center; font-family: monospace; line-height: 1.4; font-weight: 700;">
+          <h3 style="font-size: 15px; font-weight: 900; color: #000000; margin: 0;">${db.settings.shopName || "TADFANE RAFTING"}</h3>
+          ${db.settings.shopNameLao ? `<h4 style="font-size: 13px; font-weight: 800; color: #000000; margin: 2px 0 0 0;">${db.settings.shopNameLao}</h4>` : ''}
+          <p style="font-weight: bold; font-size: 11px; margin: 6px 0; color: #000000;">ບິນລົງທະບຽນລູກຄ້າ / Register Slip</p>
+          
+          <div style="display: inline-block; padding: 10px; background: #ffffff; border: 1px solid #000000; border-radius: 8px; margin: 8px 0;">
+            ${qrSlipSvg}
+          </div>
+
+          <div style="border: 2px dashed #000000; border-radius: 6px; padding: 8px; margin: 8px 0; background: #ffffff;">
+            <span style="font-size: 11px; font-weight: bold; display: block;">ລະຫັດກຸ່ມ / Group Code</span>
+            <span style="font-size: 20px; font-weight: 800; letter-spacing: 1px; display: block;">${loadedBooking.groupId}</span>
+          </div>
+
+          <div style="text-align: left; font-size: 11px; background: #f1f5f9; padding: 8px 12px; border-radius: 8px; margin-top: 10px; border: 1px solid #cbd5e1;">
+            <strong>1. ສະແກນ QR Code / Scan QR</strong><br />
+            Scan QR code with your phone camera.<br />
+            <strong>2. ກອກຂໍ້ມູນ / Enter Details</strong><br />
+            Fill in name, nationality, gender, age, phone and submit.
+          </div>
+
+          <div style="margin-top: 15px; font-size: 11px; font-style: italic; border-top: 1px dashed #000000; padding-top: 6px;">
+            Thank you / ຂໍຂอบໃຈ
+          </div>
+        </div>
+      `;
     }
 
-    flushSync(() => {
-      setPrintTemplate(template);
-    });
+    // Define temporary styles to inject for printing
+    let styleHtml = '';
+    if (templateType === 'qr_sign') {
+      styleHtml = `
+        @media print {
+          @page {
+            size: A4 portrait !important;
+            margin: 10mm !important;
+          }
+          html, body {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            overflow: visible !important;
+          }
+          body > #root {
+            display: none !important;
+          }
+          body > #print-receipt-portal {
+            display: block !important;
+            visibility: visible !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          #print-receipt-portal svg {
+            display: block !important;
+            margin: 0 auto !important;
+            max-width: 100% !important;
+            height: auto !important;
+          }
+        }
+      `;
+    } else {
+      // receipt or qr_slip (standard 80mm/58mm thermal receipt printer)
+      styleHtml = `
+        @media print {
+          @page {
+            size: 80mm auto !important;
+            margin: 0 !important;
+          }
+          html, body {
+            width: 80mm !important;
+            max-width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            overflow: visible !important;
+          }
+          body > #root {
+            display: none !important;
+          }
+          body > #print-receipt-portal {
+            width: 80mm !important;
+            max-width: 80mm !important;
+            margin: 0 !important;
+            padding: 4px 6px !important; /* safe margins for thermal print head */
+            box-sizing: border-box !important;
+            display: block !important;
+            visibility: visible !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+          }
+          #print-receipt-portal svg {
+            display: block !important;
+            margin: 6px auto !important;
+            max-width: 80% !important;
+            height: auto !important;
+          }
+        }
+      `;
+    }
 
-    const handleAfterPrint = () => {
-      setPrintTemplate(null);
-      setIsPrintLoading(false);
-      window.removeEventListener('afterprint', handleAfterPrint);
-    };
-    window.addEventListener('afterprint', handleAfterPrint);
+    // Remove any existing portal or custom style element first
+    document.getElementById('print-receipt-portal')?.remove();
+    document.getElementById('print-receipt-style')?.remove();
 
+    // 1. Create and inject style element to override page layout
+    const styleEl = document.createElement('style');
+    styleEl.id = 'print-receipt-style';
+    styleEl.innerHTML = styleHtml;
+    document.head.appendChild(styleEl);
+
+    // 2. Create and inject portal div on the main body
+    const portal = document.createElement('div');
+    portal.id = 'print-receipt-portal';
+    portal.className = 'printable-area';
+    portal.innerHTML = contentHtml;
+    document.body.appendChild(portal);
+
+    // 3. Trigger printing directly on the main window
+    window.focus();
     setTimeout(() => {
       window.print();
+      
+      // Cleanup after print dialog is closed or cancelled
+      setTimeout(() => {
+        portal.remove();
+        styleEl.remove();
+        setIsPrintLoading(false);
+      }, 800);
     }, 150);
-
-    setTimeout(() => {
-      setPrintTemplate(null);
-      setIsPrintLoading(false);
-    }, 5000);
   };
 
-  const triggerReceiptPrint = () => printByClassName('receipt-print');
-  const triggerQrSlipPrint = () => printByClassName('qr-slip-print');
+  const triggerReceiptPrint = () => printViaIframe('receipt');
+  const triggerQrSlipPrint = () => printViaIframe('qr_slip');
 
   // Handles creating a new booking in "registering"
   const handleCreateBooking = async (e) => {
@@ -3260,223 +3556,22 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       )}
       </div>
 
-      {/* ---------------- HIDDEN PRINTABLE DOM (Only Visible to @media print) ---------------- */}
-      {loadedBooking && printTemplate === 'receipt' && (() => {
-        const rt = receiptTranslations[lang] || receiptTranslations.la;
-        return (
-          <div className="printable-area">
-            <div className="receipt-print" style={{ color: "#000000", fontFamily: "monospace", fontSize: "16px", width: "100%", margin: "0 auto", padding: "12px", lineHeight: "1.5", fontWeight: "700" }}>
-              <div style={{ textAlign: "center", borderBottom: "2px dashed #000000", paddingBottom: "8px", marginBottom: "8px" }}>
-                {db.settings.logo && (
-                  <img src={db.settings.logo} alt="Logo" style={{ maxHeight: "80px", maxWidth: "220px", objectFit: "contain", marginBottom: "8px" }} />
-                )}
-                <h3 style={{ margin: "4px 0 0 0", fontWeight: "900", fontSize: "20px", color: "#000000", letterSpacing: "1px" }}>{db.settings.shopName || "TADFANE RAFTING"}</h3>
-                {db.settings.shopNameLao && <h4 style={{ margin: "2px 0 0 0", fontWeight: "900", fontSize: "16px", color: "#000000" }}>{db.settings.shopNameLao}</h4>}
-                <p style={{ fontSize: "12px", margin: "4px 0 2px 0", fontWeight: "bold" }}>{lang === "en" ? (db.settings.shopAddress || "Vang Vieng, Laos") : (db.settings.shopAddressLao || db.settings.shopAddress || rt.address)}</p>
-                <p style={{ fontSize: "12px", margin: "0", fontWeight: "bold" }}>Tel: {db.settings.shopTel || "+856 20 555-9000"}</p>
-                {db.settings.shopTaxId && <p style={{ fontSize: "11px", margin: "2px 0 0 0", fontWeight: "bold" }}>Tax ID: {db.settings.shopTaxId}</p>}
-                {db.settings.shopExtra && <p style={{ fontSize: "11px", margin: "2px 0 0 0", fontWeight: "bold" }}>{db.settings.shopExtra}</p>}
-              </div>
-
-              <div style={{ fontSize: "15px", marginBottom: "6px", lineHeight: "1.5" }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <strong>{rt.billNumber}</strong>
-                  <span>{loadedBooking.billNumber}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <strong>{rt.date}</strong>
-                  <span>{formatLocalDate(loadedBooking.date)} {loadedBooking.time}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <strong>{rt.payment}</strong>
-                  <span>
-                    {loadedBooking.paymentMethod === "cash"
-                      ? rt.cash
-                      : loadedBooking.paymentMethod === "transfer"
-                      ? rt.transfer
-                      : loadedBooking.paymentMethod === "card"
-                      ? rt.card
-                      : loadedBooking.paymentMethod?.toUpperCase()}
-                  </span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <strong>{rt.agent}</strong>
-                  <span>{loadedBooking.partnerName}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <strong>{rt.passengers}</strong>
-                  <span>{loadedBooking.paxCount} {rt.paxUnit}</span>
-                </div>
-                
-                <div style={{ borderTop: "2px dashed #000000", margin: "6px 0" }}></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <strong>{rt.driver}</strong>
-                  <span>
-                    {(() => {
-                      const driversNames = loadedBooking.driverIds && loadedBooking.driverIds.length > 0
-                        ? loadedBooking.driverIds.map(id => getDriverName(id).split(" (")[1]?.replace(")", "") || getDriverName(id).split(" ")[0]).join(", ")
-                        : (loadedBooking.driverId ? getDriverName(loadedBooking.driverId) : rt.unassigned);
-                      const vehCount = loadedBooking.vehicleCount !== undefined ? loadedBooking.vehicleCount : 1;
-                      return `${driversNames} (รถ: ${vehCount} คัน)`;
-                    })()}
-                  </span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <strong>{rt.guides}</strong>
-                  <span>{loadedBooking.guideIds?.map(gId => getGuideName(gId).split(" ")[0]).join(" & ") || rt.unassigned}</span>
-                </div>
-                
-                <div style={{ borderTop: "2px dotted #000000", margin: "4px 0", paddingTop: "4px" }}>
-                  <strong>{rt.boats}</strong>
-                </div>
-                {loadedBooking.assignedBoats && loadedBooking.assignedBoats.length > 0 ? (
-                  <>
-                    {loadedBooking.assignedBoats.map((ab, index) => (
-                      <div key={index} style={{ paddingLeft: "6px", fontSize: "12px", fontWeight: "700", display: "flex", justifyContent: "space-between" }}>
-                        <span>{rt.boatLabel} {index + 1}: {getBoatName(ab.boatId)}</span>
-                        <span>({ab.paxCount} {rt.paxUnit})</span>
-                      </div>
-                    ))}
-                    <div style={{ paddingLeft: "6px", fontSize: "12px", fontWeight: "700", borderTop: "1px dashed #000000", marginTop: "2px", paddingTop: "2px", display: "flex", justifyContent: "space-between" }}>
-                      <strong>จำนวนเรือ / Boats:</strong>
-                      <span>{loadedBooking.boatCount !== undefined ? loadedBooking.boatCount : loadedBooking.assignedBoats.length} ລຳ / Boats</span>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ paddingLeft: "6px", fontSize: "12px" }}>{rt.unassigned}</div>
-                )}
-              </div>
-
-              <div style={{ borderTop: "2px dashed #000000", margin: "6px 0" }}></div>
-              <div style={{ fontSize: "14px", marginBottom: "6px" }}>
-                <div style={{ fontWeight: "900", marginBottom: "4px" }}>
-                  {rt.passengerListHeader} ({loadedBooking.paxCount} {rt.paxUnit}):
-                </div>
-                {loadedBooking.passengers && loadedBooking.passengers.length > 0 ? (
-                  loadedBooking.passengers.map((pax, idx) => (
-                    <div key={idx} style={{ paddingLeft: "6px", fontWeight: "700", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-                      <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
-                        {idx + 1}. {pax?.name || "N/A"}
-                      </span>
-                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                        ({pax?.age || "-"} {rt.ageUnit} | {getGenderLabel(pax?.gender, lang)} | {pax?.nationality || "-"})
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div style={{ paddingLeft: "6px", fontStyle: "italic", color: "#000000" }}>
-                    {rt.waitingReg}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ borderTop: "2px dashed #000000", margin: "6px 0" }}></div>
-              <div style={{ fontSize: "15px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
-                  <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
-                    {loadedBooking.serviceName} x{loadedBooking.paxCount}:
-                  </span>
-                  <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                    {formatLAK(loadedBooking.pricePaidLAK)} LAK
-                  </span>
-                </div>
-                {/* Discount on receipt */}
-                {(loadedBooking.discountLAK || 0) > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px" }}>
-                    <span>{rt.discount}</span>
-                    <span>-{formatLAK(loadedBooking.discountLAK)} LAK</span>
-                  </div>
-                )}
-                {/* Net total on receipt */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "900", fontSize: "20px", marginTop: "8px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
-                  <span style={{ flex: 1, textAlign: "left" }}>{(loadedBooking.discountLAK || 0) > 0 || (loadedBooking.debtLAK || 0) > 0 ? rt.netTotal : rt.total}</span>
-                  <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                    {formatLAK((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK))} LAK
-                  </span>
-                </div>
-                {/* Debt on receipt */}
-                {(loadedBooking.debtLAK || 0) > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px", borderTop: "1px dotted #000000", paddingTop: "4px" }}>
-                    <span>⚠️ {rt.debt}</span>
-                    <span>-{formatLAK(loadedBooking.debtLAK)} LAK</span>
-                  </div>
-                )}
-                {/* Actual paid on receipt */}
-                {((loadedBooking.discountLAK || 0) > 0 || (loadedBooking.debtLAK || 0) > 0) && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "900", fontSize: "18px", marginTop: "6px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
-                    <span>{rt.actualPaid}</span>
-                    <span>{formatLAK(loadedBooking.paidLAK !== undefined ? loadedBooking.paidLAK : loadedBooking.pricePaidLAK)} LAK</span>
-                  </div>
-                )}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", marginTop: "6px", fontWeight: "700" }}>
-                  <span>THB:</span>
-                  <span>{formatTHB((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK) / db.settings.rateTHB)}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", fontWeight: "700" }}>
-                  <span>USD:</span>
-                  <span>{formatUSD((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK) / db.settings.rateUSD)}</span>
-                </div>
-              </div>
-
-              <div style={{ marginTop: "20px", textAlign: "center", borderTop: "2px dashed #000000", paddingTop: "8px" }}>
-                <p style={{ fontSize: "14px", margin: "0", fontWeight: "900", color: "#000000" }}>{rt.thankYou}</p>
-              </div>
-            </div>
+      {/* Hidden QR nodes for iframe printing extraction */}
+      {loadedBooking && (
+        <div style={{ display: "none" }} aria-hidden="true" className="no-print">
+          <div id="print-qr-svg-sign-node">
+            <QRCodeSVG 
+              value={getSelfRegUrl(loadedBooking.groupId, loadedBooking.partnerId, loadedBooking.paxCount, loadedBooking.id)} 
+              size={280} 
+              includeMargin={true} 
+            />
           </div>
-        );
-      })()}
-{/* ---------------- HIDDEN PRINTABLE SIGN STANDEE (Only Visible to @media print in print-qr-sign-mode) ---------------- */}
-      {printTemplate === 'qr_sign' && (
-        <div className="printable-area">
-          <div className="qr-sign-print" style={{ color: "#000000", textAlign: "center", padding: "40px", fontFamily: "sans-serif" }}>
-          <h1 style={{ fontWeight: "900", fontSize: "2.4rem", color: "#000000", margin: "0 0 5px 0" }}>{db.settings.shopName || "TADFANE RAFTING"}</h1>
-          {db.settings.shopNameLao && <h2 style={{ fontWeight: "900", fontSize: "1.8rem", color: "#000000", margin: "0 0 15px 0" }}>{db.settings.shopNameLao}</h2>}
-          <h3 style={{ fontSize: "1.3rem", color: "#475569", marginBottom: "1.5rem" }}>ລົງທະບຽນຜູ້ໂດຍສານ / Customer Registration</h3>
-          
-          <div style={{ margin: "25px 0", display: "flex", justifyContent: "center" }}>
-            <QRCodeSVG value={getSelfRegUrl(loadedBooking?.groupId, loadedBooking?.partnerId, loadedBooking?.paxCount, loadedBooking?.id)} size={280} includeMargin={true} />
-          </div>
-
-          <div style={{ fontSize: "1.3rem", fontWeight: "900", margin: "20px 0", color: "#000000" }}>
-            Group Code / ລະຫັດກຸ່ມ: <span style={{ textDecoration: "underline" }}>{loadedBooking?.groupId || registrationGroupId}</span>
-          </div>
-
-          <div style={{ textAlign: "left", maxWidth: "440px", margin: "0 auto", fontSize: "0.95rem", lineHeight: "1.6", fontWeight: "700" }}>
-            <p>1. Scan the QR Code using your mobile phone camera.</p>
-            <p>2. Agree to safety rules & terms.</p>
-            <p>3. Enter name, nationality, age, gender, phone details and submit.</p>
-            <p>4. Please notify cashier after submit.</p>
-          </div>
-        </div>
-      </div>
-      )}
-{/* ---------------- HIDDEN PRINTABLE QR SLIP (Only Visible to @media print in print-qr-slip-mode) ---------------- */}
-      {loadedBooking && printTemplate === 'qr_slip' && (
-        <div className="printable-area">
-          <div className="qr-slip-print" style={{ color: "#000000", width: "260px", margin: "0 auto", padding: "12px", textAlign: "center", fontFamily: "monospace", lineHeight: "1.5" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: "900", color: "#000000", margin: "0" }}>{db.settings.shopName || "TADFANE RAFTING"}</h3>
-            {db.settings.shopNameLao && <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#000000", margin: "2px 0 0 0" }}>{db.settings.shopNameLao}</h4>}
-            <p style={{ fontWeight: "bold", fontSize: "11px", margin: "6px 0 6px 0", color: "#000000" }}>ບິນລົງທະບຽນລູກຄ້າ / Register Slip</p>
-            
-            <div style={{ display: "inline-block", padding: "10px", background: "#ffffff", border: "1px solid #000000", borderRadius: "8px", margin: "10px 0" }}>
-              <QRCodeSVG value={getSelfRegUrl(loadedBooking.groupId, loadedBooking.partnerId, loadedBooking.paxCount, loadedBooking.id)} size={150} includeMargin={true} />
-            </div>
-
-            <div style={{ border: "2px dashed #000000", borderRadius: "6px", padding: "8px", margin: "8px 0", background: "#ffffff" }}>
-              <span style={{ fontSize: "11px", fontWeight: "bold", display: "block" }}>ລະຫັດກຸ່ມ / Group Code</span>
-              <span style={{ fontSize: "20px", fontWeight: "800", letterSpacing: "1px", display: "block" }}>{loadedBooking.groupId}</span>
-            </div>
-
-            <div style={{ textAlign: "left", fontSize: "11px", background: "#f1f5f9", padding: "8px 12px", borderRadius: "8px", marginTop: "10px", border: "1px solid #cbd5e1", fontWeight: "700" }}>
-              <strong>1. ສະແກນ QR Code / Scan QR</strong><br />
-              Scan QR code with your phone camera.<br />
-              <strong>2. ກອກຂໍ້ມູນ / Enter Details</strong><br />
-              Fill in name, nationality, gender, age, phone and submit.
-            </div>
-
-            <div style={{ marginTop: "15px", fontSize: "11px", fontStyle: "italic", borderTop: "1px dashed #000000", paddingTop: "6px", fontWeight: "700" }}>
-              Thank you / ຂໍຂອບໃຈ
-            </div>
+          <div id="print-qr-svg-slip-node">
+            <QRCodeSVG 
+              value={getSelfRegUrl(loadedBooking.groupId, loadedBooking.partnerId, loadedBooking.paxCount, loadedBooking.id)} 
+              size={150} 
+              includeMargin={true} 
+            />
           </div>
         </div>
       )}

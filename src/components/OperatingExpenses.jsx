@@ -51,11 +51,10 @@ export default function OperatingExpenses() {
     }
   };
 
-  // Trigger statement print
   const triggerPrintExpenses = () => {
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    // Force synchronous layout reflow
+    const forceReflow = document.body.offsetHeight;
+    window.print();
   };
 
   // Computations for the selected month

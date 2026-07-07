@@ -6,6 +6,7 @@ import { migrateDb, getDb, saveDb } from "./db/mockDb";
 import { useLanguage } from "./utils/LanguageContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { isFirebaseConfigured, listenToAllBookings, listenToEmployeeRegistrations, deleteEmployeeRegistrationFromFirebase } from "./db/firebaseSync";
+import PrintFallback from "./components/PrintFallback";
 
 // Lazy load all heavy components - they will be downloaded only when needed
 const Dashboard = React.lazy(() => import("./components/Dashboard"));
@@ -62,6 +63,7 @@ export default function App() {
   const isSelfRegister = window.location.pathname === "/register" || params.get("mode") === "self-register";
   const isSelfRegisterEmployee = window.location.pathname === "/register-employee" || params.get("mode") === "register-employee";
   const partnerIdParam = params.get("partnerId") || "";
+  const printParam = params.get("print") || "";
 
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
@@ -390,6 +392,14 @@ export default function App() {
     }
   }, [activeTab, currentUser]);
 
+
+  if (printParam) {
+    return (
+      <ErrorBoundary>
+        <PrintFallback />
+      </ErrorBoundary>
+    );
+  }
 
   if (isSelfRegisterEmployee) {
     return (
