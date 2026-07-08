@@ -864,6 +864,13 @@ export default function SelfRegisterPortal() {
 
   const startCamera = async (isSelfie = false) => {
     stopCamera();
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.warn("Camera API is not supported in this browser.");
+      alert(t.alertCameraError);
+      return;
+    }
+
     try {
       const constraints = {
         video: {

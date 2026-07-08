@@ -1570,20 +1570,6 @@ export default function AccountingPayroll({ currentUser }) {
         );
       })()}
 
-      {/* --- TAB 6: STAFF PAYROLL MANAGER --- */}
-      {activeTab === "payroll_manager" && (
-        <div className="fade-in no-print">
-          <PayrollManager />
-        </div>
-      )}
-
-      {/* --- TAB 7: COMMISSION TRACKER --- */}
-      {activeTab === "commission_manager" && (
-        <div className="fade-in no-print">
-          <CommissionTracker />
-        </div>
-      )}
-
       </div>
       {/* --------------------- HIGH FIDELITY PRINTABLE STATEMENT (EXPENSES MONTHLY PRINT OUT OVERLAY) --------------------- */}
       <div className="printable-area">

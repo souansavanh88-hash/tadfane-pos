@@ -119,7 +119,12 @@ export default function PrintFallback() {
   };
 
   const getSelfRegUrl = (groupId, partnerId, paxCount, bookingId) => {
-    let url = `https://tadfane-pos.vercel.app/register?`;
+    const customHostUrl = localStorage.getItem("pos_custom_host_url") || "";
+    let baseUrl = customHostUrl.trim() || window.location.origin;
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.slice(0, -1);
+    }
+    let url = `${baseUrl}/register?`;
     if (bookingId) {
       url += `bookingId=${bookingId}&`;
     }

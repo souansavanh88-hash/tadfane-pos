@@ -698,9 +698,10 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     ? Math.round((totalPriceLAK * Math.min(discountAmount, 100)) / 100)
     : discountAmount;
 
-  // Generate self registration URL (Hardcoded to Vercel as requested)
   const getSelfRegUrl = (grpId, bookingPartnerId = null, bookingPaxCount = null, bookingId = null) => {
-    let url = `https://tadfane-pos.vercel.app/register?`;
+    let baseUrl = customHostUrl.trim() || window.location.origin;
+    if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+    let url = `${baseUrl}/register?_t=${Date.now()}&`;
     
     const bid = bookingId || (loadedBooking ? loadedBooking.id : null);
     if (bid) {
