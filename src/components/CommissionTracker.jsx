@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import { getDb, saveDb } from "../db/mockDb";
 import { formatLAK } from "../utils/helpers";
 import { useLanguage } from "../utils/LanguageContext";
-import { Coins, Plus, Trash2, Edit2, X, Calendar } from "lucide-react";
+import { Coins, Plus, Trash2, Edit2, X, Calendar, QrCode, Copy, Printer, Check } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function CommissionTracker() {
   const { lang, t } = useLanguage();
@@ -139,10 +140,11 @@ export default function CommissionTracker() {
   const [bankAccount, setBankAccount] = useState("");
   const [selectedPartnerId, setSelectedPartnerId] = useState("");
   
-  // Edit & Filter states
   const [editingPartnerId, setEditingPartnerId] = useState("");
   const [selectedMonthFilter, setSelectedMonthFilter] = useState("");
   const [sortBy, setSortBy] = useState("name"); // name, pax, sales, commission
+  const [qrPartnerModal, setQrPartnerModal] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const handleDbUpdate = () => {
@@ -198,7 +200,12 @@ export default function CommissionTracker() {
         bankAccount
       };
       updatedDb.partners.push(newPartner);
-      alert("ເພີ່ມບໍລິສັດຄູ່ຄ້າສຳເລັດ! / Partner added successfully!");
+      
+      if (partnerType === "agent") {
+        setQrPartnerModal(newPartner);
+      } else {
+        alert("ເພີ່ມບໍລິສັດຄູ່ຄ້າສຳເລັດ! / Partner added successfully!");
+      }
     }
 
     saveDb(updatedDb);
@@ -465,6 +472,19 @@ export default function CommissionTracker() {
                         <td style={{ fontWeight: "bold", color: "var(--primary)" }}>{formatLAK(stats.totalCommission)}</td>
                         <td>
                           <div style={{ display: "flex", gap: "4px" }}>
+                            {partner.type === "agent" && (
+                              <button 
+                                className="btn btn-primary"
+                                style={{ padding: "4px 8px", fontSize: "0.75rem", background: "#0f766e", border: "none", color: "#fff", display: "flex", alignItems: "center", gap: "2px" }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setQrPartnerModal(partner);
+                                }}
+                              >
+                                <QrCode size={12} />
+                                QR Code
+                              </button>
+                            )}
                             <button 
                               className="btn btn-secondary"
                               style={{ padding: "4px 8px", fontSize: "0.75rem", background: "var(--bg-tertiary)" }}
@@ -570,6 +590,18 @@ export default function CommissionTracker() {
                     </div>
 
                     <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                      {partner.type === "agent" && (
+                        <button 
+                          className="btn btn-primary"
+                          style={{ padding: "4px 8px", fontSize: "0.75rem", background: "#0f766e", border: "none", color: "#fff" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setQrPartnerModal(partner);
+                          }}
+                        >
+                          QR Code
+                        </button>
+                      )}
                       <button 
                         className="btn btn-secondary" 
                         style={{ padding: "4px 8px", fontSize: "0.75rem" }}
@@ -834,6 +866,22 @@ export default function CommissionTracker() {
                 <button type="submit" className="btn btn-primary">
                   {editingPartnerId ? t("update_partner_btn", "ອັບເດດຄູ່ຄ້າ / Update") : t("add_partner_btn", "ເພີ່ມຄູ່ຄ້າ / Add Partner")}
                 </button>
+                {editingPartnerId && partnerType === "agent" && (
+                  <button 
+                    type="button" 
+                    className="btn btn-success" 
+                    style={{ background: "#0f766e", border: "none", color: "#fff", display: "flex", alignItems: "center", gap: "4px" }}
+                    onClick={() => {
+                      const matched = db.partners.find(p => p.id === editingPartnerId);
+                      if (matched) {
+                        setQrPartnerModal(matched);
+                      }
+                    }}
+                  >
+                    <QrCode size={16} />
+                    QR Code
+                  </button>
+                )}
                 {editingPartnerId && (
                   <button type="button" className="btn btn-secondary" onClick={handleCancelEdit}>
                     {t("cancel_partner_btn", "ຍົກເລີກ / Cancel")}
@@ -1047,6 +1095,221 @@ export default function CommissionTracker() {
             </div>
           </div>
         )}
+      {/* Agent QR Code Modal */}
+      {qrPartnerModal && (() => {
+        const customHostUrl = localStorage.getItem("pos_custom_host_url") || "";
+        const getBaseUrl = () => {
+          if (customHostUrl) return customHostUrl.replace(/\/$/, "");
+          return window.location.origin;
+        };
+        const agentUrl = `${getBaseUrl()}/register?partnerId=${qrPartnerModal.id}`;
+
+        const handleCopyLink = () => {
+          navigator.clipboard.writeText(agentUrl);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        };
+
+        const handlePrint = () => {
+          const printWindow = window.open("", "_blank");
+          printWindow.document.write(`
+            <html>
+              <head>
+                <title>Print QR Code - ${qrPartnerModal.name}</title>
+                <style>
+                  body {
+                    font-family: 'Outfit', sans-serif;
+                    text-align: center;
+                    padding: 40px;
+                    margin: 0;
+                  }
+                  .container {
+                    border: 4px solid #0f766e;
+                    border-radius: 20px;
+                    padding: 40px;
+                    max-width: 500px;
+                    margin: 0 auto;
+                  }
+                  h1 { color: #0f766e; font-size: 28px; margin-bottom: 5px; }
+                  p { color: #475569; font-size: 16px; margin-top: 5px; }
+                  .qr-box { margin: 30px auto; }
+                  .agent-name { font-size: 22px; font-weight: bold; color: #0f172a; margin-top: 20px; }
+                  .footer { font-size: 12px; color: #94a3b8; margin-top: 40px; }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <h1>TADFANE RAFTING</h1>
+                  <p>ສະແກນເພື່ອລົງທະບຽນ ແລະ ກອກຂໍ້ມູນລູກຄ້າ</p>
+                  <div class="qr-box" id="qrcode"></div>
+                  <div class="agent-name">ເອເຈນ: ${qrPartnerModal.name}</div>
+                  <p style="font-size: 14px; font-family: monospace; color: #64748b;">Code: ${qrPartnerModal.id}</p>
+                  <div class="footer">Powered by Tadfane POS System</div>
+                </div>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+                <script>
+                  new QRCode(document.getElementById("qrcode"), {
+                    text: "${agentUrl}",
+                    width: 250,
+                    height: 250
+                  });
+                  window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 500);
+                  }
+                </script>
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+        };
+
+        return (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+            padding: "1rem"
+          }}>
+            <div style={{
+              background: "#fff",
+              padding: "2rem",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "450px",
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)",
+              position: "relative",
+              textAlign: "center"
+            }}>
+              <button
+                type="button"
+                onClick={() => setQrPartnerModal(null)}
+                style={{
+                  position: "absolute",
+                  top: "12px",
+                  right: "12px",
+                  background: "none",
+                  border: "none",
+                  fontSize: "1.25rem",
+                  cursor: "pointer",
+                  color: "#64748b"
+                }}
+              >
+                <X size={20} />
+              </button>
+
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "bold", color: "#0f172a", marginBottom: "4px" }}>
+                {lang === "la" ? "ຄິວອາໂຄ້ດສຳລັບເອເຈນ" : lang === "th" ? "คิวอาร์โค้ดสำหรับเอเจนท์" : "Agent QR Code"}
+              </h3>
+              <p style={{ fontSize: "0.85rem", color: "#64748b", marginBottom: "1.5rem" }}>
+                {lang === "la" ? "ໃຫ້ເອເຈນສະແກນເພື່ອລົງທະບຽນ ແລະ ກອກຂໍ້ມູນລູກຄ້າ" : lang === "th" ? "ให้เอเจนท์สแกนเพื่อลงทะเบียนและกรอกข้อมูลลูกค้า" : "Send this QR or link to the agent to fill customer details."}
+              </p>
+
+              <div style={{
+                background: "#f8fafc",
+                padding: "20px",
+                borderRadius: "12px",
+                display: "inline-block",
+                border: "1px dashed #cbd5e1",
+                marginBottom: "1rem"
+              }}>
+                <QRCodeSVG value={agentUrl} size={200} />
+              </div>
+
+              <div style={{ fontWeight: "bold", color: "#0f172a", fontSize: "1.05rem" }}>
+                {qrPartnerModal.name}
+              </div>
+              <div style={{ fontSize: "0.8rem", color: "#64748b", fontFamily: "monospace", marginBottom: "1.5rem" }}>
+                Code: {qrPartnerModal.id}
+              </div>
+
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                background: "#f1f5f9",
+                borderRadius: "8px",
+                padding: "8px 12px",
+                fontSize: "0.8rem",
+                color: "#475569",
+                fontFamily: "monospace",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+                marginBottom: "1rem",
+                border: "1px solid #e2e8f0"
+              }}>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", flex: 1, textAlign: "left" }}>
+                  {agentUrl}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: copied ? "#0f766e" : "#64748b",
+                    marginLeft: "8px",
+                    display: "flex",
+                    alignItems: "center"
+                  }}
+                  title="Copy Link"
+                >
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                </button>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    borderRadius: "8px",
+                    background: "#0f766e",
+                    border: "none",
+                    color: "#fff",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px"
+                  }}
+                >
+                  <Printer size={16} />
+                  {lang === "la" ? "ພິມປ້າຍ QR" : lang === "th" ? "พิมพ์ป้าย QR" : "Print QR Sign"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQrPartnerModal(null)}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    borderRadius: "8px",
+                    background: "#cbd5e1",
+                    border: "none",
+                    color: "#475569",
+                    fontWeight: "bold",
+                    cursor: "pointer"
+                  }}
+                >
+                  {lang === "la" ? "ປິດ" : lang === "th" ? "ปิด" : "Close"}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
       </div>
     </div>
   );

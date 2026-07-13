@@ -850,13 +850,13 @@ export default function SettingsPanel({ currentUser }) {
                     />
                   </div>
                   <div className="form-group">
-                    <label style={{ fontSize: "0.8rem", fontWeight: "700" }}>{t("login_email", "ອີເມວເຂົ້າໃຊ້ງານ / Login Email")}</label>
+                    <label style={{ fontSize: "0.8rem", fontWeight: "700" }}>{t("login_email", "ຊື່ເຂົ້າໃຊ້ງານ / Username")}</label>
                     <input 
-                      type="email"
+                      type="text"
                       className="form-control"
                       value={addEmail}
                       onChange={(e) => setAddEmail(e.target.value)}
-                      placeholder="somjai@tadfane.com"
+                      placeholder="somjai"
                       required
                     />
                   </div>
@@ -904,7 +904,7 @@ export default function SettingsPanel({ currentUser }) {
                         <tr style={{ borderBottom: "2px solid var(--border-color)", textAlign: "left" }}>
                           <th style={{ padding: "8px 5px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>{t("role_header", "ບົດບາດ / Role")}</th>
                           <th style={{ padding: "8px 5px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>{t("employee_name_header", "ຊື່ພະນັກງານ / Name")}</th>
-                          <th style={{ padding: "8px 5px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>{t("email_header", "ອີເມວ / Email")}</th>
+                          <th style={{ padding: "8px 5px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>{t("email_header", "ຊື່ເຂົ້າໃຊ້ / Username")}</th>
                           <th style={{ padding: "8px 5px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>{t("password", "ລະຫັດຜ່ານ / Password")}</th>
                           <th style={{ padding: "8px 5px", fontSize: "0.8rem", color: "var(--text-secondary)", textAlign: "center" }}>{t("permissions_header", "ຈັດການສິດ / Permissions")}</th>
                           <th style={{ padding: "8px 5px", fontSize: "0.8rem", color: "var(--text-secondary)", textAlign: "center" }}>{t("delete_header", "ລຶບ / Del")}</th>
@@ -939,7 +939,7 @@ export default function SettingsPanel({ currentUser }) {
                             </td>
                             <td style={{ padding: "6px 5px" }}>
                               <input 
-                                type="email" 
+                                type="text" 
                                 className="form-control" 
                                 style={{ padding: "4px 8px", fontSize: "0.8rem", borderRadius: "4px" }}
                                 value={usr.email}

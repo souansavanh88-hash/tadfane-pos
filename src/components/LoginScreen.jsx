@@ -16,14 +16,17 @@ export default function LoginScreen({ onLoginSuccess }) {
     if (e) e.preventDefault();
     setError("");
 
-    const matchedUser = db.users.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
-    );
+    const inputVal = email.trim().toLowerCase();
+    const matchedUser = db.users.find((u) => {
+      const dbEmail = u.email.toLowerCase();
+      const dbUsername = dbEmail.split("@")[0];
+      return (dbEmail === inputVal || dbUsername === inputVal) && u.password === password;
+    });
 
     if (matchedUser) {
       onLoginSuccess(matchedUser);
     } else {
-      setError(t("login_error", "ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ!"));
+      setError(t("login_error", "ອີເມວ/ຊື່ຜູ້ໃຊ້ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ!"));
     }
   };
 
@@ -121,12 +124,12 @@ export default function LoginScreen({ onLoginSuccess }) {
         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            <label style={labelStyle}>{t("login_email_label", "ອີເມວພະນັກງານ / Email Address")}</label>
+            <label style={labelStyle}>{t("login_email_label", "ຊື່ຜູ້ໃຊ້ ຫຼື ອີເມວ / Username or Email")}</label>
             <div style={inputWrapperStyle}>
               <Mail size={18} color="#10b981" style={{ marginLeft: "12px" }} />
               <input 
-                type="email" 
-                placeholder="example@tadfane.com"
+                type="text" 
+                placeholder="admin / example@tadfane.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 style={inputStyle}

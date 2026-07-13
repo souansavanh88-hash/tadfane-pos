@@ -594,6 +594,15 @@ export default function SelfRegisterPortal() {
   const [regSuccess, setRegSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [searchMode, setSearchMode] = useState("customer"); // "customer" or "agent"
+  const [agentCodeInput, setAgentCodeInput] = useState("");
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [agentPaxCount, setAgentPaxCount] = useState(1);
+  const [agentServiceId, setAgentServiceId] = useState("");
+  const [agentTripDate, setAgentTripDate] = useState(new Date().toISOString().split("T")[0]);
+  const [agentTripTime, setAgentTripTime] = useState("09:00");
+  const [agentError, setAgentError] = useState("");
+
   // Scanner Modal state
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannerPaxIndex, setScannerPaxIndex] = useState(0);
@@ -700,6 +709,104 @@ export default function SelfRegisterPortal() {
   }, []);
 
   // Auto-save draft effect removed in single passenger registration mode
+
+  // Auto-detect agent from partnerId URL parameter
+  useEffect(() => {
+    const pId = params.get("partnerId");
+    if (pId && !initialGroupId) {
+      setSearchMode("agent");
+      const matched = db.partners?.find(p => p.id.toLowerCase() === pId.toLowerCase() && p.type === "agent");
+      if (matched) {
+        setSelectedAgent(matched);
+        setAgentCodeInput(matched.id);
+        const firstService = db.services?.find(s => s.status === "active");
+        if (firstService) {
+          setAgentServiceId(firstService.id);
+        }
+      }
+    }
+  }, [db]);
+
+  const handleVerifyAgent = (e) => {
+    if (e) e.preventDefault();
+    setAgentError("");
+    setSelectedAgent(null);
+
+    const code = agentCodeInput.trim().toUpperCase();
+    if (!code) return;
+
+    const found = db.partners?.find(p => 
+      p.type === "agent" && (
+        p.id.toUpperCase() === code || 
+        p.id.toUpperCase() === `PTN-${code.padStart(3, "0")}` ||
+        p.name.toLowerCase().includes(code.toLowerCase())
+      )
+    );
+
+    if (found) {
+      setSelectedAgent(found);
+      const firstService = db.services?.find(s => s.status === "active");
+      if (firstService) {
+        setAgentServiceId(firstService.id);
+      }
+    } else {
+      setAgentError(lang === "la" ? "ບໍ່ພົບລະຫັດເອເຈນນີ້! ກະລຸນາກວດສອບຄືນ." : "Agent code not found. Please try again.");
+    }
+  };
+
+  const handleCreateAgentBooking = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedAgent) return;
+
+    const matchedService = db.services?.find(s => s.id === agentServiceId);
+    if (!matchedService) {
+      alert("Please select a service.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    const generatedGroupId = `REG-${Math.floor(1000 + Math.random() * 9000)}`;
+    const generatedBookingId = `BK-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newBooking = {
+      id: generatedBookingId,
+      partnerId: selectedAgent.id,
+      partnerName: selectedAgent.name,
+      bookingSource: "agent",
+      paxCount: agentPaxCount,
+      date: agentTripDate,
+      time: agentTripTime,
+      serviceId: matchedService.id,
+      serviceName: matchedService.name,
+      pricePerPax: matchedService.price,
+      pricePaidLAK: matchedService.currency === "LAK" ? (matchedService.price * agentPaxCount) : 0,
+      pricePaidTHB: matchedService.currency === "THB" ? (matchedService.price * agentPaxCount) : 0,
+      paymentMethod: "cash",
+      billNumber: `BILL-${Math.floor(100000 + Math.random() * 900000)}-${Math.floor(100 + Math.random() * 900)}`,
+      status: "รอลูกค้ากรอกข้อมูล",
+      groupId: generatedGroupId,
+      passengers: [],
+      createdAt: new Date().toISOString()
+    };
+
+    const currentDb = getDb();
+    currentDb.bookings = [newBooking, ...(currentDb.bookings || [])];
+    saveDb(currentDb);
+    setDb(currentDb);
+
+    if (isFirebaseConfigured()) {
+      try {
+        const { updateBookingInFirebase } = await import("../db/firebaseSync");
+        await updateBookingInFirebase(newBooking);
+      } catch (err) {
+        console.error("Failed to push agent booking to Firebase:", err);
+      }
+    }
+
+    setIsLoading(false);
+    setActiveGroupId(generatedGroupId);
+  };
 
   // Lookup booking: Firebase first (works on Vercel), then local server, then URL fallback
   useEffect(() => {
@@ -1373,37 +1480,203 @@ export default function SelfRegisterPortal() {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSearchCode} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{ textAlign: "center", padding: "1rem 0" }}>
-                <AlertTriangle size={32} color="#b45309" style={{ margin: "0 auto 0.75rem auto" }} />
-                <div style={{ fontSize: "0.9rem", color: "#475569", fontWeight: "600", marginBottom: "0.5rem" }}>
-                  {t.enterCode}
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <input
-                    type="text"
-                    className="form-control"
-                    style={{ flex: 1, textTransform: "uppercase", textAlign: "center", fontWeight: "800", height: "42px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", fontSize: "16px" }}
-                    value={groupIdInput}
-                    onChange={(e) => setGroupIdInput(e.target.value)}
-                    placeholder="e.g. REG-3244"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    style={{ padding: "0 16px", borderRadius: "8px", background: "#0f766e", border: "none", color: "#fff", fontWeight: "bold", cursor: "pointer" }}
-                  >
-                    {t.search}
-                  </button>
-                </div>
-                {lookupError && (
-                  <div style={{ color: "#be123c", fontSize: "0.8rem", marginTop: "8px", fontWeight: "600" }}>
-                    {t.invalidCode}
-                  </div>
-                )}
+            <div>
+              {/* Tab Selector */}
+              <div style={{ display: "flex", borderBottom: "1px solid #cbd5e1", marginBottom: "1rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setSearchMode("customer")}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    fontWeight: "bold",
+                    background: "none",
+                    border: "none",
+                    borderBottom: searchMode === "customer" ? "3px solid #0f766e" : "none",
+                    color: searchMode === "customer" ? "#0f766e" : "#64748b",
+                    cursor: "pointer",
+                    fontSize: "0.9rem"
+                  }}
+                >
+                  {lang === "la" ? "ລູກຄ້າລົງທະບຽນ" : lang === "th" ? "ลูกค้าลงทะเบียน" : "Customer Register"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchMode("agent")}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    fontWeight: "bold",
+                    background: "none",
+                    border: "none",
+                    borderBottom: searchMode === "agent" ? "3px solid #0f766e" : "none",
+                    color: searchMode === "agent" ? "#0f766e" : "#64748b",
+                    cursor: "pointer",
+                    fontSize: "0.9rem"
+                  }}
+                >
+                  {lang === "la" ? "ສຳລັບເອເຈນ" : lang === "th" ? "สำหรับเอเจนท์" : "For Agents"}
+                </button>
               </div>
-            </form>
+
+              {searchMode === "customer" ? (
+                <form onSubmit={handleSearchCode} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div style={{ textAlign: "center", padding: "1rem 0" }}>
+                    <AlertTriangle size={32} color="#b45309" style={{ margin: "0 auto 0.75rem auto" }} />
+                    <div style={{ fontSize: "0.9rem", color: "#475569", fontWeight: "600", marginBottom: "0.5rem" }}>
+                      {t.enterCode}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        style={{ flex: 1, textTransform: "uppercase", textAlign: "center", fontWeight: "800", height: "42px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", fontSize: "16px" }}
+                        value={groupIdInput}
+                        onChange={(e) => setGroupIdInput(e.target.value)}
+                        placeholder="e.g. REG-3244"
+                        required
+                      />
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        style={{ padding: "0 16px", borderRadius: "8px", background: "#0f766e", border: "none", color: "#fff", fontWeight: "bold", cursor: "pointer" }}
+                      >
+                        {t.search}
+                      </button>
+                    </div>
+                    {lookupError && (
+                      <div style={{ color: "#be123c", fontSize: "0.8rem", marginTop: "8px", fontWeight: "600" }}>
+                        {t.invalidCode}
+                      </div>
+                    )}
+                  </div>
+                </form>
+              ) : (
+                /* Agent mode */
+                <div style={{ padding: "0.5rem 0" }}>
+                  {!selectedAgent ? (
+                    <form onSubmit={handleVerifyAgent} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: "0.9rem", color: "#475569", fontWeight: "600", marginBottom: "0.5rem" }}>
+                          {lang === "la" ? "ປ້ອນລະຫັດເອເຈນ (Agent Code)" : lang === "th" ? "ป้อนรหัสเอเจนท์ (Agent Code)" : "Enter Agent Code"}
+                        </div>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <input
+                            type="text"
+                            className="form-control"
+                            style={{ flex: 1, textTransform: "uppercase", textAlign: "center", fontWeight: "800", height: "42px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", fontSize: "16px" }}
+                            value={agentCodeInput}
+                            onChange={(e) => setAgentCodeInput(e.target.value)}
+                            placeholder="e.g. PTN-001 or NOY"
+                            required
+                          />
+                          <button
+                            type="submit"
+                            className="btn btn-primary"
+                            style={{ padding: "0 16px", borderRadius: "8px", background: "#0f766e", border: "none", color: "#fff", fontWeight: "bold", cursor: "pointer" }}
+                          >
+                            {lang === "la" ? "ກວດສອບ" : lang === "th" ? "ตรวจสอบ" : "Verify"}
+                          </button>
+                        </div>
+                        {agentError && (
+                          <div style={{ color: "#be123c", fontSize: "0.8rem", marginTop: "8px", fontWeight: "600" }}>
+                            {agentError}
+                          </div>
+                        )}
+                      </div>
+                    </form>
+                  ) : (
+                    /* Agent verified, show booking form */
+                    <form onSubmit={handleCreateAgentBooking} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                      <div style={{ background: "#e0f2fe", padding: "10px", borderRadius: "8px", border: "1px solid #bae6fd", fontSize: "0.85rem", color: "#0369a1", fontWeight: "bold", textAlign: "center" }}>
+                        ✅ {lang === "la" ? "ກວດສອບເອເຈນສຳເລັດ:" : lang === "th" ? "ตรวจสอบเอเจนท์สำเร็จ:" : "Agent Verified:"} {selectedAgent.name}
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                        <label style={{ fontSize: "0.8rem", fontWeight: "700", color: "#475569" }}>
+                          {lang === "la" ? "ຈຳນວນລູກຄ້າ (Pax)" : lang === "th" ? "จำนวนลูกค้า (Pax)" : "Number of Passengers (Pax)"}
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          className="form-control"
+                          style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", outline: "none", fontSize: "16px" }}
+                          value={agentPaxCount}
+                          onChange={(e) => setAgentPaxCount(parseInt(e.target.value) || 1)}
+                          required
+                        />
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                        <label style={{ fontSize: "0.8rem", fontWeight: "700", color: "#475569" }}>
+                          {lang === "la" ? "ເລືອກກິດຈະກຳ / ບໍລິການ" : lang === "th" ? "เลือกกิจกรรม / บริการ" : "Select Service / Activity"}
+                        </label>
+                        <select
+                          className="form-control"
+                          style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", outline: "none", fontSize: "16px" }}
+                          value={agentServiceId}
+                          onChange={(e) => setAgentServiceId(e.target.value)}
+                          required
+                        >
+                          {(db.services || []).filter(s => s.status === "active").map(s => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} ({s.price.toLocaleString()} {s.currency})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div style={{ display: "flex", gap: "10px" }}>
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                          <label style={{ fontSize: "0.8rem", fontWeight: "700", color: "#475569" }}>
+                            {lang === "la" ? "ວັນທີ" : lang === "th" ? "วันที่" : "Trip Date"}
+                          </label>
+                          <input
+                            type="date"
+                            className="form-control"
+                            style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", outline: "none", fontSize: "16px" }}
+                            value={agentTripDate}
+                            onChange={(e) => setAgentTripDate(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                          <label style={{ fontSize: "0.8rem", fontWeight: "700", color: "#475569" }}>
+                            {lang === "la" ? "ເວລາ" : lang === "th" ? "เวลา" : "Trip Time"}
+                          </label>
+                          <input
+                            type="time"
+                            className="form-control"
+                            style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", outline: "none", fontSize: "16px" }}
+                            value={agentTripTime}
+                            onChange={(e) => setAgentTripTime(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: "8px", marginTop: "0.5rem" }}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAgent(null)}
+                          style={{ flex: 1, padding: "10px", borderRadius: "8px", background: "#cbd5e1", border: "none", color: "#475569", fontWeight: "bold", cursor: "pointer" }}
+                        >
+                          {lang === "la" ? "ຍ້ອນກັບ" : lang === "th" ? "ย้อนกลับ" : "Back"}
+                        </button>
+                        <button
+                          type="submit"
+                          style={{ flex: 2, padding: "10px", borderRadius: "8px", background: "#0f766e", border: "none", color: "#fff", fontWeight: "bold", cursor: "pointer" }}
+                        >
+                          {lang === "la" ? "ສ້າງກຸ່ມ ແລະ ກອກຂໍ້ມູນ ➔" : lang === "th" ? "สร้างกลุ่ม & กรอกข้อมูล ➔" : "Create Group & Fill ➔"}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+            </div>
           )
         ) : (
           /* Booking Found! Proceed to Registration Flow */

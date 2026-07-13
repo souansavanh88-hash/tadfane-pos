@@ -34,11 +34,11 @@ const translations = {
     logout: "Logout",
 
     // Login screen
-    login_email_label: "Employee Email / Email Address",
+    login_email_label: "Username or Email Address",
     login_password_label: "Password",
     login_btn: "Sign In",
     demo_accounts: "Quick Test Accounts",
-    login_error: "Invalid email or password!",
+    login_error: "Invalid username/email or password!",
 
     // Inactivity warning
     inactivity_warning_title: "Session Warning",
@@ -88,7 +88,7 @@ const translations = {
     user_deleted_success: "User deleted! (Click Save Accounts below to commit)",
     add_activity: "Add Activity",
     update_activity: "Update Activity",
-    login_email: "Login Email",
+    login_email: "Username",
     password: "Password",
     min_characters: "At least 6 characters",
 
@@ -338,12 +338,11 @@ const translations = {
     settings: "ຕັ້ງຄ່າ",
     logout: "ອອກຈາກລະບົບ",
 
-    // Login screen
-    login_email_label: "ອີເມວພະນັກງານ / Email Address",
+    login_email_label: "ຊື່ເຂົ້າໃຊ້ ຫຼື ອີເມວ / Username or Email",
     login_password_label: "ລະຫັດຜ່ານ / Password",
     login_btn: "ເຂົ້າສູ່ລະບົບ / Sign In",
     demo_accounts: "ບັນຊີທົດລອງໃຊ້ງານ / Quick Test Accounts",
-    login_error: "ອີເມວ ຫຼື ຣະຫັດຜ່ານບໍ່ຖືກຕ້ອງ!",
+    login_error: "ຊື່ຜູ້ໃຊ້/ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ!",
 
     // Inactivity warning
     inactivity_warning_title: "ແຈ້ງເຕືອນໝົດເວລາໃຊ້ງານ",
@@ -393,7 +392,7 @@ const translations = {
     user_deleted_success: "ລົບບັນຊີສຳເລັດ! (ກົດບັນທຶກບັນຊີດ້ານລຸ່ມເພື່ອບັນທຶກ)",
     add_activity: "ເພີ່ມກິດຈະກຳ / Add Activity",
     update_activity: "ບັນທຶກການແກ້ໄຂ / Update Activity",
-    login_email: "ອີເມວເຂົ້າໃຊ້ງານ / Login Email",
+    login_email: "ຊື່ເຂົ້າໃຊ້ງານ / Username",
     password: "ລະຫັດຜ່ານ / Password",
     min_characters: "ຢ່າງໜ້ອຍ 6 ຕົວອັກສອນ",
 
@@ -643,12 +642,11 @@ const translations = {
     settings: "ตั้งค่า",
     logout: "ออกจากระบบ",
 
-    // Login screen
-    login_email_label: "อีเมลพนักงาน / Email Address",
+    login_email_label: "ชื่อผู้ใช้ หรือ อีเมล / Username or Email",
     login_password_label: "รหัสผ่าน",
     login_btn: "เข้าสู่ระบบ",
     demo_accounts: "บัญชีทดลองใช้งาน",
-    login_error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง!",
+    login_error: "ชื่อผู้ใช้/อีเมล หรือ รหัสผ่านไม่ถูกต้อง!",
 
     // Inactivity warning
     inactivity_warning_title: "แจ้งเตือนหมดเวลาใช้งาน",
@@ -698,7 +696,7 @@ const translations = {
     user_deleted_success: "ลบบัญชีสำเร็จ! (คลิกบันทึกบัญชีด้านล่างเพื่อยืนยัน)",
     add_activity: "เพิ่มกิจกรรม",
     update_activity: "บันทึกการแก้ไข",
-    login_email: "อีเมลเข้าใช้งาน",
+    login_email: "ชื่อผู้ใช้งาน / Username",
     password: "รหัสผ่าน",
     min_characters: "อย่างน้อย 6 ตัวอักษร",
 
