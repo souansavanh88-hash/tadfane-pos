@@ -625,7 +625,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       return count >= 3 ? 780 : 1900;
     }
     const service = db.services?.find(s => s.id === serviceId) || db.services?.[0];
-    return service ? service.price : 250000;
+    if (service) {
+      if (count >= 3) return service.priceTier3 || service.price;
+      return service.priceTier1 || service.price;
+    }
+    return 250000;
   };
 
   // Get tiered price helper based on passenger count and service currency/type selection
@@ -671,15 +675,32 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       }
     } else {
       const service = db.services.find(s => s.id === serviceId) || db.services[0];
-      const basePrice = hasCustom ? customVal : (service.price || 250000);
-      const totalLAK = basePrice * count;
+      
+      // Determine base price based on selected tier
+      let defaultPrice = service.price || 250000;
+      if (tier === "tier3") {
+        defaultPrice = service.priceTier3 || defaultPrice;
+      } else if (tier === "tier2") {
+        defaultPrice = service.priceTier2 || defaultPrice;
+      } else {
+        defaultPrice = service.priceTier1 || defaultPrice;
+      }
+
+      const basePrice = hasCustom ? customVal : defaultPrice;
+      const isTHB = service.currency === "THB";
+      const isFlat = service.priceTier1Type === "flat";
+      
+      const total = isFlat ? basePrice : (basePrice * count);
+      
       return {
-        totalLAK,
-        pricePerPaxLAK: basePrice,
+        totalLAK: isTHB ? total * rateTHB : total,
+        pricePerPaxLAK: isTHB 
+          ? (isFlat ? (basePrice / (count || 1)) * rateTHB : basePrice * rateTHB)
+          : (isFlat ? (basePrice / (count || 1)) : basePrice),
         rawPrice: basePrice,
-        rawTotal: totalLAK,
-        currency: "LAK",
-        isFlat: false
+        rawTotal: total,
+        currency: service.currency || "LAK",
+        isFlat: isFlat
       };
     }
   };
@@ -1840,171 +1861,62 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
               </div>
             </div>
 
-            {/* Service selection blocks instead of dropdown */}
+            {/* Service selection blocks */}
             <div style={{ marginBottom: "15px" }}>
               <label style={{ ...fieldLabelStyle, marginBottom: "8px", display: "block" }}>ປະເພດການບໍລິການ / Activity Service</label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                
-                {/* Block 1: Waterfall Rappelling */}
-                <div 
-                  style={{
-                    border: selectedServiceId === "SRV-004" ? "2px solid #10b981" : "1.5px solid #cbd5e1",
-                    borderRadius: "12px",
-                    padding: "12px",
-                    background: selectedServiceId === "SRV-004" ? "#e6fbf1" : "#ffffff",
-                    boxShadow: selectedServiceId === "SRV-004" ? "0 4px 12px rgba(16, 185, 129, 0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
-                    transition: "all 0.2s ease",
-                    cursor: isLocked ? "not-allowed" : "pointer"
-                  }}
-                  onClick={() => {
-                    if (!isLocked) {
-                      setSelectedServiceId("SRV-004");
-                      setSelectedTier(paxCount >= 3 ? "tier3" : "tier1");
-                      setCustomPricePerPax("");
-                    }
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "800", color: "#0f766e", fontSize: "0.9rem", marginBottom: "10px" }}>
-                    <span>🧗</span>
-                    <span>Waterfall Rappelling</span>
-                  </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px" }}>
+                {(db.services || []).filter(s => s.status === "active").map(srv => {
+                  const isSelected = selectedServiceId === srv.id;
+                  let emoji = "🎟️";
+                  if (srv.name.toLowerCase().includes("boat") || srv.name.includes("ເຮືອ")) emoji = "🚤";
+                  else if (srv.name.toLowerCase().includes("rap") || srv.name.includes("🧗")) emoji = "🧗";
+                  else if (srv.name.toLowerCase().includes("hik") || srv.name.includes("ເດີນ") || srv.name.includes("🥾")) emoji = "🥾";
+                  else if (srv.name.toLowerCase().includes("zip") || srv.name.includes("ສະລິງ")) emoji = "🧗";
                   
-                  {/* Option 1: 1-2 pax */}
-                  <div 
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "8px 10px",
-                      borderRadius: "8px",
-                      background: (selectedServiceId === "SRV-004" && selectedTier === "tier1") ? "#d1fae5" : "transparent",
-                      border: (selectedServiceId === "SRV-004" && selectedTier === "tier1") ? "1.5px solid #10b981" : "1.5px solid transparent",
-                      marginBottom: "6px"
-                    }}
-                  >
-                    <div style={{
-                      width: "18px",
-                      height: "18px",
-                      borderRadius: "50%",
-                      border: (selectedServiceId === "SRV-004" && selectedTier === "tier1") ? "2px solid #10b981" : "2px solid #cbd5e1",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: (selectedServiceId === "SRV-004" && selectedTier === "tier1") ? "#10b981" : "#ffffff"
-                    }}>
-                      {(selectedServiceId === "SRV-004" && selectedTier === "tier1") && <span style={{ color: "#ffffff", fontSize: "0.65rem", fontWeight: "900" }}>✓</span>}
-                    </div>
-                    <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#1e293b" }}>{lang === "en" ? "1-2 Pax: 1,580 THB/pax" : "1-2 ທ່ານ: 1,580 THB/ທ່ານ"}</span>
-                  </div>
-
-                  {/* Option 2: 3+ pax */}
-                  <div 
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "8px 10px",
-                      borderRadius: "8px",
-                      background: (selectedServiceId === "SRV-004" && selectedTier === "tier3") ? "#d1fae5" : "transparent",
-                      border: (selectedServiceId === "SRV-004" && selectedTier === "tier3") ? "1.5px solid #10b981" : "1.5px solid transparent",
-                    }}
-                  >
-                    <div style={{
-                      width: "18px",
-                      height: "18px",
-                      borderRadius: "50%",
-                      border: (selectedServiceId === "SRV-004" && selectedTier === "tier3") ? "2px solid #10b981" : "2px solid #cbd5e1",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: (selectedServiceId === "SRV-004" && selectedTier === "tier3") ? "#10b981" : "#ffffff"
-                    }}>
-                      {(selectedServiceId === "SRV-004" && selectedTier === "tier3") && <span style={{ color: "#ffffff", fontSize: "0.65rem", fontWeight: "900" }}>✓</span>}
-                    </div>
-                    <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#1e293b" }}>{lang === "en" ? "3+ Pax: 1,120 THB/pax" : "3 ທ່ານຂຶ້ນໄປ: 1,120 THB/ທ່ານ"}</span>
-                  </div>
-                </div>
-
-                {/* Block 2: Adventure Boat */}
-                <div 
-                  style={{
-                    border: selectedServiceId === "SRV-005" ? "2px solid #10b981" : "1.5px solid #cbd5e1",
-                    borderRadius: "12px",
-                    padding: "12px",
-                    background: selectedServiceId === "SRV-005" ? "#e6fbf1" : "#ffffff",
-                    boxShadow: selectedServiceId === "SRV-005" ? "0 4px 12px rgba(16, 185, 129, 0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
-                    transition: "all 0.2s ease",
-                    cursor: isLocked ? "not-allowed" : "pointer"
-                  }}
-                  onClick={() => {
-                    if (!isLocked) {
-                      setSelectedServiceId("SRV-005");
-                      setSelectedTier(paxCount >= 3 ? "tier3" : "tier1");
-                      setCustomPricePerPax("");
-                    }
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "800", color: "#0f766e", fontSize: "0.9rem", marginBottom: "10px" }}>
-                    <span>🚤</span>
-                    <span>Adventure Boat</span>
-                  </div>
+                  const p1 = srv.priceTier1 || srv.price || 0;
+                  const p3 = srv.priceTier3 || srv.price || 0;
+                  const isFlat = srv.priceTier1Type === "flat";
+                  const unit = isFlat ? (lang === "en" ? "round" : "ຮອບ") : (lang === "en" ? "pax" : "ທ່ານ");
                   
-                  {/* Option 1: 1-2 pax */}
-                  <div 
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "8px 10px",
-                      borderRadius: "8px",
-                      background: (selectedServiceId === "SRV-005" && selectedTier === "tier1") ? "#d1fae5" : "transparent",
-                      border: (selectedServiceId === "SRV-005" && selectedTier === "tier1") ? "1.5px solid #10b981" : "1.5px solid transparent",
-                      marginBottom: "6px"
-                    }}
-                  >
-                    <div style={{
-                      width: "18px",
-                      height: "18px",
-                      borderRadius: "50%",
-                      border: (selectedServiceId === "SRV-005" && selectedTier === "tier1") ? "2px solid #10b981" : "2px solid #cbd5e1",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: (selectedServiceId === "SRV-005" && selectedTier === "tier1") ? "#10b981" : "#ffffff"
-                    }}>
-                      {(selectedServiceId === "SRV-005" && selectedTier === "tier1") && <span style={{ color: "#ffffff", fontSize: "0.65rem", fontWeight: "900" }}>✓</span>}
+                  return (
+                    <div 
+                      key={srv.id}
+                      style={{
+                        border: isSelected ? "2px solid #10b981" : "1.5px solid #cbd5e1",
+                        borderRadius: "12px",
+                        padding: "12px",
+                        background: isSelected ? "#e6fbf1" : "#ffffff",
+                        boxShadow: isSelected ? "0 4px 12px rgba(16, 185, 129, 0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
+                        transition: "all 0.2s ease",
+                        cursor: isLocked ? "not-allowed" : "pointer"
+                      }}
+                      onClick={() => {
+                        if (!isLocked) {
+                          setSelectedServiceId(srv.id);
+                          setSelectedTier(paxCount >= 3 ? "tier3" : "tier1");
+                          setCustomPricePerPax("");
+                        }
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "800", color: "#0f766e", fontSize: "0.9rem", marginBottom: "10px" }}>
+                        <span>{emoji}</span>
+                        <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{srv.name}</span>
+                      </div>
+                      
+                      {/* Price Options */}
+                      <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                        <div style={{ marginBottom: "4px" }}>
+                          <strong>{lang === "en" ? "1-2 Pax:" : "1-2 ທ່ານ:"}</strong> {p1.toLocaleString()} {srv.currency}/{unit}
+                        </div>
+                        {p3 !== p1 && (
+                          <div>
+                            <strong>{lang === "en" ? "3+ Pax:" : "3 ທ່ານຂຶ້ນໄປ:"}</strong> {p3.toLocaleString()} {srv.currency}/{unit}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#1e293b" }}>{lang === "en" ? "1-2 Pax: 1,900 THB/round" : "1-2 ທ່ານ: 1,900 THB/ຮອບ"}</span>
-                  </div>
-
-                  {/* Option 2: 3+ pax */}
-                  <div 
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "8px 10px",
-                      borderRadius: "8px",
-                      background: (selectedServiceId === "SRV-005" && selectedTier === "tier3") ? "#d1fae5" : "transparent",
-                      border: (selectedServiceId === "SRV-005" && selectedTier === "tier3") ? "1.5px solid #10b981" : "1.5px solid transparent",
-                    }}
-                  >
-                    <div style={{
-                      width: "18px",
-                      height: "18px",
-                      borderRadius: "50%",
-                      border: (selectedServiceId === "SRV-005" && selectedTier === "tier3") ? "2px solid #10b981" : "2px solid #cbd5e1",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: (selectedServiceId === "SRV-005" && selectedTier === "tier3") ? "#10b981" : "#ffffff"
-                    }}>
-                      {(selectedServiceId === "SRV-005" && selectedTier === "tier3") && <span style={{ color: "#ffffff", fontSize: "0.65rem", fontWeight: "900" }}>✓</span>}
-                    </div>
-                    <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#1e293b" }}>{lang === "en" ? "3+ Pax: 780 THB/pax" : "3 ທ່ານຂຶ້ນໄປ: 780 THB/ທ່ານ"}</span>
-                  </div>
-                </div>
-
+                  );
+                })}
               </div>
             </div>
 
