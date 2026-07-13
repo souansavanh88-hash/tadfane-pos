@@ -434,6 +434,14 @@ export default function SettingsPanel({ currentUser }) {
     }
   };
 
+  const handleForcePullCloud = () => {
+    if (window.confirm(lang === "en" ? "Force pull database from Cloud? This will delete local cache on this device and load the latest data from the Cloud." : "🚨 ທ່ານຕ້ອງການດຶງຂໍ້ມູນຫຼ້າສຸດຈາກ Cloud ແມ່ນບໍ່? ການດຳເນີນການນີ້ຈະລຶບຂໍ້ມູນແຄຊໃນເຄື່ອງນີ້ ແລະ ດຶງຂໍ້ມູນຫຼ້າສຸດຈາກ Cloud ມາແທນທີ່.")) {
+      localStorage.removeItem("pos_tadfane_db");
+      localStorage.removeItem("pos_local_db_backup");
+      window.location.reload();
+    }
+  };
+
   const handlePurgeTestData = async () => {
     if (window.confirm(lang === "en" ? "Are you sure you want to clear all sales data? (Agents, employees, and settings will not be deleted)" : "ທ່ານຕ້ອງການລຶບຂໍ້ມູນການຂາຍທັງໝົດແມ່ນບໍ່? (ເອເຈນ, ພະນັກງານ ແລະ ການຕັ້ງຄ່າຈະບໍ່ຖືກລຶບ)")) {
       purgeTestData();
@@ -770,6 +778,15 @@ export default function SettingsPanel({ currentUser }) {
               onClick={handleRestoreBackup}
             >
               🕒 ກູ້ຄືນຂໍ້ມູນສຳຮອງ (Restore Local Backup)
+            </button>
+
+            <button 
+              type="button" 
+              className="btn" 
+              style={{ width: "100%", marginBottom: "12px", background: "#10b981", color: "white", fontWeight: "bold" }}
+              onClick={handleForcePullCloud}
+            >
+              📥 ດຶງຂໍ້ມູນຫຼ້າສຸດຈາກ Cloud (Force Pull Cloud Data)
             </button>
 
             <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "1rem" }}>
