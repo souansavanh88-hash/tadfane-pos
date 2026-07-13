@@ -326,6 +326,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   // Time clock
   const [currentTimeStr, setCurrentTimeStr] = useState("");
   const [isPrintLoading, setIsPrintLoading] = useState(false);
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false);
 
   // 1. Clock interval
   useEffect(() => {
@@ -1112,9 +1113,35 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const triggerReceiptPrint = (overrideBooking = null) => printViaIframe('receipt', overrideBooking);
   const triggerQrSlipPrint = (overrideBooking = null) => printViaIframe('qr_slip', overrideBooking);
 
+  const resetForm = () => {
+    setPartnerId("");
+    setPaxCount(1);
+    const d = new Date();
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - (offset * 60 * 1000));
+    setDate(local.toISOString().split("T")[0]);
+    const hours = String(d.getHours()).padStart(2, "0");
+    const mins = String(d.getMinutes()).padStart(2, "0");
+    setTime(`${hours}:${mins}`);
+    setIsDateManual(false);
+    setIsTimeManual(false);
+    setSelectedServiceId("SRV-004");
+    setSelectedTier("tier1");
+    setCustomPricePerPax("");
+    setDiscountAmount(0);
+    setDiscountMode("lak");
+    setDebtAmount(0);
+    setPaymentMethod("cash");
+    setPaymentCurrency("LAK");
+    setLoadedBooking(null);
+  };
+
   // Handles creating a new booking in "registering"
   const handleCreateBooking = async (e) => {
     if (e) e.preventDefault();
+    if (isCreatingBooking) return;
+    setIsCreatingBooking(true);
+
     try {
       const currentDb = getDb();
       const isAgent = partnerId !== "";
@@ -1169,8 +1196,15 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       // Generate new group ID and bill number for next customer
       setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
       setBillNumber(generateBillId());
+
+      // Reset form and return to clean booking creation page after 2 seconds
+      setTimeout(() => {
+        resetForm();
+        setIsCreatingBooking(false);
+      }, 2000);
     } catch (err) {
       alert("Error in handleCreateBooking: " + err.message + "\nStack: " + err.stack);
+      setIsCreatingBooking(false);
     }
   };
 
@@ -2026,10 +2060,36 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                 </div>
                 <button
                   type="submit"
-                  style={{ padding: "14px 20px", borderRadius: "10px", background: "#10b981", border: "none", color: "#fff", fontWeight: "800", fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)", transition: "all 0.2s ease" }}
+                  disabled={isCreatingBooking}
+                  style={{
+                    padding: "14px 20px",
+                    borderRadius: "10px",
+                    background: isCreatingBooking ? "#6b7280" : "#10b981",
+                    border: "none",
+                    color: "#fff",
+                    fontWeight: "800",
+                    fontSize: "0.95rem",
+                    cursor: isCreatingBooking ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    boxShadow: isCreatingBooking ? "none" : "0 4px 12px rgba(16, 185, 129, 0.25)",
+                    transition: "all 0.2s ease",
+                    opacity: isCreatingBooking ? 0.8 : 1
+                  }}
                 >
-                  <QrCode size={20} />
-                  <span>➕ ສ້າງບິນ & ພິມ QR / Create Booking & Print QR</span>
+                  {isCreatingBooking ? (
+                    <>
+                      <RefreshCw size={20} style={{ animation: "spin 1s linear infinite" }} />
+                      <span>⏳ ກຳລັງສ້າງບິນ ກະລຸນາລໍຖ້າ... / Creating Booking...</span>
+                    </>
+                  ) : (
+                    <>
+                      <QrCode size={20} />
+                      <span>➕ ສ້າງບິນ & ພິມ QR / Create Booking & Print QR</span>
+                    </>
+                  )}
                 </button>
               </div>
             )}
