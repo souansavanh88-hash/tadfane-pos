@@ -1056,18 +1056,15 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     portal.innerHTML = contentHtml;
     document.body.appendChild(portal);
 
-    // 3. Trigger printing directly on the main window
+    // 3. Trigger printing directly on the main window (synchronously to preserve user gesture context)
+    const _reflow = portal.offsetHeight; // Force DOM layout flush
     window.focus();
-    setTimeout(() => {
-      window.print();
-      
-      // Cleanup after print dialog is closed or cancelled
-      setTimeout(() => {
-        portal.remove();
-        styleEl.remove();
-        setIsPrintLoading(false);
-      }, 800);
-    }, 150);
+    window.print();
+    
+    // Cleanup immediately after print dialog is closed or cancelled
+    portal.remove();
+    styleEl.remove();
+    setIsPrintLoading(false);
     };
 
     runPrint(activeBooking);
