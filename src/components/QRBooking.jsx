@@ -737,11 +737,26 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     return url;
   };
 
+  const getPrintUrl = (templateType, booking) => {
+    let baseUrl = window.location.origin;
+    return `${baseUrl}/?print=${templateType}&id=${booking.id}&lang=${lang}&groupId=${booking.groupId || ''}&paxCount=${booking.paxCount || 0}&partnerId=${booking.partnerId || ''}`;
+  };
+
   // Universal print helper using hidden isolated iframe - prevents popup blockers and media style leakage
   const printViaIframe = (templateType, overrideBooking = null) => {
     try {
       const activeBooking = overrideBooking || loadedBooking;
       if (!activeBooking) return;
+
+      const isStandalone = (window.navigator && window.navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches;
+      if (isStandalone) {
+        const printUrl = getPrintUrl(templateType, activeBooking);
+        const win = window.open(printUrl, '_blank');
+        if (!win) {
+          window.location.href = printUrl;
+        }
+        return;
+      }
 
       const runPrint = (loadedBooking) => {
         try {
