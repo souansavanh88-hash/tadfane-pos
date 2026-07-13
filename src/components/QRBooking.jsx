@@ -741,8 +741,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const printViaIframe = (templateType, overrideBooking = null) => {
     const activeBooking = overrideBooking || loadedBooking;
     if (!activeBooking) return;
-    const loadedBooking = activeBooking;
-    setIsPrintLoading(true);
+
+    const runPrint = (loadedBooking) => {
+      setIsPrintLoading(true);
 
     // Get QR SVGs dynamically from rendered hidden SVG elements
     const qrSignSvg = document.querySelector('#print-qr-svg-sign-node svg')?.outerHTML || '';
@@ -1067,6 +1068,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         setIsPrintLoading(false);
       }, 800);
     }, 150);
+    };
+
+    runPrint(activeBooking);
   };
 
   const triggerReceiptPrint = (overrideBooking = null) => printViaIframe('receipt', overrideBooking);
