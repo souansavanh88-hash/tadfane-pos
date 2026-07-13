@@ -238,7 +238,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const dispatchAssignees = db.users?.filter(u => u.responsibilities?.crew_dispatch).map(u => u.name) || [];
   
   const canEdit = currentUser?.role === "owner" || currentUser?.role === "admin" || currentUser?.permissions?.["checkin-tickets"]?.edit === true;
-  const canDelete = currentUser?.role === "owner" || currentUser?.role === "admin" || currentUser?.permissions?.["checkin-tickets"]?.delete === true;
+  const canDelete = (currentUser?.role === "owner" || currentUser?.role === "admin" || currentUser?.permissions?.["checkin-tickets"]?.delete === true) && currentUser?.role !== "cashier";
   
   // Create / Edit Form State
   const [partnerId, setPartnerId] = useState(""); // empty = Walk In
