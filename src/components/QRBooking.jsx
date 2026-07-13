@@ -738,8 +738,10 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   };
 
   // Universal print helper using hidden isolated iframe - prevents popup blockers and media style leakage
-  const printViaIframe = (templateType) => {
-    if (!loadedBooking) return;
+  const printViaIframe = (templateType, overrideBooking = null) => {
+    const activeBooking = overrideBooking || loadedBooking;
+    if (!activeBooking) return;
+    const loadedBooking = activeBooking;
     setIsPrintLoading(true);
 
     // Get QR SVGs dynamically from rendered hidden SVG elements
@@ -1067,8 +1069,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     }, 150);
   };
 
-  const triggerReceiptPrint = () => printViaIframe('receipt');
-  const triggerQrSlipPrint = () => printViaIframe('qr_slip');
+  const triggerReceiptPrint = (overrideBooking = null) => printViaIframe('receipt', overrideBooking);
+  const triggerQrSlipPrint = (overrideBooking = null) => printViaIframe('qr_slip', overrideBooking);
 
   // Handles creating a new booking in "registering"
   const handleCreateBooking = async (e) => {
@@ -1122,7 +1124,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     });
 
     // Trigger print synchronously to preserve user gesture context
-    triggerQrSlipPrint();
+    triggerQrSlipPrint(newBooking);
 
     // Generate new group ID and bill number for next customer
     setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
