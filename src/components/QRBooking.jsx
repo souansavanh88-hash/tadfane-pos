@@ -466,10 +466,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
   // 2b. Automatically update selectedTier when paxCount or selectedServiceId changes
   useEffect(() => {
-    if (selectedServiceId === "SRV-004" || selectedServiceId === "SRV-005") {
-      const autoTier = paxCount >= 3 ? "tier3" : "tier1";
-      setSelectedTier(autoTier);
-    }
+    const autoTier = paxCount >= 3 ? "tier3" : "tier1";
+    setSelectedTier(autoTier);
   }, [paxCount, selectedServiceId]);
 
   // 2c. Auto-load preloadedBookingId from props if navigating from Customer Registration
