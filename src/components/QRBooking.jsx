@@ -1014,6 +1014,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             height: auto !important;
           }
         }
+        @media screen {
+          #print-receipt-portal {
+            display: none !important;
+          }
+        }
       `;
     } else {
       // receipt or qr_slip (standard 80mm/58mm thermal receipt printer)
@@ -1053,6 +1058,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             height: auto !important;
           }
         }
+        @media screen {
+          #print-receipt-portal {
+            display: none !important;
+          }
+        }
       `;
     }
 
@@ -1078,10 +1088,16 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     window.focus();
     window.print();
     
-    // Cleanup immediately after print dialog is closed or cancelled
-    portal.remove();
-    styleEl.remove();
-    setIsPrintLoading(false);
+    // Reset loading spinner shortly after triggering print sheet
+    setTimeout(() => {
+      setIsPrintLoading(false);
+    }, 1500);
+
+    // Keep elements in DOM for 8 seconds to allow Safari print PDF rendering, then cleanup
+    setTimeout(() => {
+      portal.remove();
+      styleEl.remove();
+    }, 8000);
         } catch (runErr) {
           alert("Error in runPrint: " + runErr.message + "\nStack: " + runErr.stack);
         }
