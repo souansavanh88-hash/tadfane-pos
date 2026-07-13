@@ -60,9 +60,9 @@ const SEED_DATA = {
     },
     {
       id: "USR-002",
-      email: "cashier@tadfane.com",
-      password: "cashier123",
-      name: "Naree (Cashier)",
+      email: "min",
+      password: "min1122",
+      name: "Min",
       role: "cashier",
       permissions: {
         dashboard: { view: false, add: false, edit: false, approve: false, delete: false },
@@ -129,6 +129,19 @@ const safeSetItem = (key, val) => {
 
 export const migrateDb = (parsed) => {
   let migrated = false;
+
+  // Automatically migrate legacy Naree (Cashier) to Min (Cashier)
+  if (parsed.users && Array.isArray(parsed.users)) {
+    parsed.users = parsed.users.map(u => {
+      if (u.id === "USR-002" && (u.email === "cashier@tadfane.com" || u.name === "Naree (Cashier)")) {
+        u.email = "min";
+        u.name = "Min";
+        u.password = "min1122";
+        migrated = true;
+      }
+      return u;
+    });
+  }
 
   // === ONE-TIME FORCED RESET (v2): Disabled to prevent wiping production employees/partners ===
   /*
