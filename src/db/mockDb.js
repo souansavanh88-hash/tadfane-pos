@@ -218,7 +218,8 @@ export const migrateDb = (parsed) => {
     });
   }
 
-  // Automatically merge missing seed services into parsed list
+  // Automatically merge missing seed services into parsed list (Disabled so user-deleted services stay deleted)
+  /*
   if (parsed.services && Array.isArray(parsed.services)) {
     SEED_DATA.services.forEach(ss => {
       if (!parsed.services.some(ps => ps.id === ss.id)) {
@@ -227,6 +228,7 @@ export const migrateDb = (parsed) => {
       }
     });
   }
+  */
 
   // Automatically migrate services to support tiered pricing and flat/pax type flags
   if (parsed.services && Array.isArray(parsed.services)) {
