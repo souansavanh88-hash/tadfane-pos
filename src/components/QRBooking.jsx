@@ -739,11 +739,13 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
   // Universal print helper using hidden isolated iframe - prevents popup blockers and media style leakage
   const printViaIframe = (templateType, overrideBooking = null) => {
-    const activeBooking = overrideBooking || loadedBooking;
-    if (!activeBooking) return;
+    try {
+      const activeBooking = overrideBooking || loadedBooking;
+      if (!activeBooking) return;
 
-    const runPrint = (loadedBooking) => {
-      setIsPrintLoading(true);
+      const runPrint = (loadedBooking) => {
+        try {
+          setIsPrintLoading(true);
 
     // Get QR SVGs dynamically from rendered hidden SVG elements
     const qrSignSvg = document.querySelector('#print-qr-svg-sign-node svg')?.outerHTML || '';
@@ -1065,9 +1067,15 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     portal.remove();
     styleEl.remove();
     setIsPrintLoading(false);
-    };
+        } catch (runErr) {
+          alert("Error in runPrint: " + runErr.message + "\nStack: " + runErr.stack);
+        }
+      };
 
-    runPrint(activeBooking);
+      runPrint(activeBooking);
+    } catch (err) {
+      alert("Error in printViaIframe: " + err.message + "\nStack: " + err.stack);
+    }
   };
 
   const triggerReceiptPrint = (overrideBooking = null) => printViaIframe('receipt', overrideBooking);
@@ -1076,60 +1084,63 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   // Handles creating a new booking in "registering"
   const handleCreateBooking = async (e) => {
     if (e) e.preventDefault();
+    try {
+      const currentDb = getDb();
+      const isAgent = partnerId !== "";
+      const partnerObj = currentDb.partners.find(p => p.id === partnerId);
+      const sourceName = isAgent ? partnerObj?.name : "Walk-in (ລູກຄ້າທົ່ວໄປ)";
 
-    const currentDb = getDb();
-    const isAgent = partnerId !== "";
-    const partnerObj = currentDb.partners.find(p => p.id === partnerId);
-    const sourceName = isAgent ? partnerObj?.name : "Walk-in (ລູກຄ້າທົ່ວໄປ)";
+      // Generate a unique ID synchronously so we can print without async block
+      const uniqueId = `BK-${Date.now()}`;
 
-    // Generate a unique ID synchronously so we can print without async block
-    const uniqueId = `BK-${Date.now()}`;
+      const newBooking = {
+        id: uniqueId,
+        partnerId: partnerId || null,
+        partnerName: sourceName,
+        bookingSource: isAgent ? "agent" : "walk-in",
+        paxCount: parseInt(paxCount),
+        date,
+        time,
+        serviceId: selectedServiceId,
+        serviceName: currentService.name,
+        pricePerPax: activePricePerPax,
+        pricePaidLAK: totalPriceLAK,
+        discountLAK: computedDiscountLAK,
+        netPriceLAK: totalPriceLAK - computedDiscountLAK,
+        debtLAK: debtAmount,
+        paidLAK: (totalPriceLAK - computedDiscountLAK) - debtAmount,
+        paymentMethod,
+        paymentCurrency,
+        billNumber,
+        status: "registering", // Enforce standard status
+        paymentStatus: "pending",
+        groupId: registrationGroupId,
+        passengers: [],
+        auditLogs: [],
+        guideIds: [],
+        assignedBoats: [],
+        driverId: "",
+      };
 
-    const newBooking = {
-      id: uniqueId,
-      partnerId: partnerId || null,
-      partnerName: sourceName,
-      bookingSource: isAgent ? "agent" : "walk-in",
-      paxCount: parseInt(paxCount),
-      date,
-      time,
-      serviceId: selectedServiceId,
-      serviceName: currentService.name,
-      pricePerPax: activePricePerPax,
-      pricePaidLAK: totalPriceLAK,
-      discountLAK: computedDiscountLAK,
-      netPriceLAK: totalPriceLAK - computedDiscountLAK,
-      debtLAK: debtAmount,
-      paidLAK: (totalPriceLAK - computedDiscountLAK) - debtAmount,
-      paymentMethod,
-      paymentCurrency,
-      billNumber,
-      status: "registering", // Enforce standard status
-      paymentStatus: "pending",
-      groupId: registrationGroupId,
-      passengers: [],
-      auditLogs: [],
-      guideIds: [],
-      assignedBoats: [],
-      driverId: "",
-    };
+      // Synchronously update React state before printing to ensure DOM is flushed
+      flushSync(() => {
+        setLoadedBooking(newBooking);
+      });
 
-    // Synchronously update React state before printing to ensure DOM is flushed
-    flushSync(() => {
-      setLoadedBooking(newBooking);
-    });
+      // Save to Firebase asynchronously in the background
+      addBookingToFirebase(newBooking).catch(err => {
+        console.error("Failed to create booking in cloud:", err);
+      });
 
-    // Save to Firebase asynchronously in the background
-    addBookingToFirebase(newBooking).catch(err => {
-      console.error("Failed to create booking in cloud:", err);
-    });
+      // Trigger print synchronously to preserve user gesture context
+      triggerQrSlipPrint(newBooking);
 
-    // Trigger print synchronously to preserve user gesture context
-    triggerQrSlipPrint(newBooking);
-
-    // Generate new group ID and bill number for next customer
-    setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
-    setBillNumber(generateBillId());
+      // Generate new group ID and bill number for next customer
+      setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
+      setBillNumber(generateBillId());
+    } catch (err) {
+      alert("Error in handleCreateBooking: " + err.message + "\nStack: " + err.stack);
+    }
   };
 
   // Loads a booking to details pane
