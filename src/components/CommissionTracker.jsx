@@ -1111,8 +1111,81 @@ export default function CommissionTracker() {
         };
 
         const handlePrint = () => {
-          const printUrl = `${window.location.origin}/?print=qr_sign&partnerId=${qrPartnerModal.id}&partnerName=${encodeURIComponent(qrPartnerModal.name)}`;
-          window.open(printUrl, "_blank");
+          // Remove any existing portal or custom style element first
+          document.getElementById('print-receipt-portal')?.remove();
+          document.getElementById('print-receipt-style')?.remove();
+
+          // 1. Create and inject style element to override page layout
+          const styleEl = document.createElement('style');
+          styleEl.id = 'print-receipt-style';
+          styleEl.innerHTML = `
+            @media print {
+              @page {
+                size: A4 portrait !important;
+                margin: 10mm !important;
+              }
+              body > #root {
+                display: none !important;
+              }
+              body > #print-receipt-portal {
+                display: block !important;
+                visibility: visible !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+            }
+            @media screen {
+              #print-receipt-portal {
+                display: none !important;
+              }
+            }
+          `;
+          document.head.appendChild(styleEl);
+
+          // 2. Create and inject portal div on the main body
+          const portal = document.createElement('div');
+          portal.id = 'print-receipt-portal';
+          portal.className = 'printable-area';
+          portal.innerHTML = `
+            <div style="font-family: sans-serif; text-align: center; padding: 40px; border: 4px solid #0f766e; border-radius: 20px; max-width: 500px; margin: 50px auto 0 auto; color: #000000; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <h1 style="color: #0f766e; font-size: 32px; margin-bottom: 5px; font-weight: 900; letter-spacing: 1px;">${db.settings.shopName || "TADFANE RAFTING"}</h1>
+              ${db.settings.shopNameLao ? `<h2 style="color: #0f766e; font-size: 24px; margin: 4px 0; font-weight: 900;">${db.settings.shopNameLao}</h2>` : ''}
+              <h3 style="color: #475569; font-size: 16px; margin-top: 10px; margin-bottom: 25px; font-weight: 700;">ລົງທະບຽນຜູ້ໂດຍສານ / Customer Registration</h3>
+              <div style="margin: 25px auto; display: flex; justify-content: center;" id="qrcode-node"></div>
+              <div style="font-size: 24px; font-weight: 900; color: #0f172a; margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 15px;">
+                ເອເຈນ / Agent: <span style="text-decoration: underline;">${qrPartnerModal.name}</span>
+              </div>
+              <p style="font-size: 14px; font-family: monospace; color: #64748b; font-weight: 700; margin-top: 5px;">Code: ${qrPartnerModal.id}</p>
+              
+              <div style="text-align: left; max-width: 440px; margin: 30px auto 0 auto; font-size: 13px; line-height: 1.6; font-weight: 700; border-top: 1px solid #cbd5e1; padding-top: 15px; color: #334155;">
+                <p style="margin: 4px 0;">1. Scan the QR Code using your mobile phone camera.</p>
+                <p style="margin: 4px 0;">2. Agree to safety rules & terms.</p>
+                <p style="margin: 4px 0;">3. Enter name, nationality, age, gender, phone details and submit.</p>
+                <p style="margin: 4px 0;">4. Please notify cashier after submit.</p>
+              </div>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 40px; font-weight: 700;">Powered by Tadfane POS System</div>
+            </div>
+          `;
+          document.body.appendChild(portal);
+
+          // Clone the SVG from the modal and append it to the portal
+          const modalSvg = document.querySelector('#qrcode-modal-svg svg');
+          const qrTargetNode = portal.querySelector('#qrcode-node');
+          if (modalSvg && qrTargetNode) {
+            qrTargetNode.appendChild(modalSvg.cloneNode(true));
+          }
+
+          // Force DOM layout reflow
+          const _reflow = portal.offsetHeight;
+
+          // Trigger print dialog instantly
+          setTimeout(() => {
+            window.focus();
+            window.print();
+            portal.remove();
+            styleEl.remove();
+          }, 150);
         };
 
         return (
@@ -1163,7 +1236,7 @@ export default function CommissionTracker() {
                 {lang === "la" ? "ໃຫ້ເອເຈນສະແກນເພື່ອລົງທະບຽນ ແລະ ກອກຂໍ້ມູນລູກຄ້າ" : lang === "th" ? "ให้เอเจนท์สแกนเพื่อลงทะเบียนและกรอกข้อมูลลูกค้า" : "Send this QR or link to the agent to fill customer details."}
               </p>
 
-              <div style={{
+              <div id="qrcode-modal-svg" style={{
                 background: "#f8fafc",
                 padding: "20px",
                 borderRadius: "12px",

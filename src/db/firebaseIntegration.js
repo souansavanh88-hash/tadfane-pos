@@ -40,11 +40,6 @@ export const pushToFirebase = async (dbState) => {
   if (!fireDb) return false;
   if (isPushing) return false;
   
-  // Skip pushing if we just received this data from cloud to avoid loops
-  if (Date.now() - lastSyncTime < 1500) {
-    return false;
-  }
-
   isPushing = true;
   try {
     const docRef = doc(fireDb, POS_DATA_DOC);

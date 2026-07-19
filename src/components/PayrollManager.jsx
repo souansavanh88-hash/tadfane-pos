@@ -318,61 +318,304 @@ export default function PayrollManager() {
     }
   };
 
-  const triggerPrintPayslip = () => {
-    flushSync(() => {
-      setPrintTemplate("payslip");
-    });
+  const triggerPrintPayslip = (empOverride = null) => {
+    const emp = empOverride || selectedEmpDetails;
+    if (!emp) return;
+    const calc = calculatePayout(emp);
+    const roleLabel =
+      emp.role === "guide" ? "ໄກ້ດນຳທ່ຽວ" :
+      emp.role === "captain" ? "ກັປຕັນເຮືອ" :
+      emp.role === "driver" ? "ພະນັກງານຂັບລົດ" :
+      "ພະນັກງານຕ້ອນຮັບ";
 
-    const handleAfterPrint = () => {
-      setTimeout(() => {
-        setPrintTemplate(null);
-      }, 1000);
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-    window.addEventListener("afterprint", handleAfterPrint);
+    document.getElementById('print-receipt-portal')?.remove();
+    document.getElementById('print-receipt-style')?.remove();
 
-    // Force synchronous layout reflow then wait for DOM paint
-    const forceReflow = document.body.offsetHeight;
+    const styleEl = document.createElement('style');
+    styleEl.id = 'print-receipt-style';
+    styleEl.innerHTML = `
+      @media print {
+        @page {
+          size: A4 portrait !important;
+          margin: 10mm !important;
+        }
+        body > #root {
+          display: none !important;
+        }
+        body > #print-receipt-portal {
+          display: block !important;
+          visibility: visible !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+      }
+      @media screen {
+        #print-receipt-portal {
+          display: none !important;
+        }
+      }
+    `;
+    document.head.appendChild(styleEl);
 
+    const portal = document.createElement('div');
+    portal.id = 'print-receipt-portal';
+    portal.className = 'printable-area';
+    portal.innerHTML = `
+      <div style="width: 100%; padding: 10mm; font-family: sans-serif; color: #000000; box-sizing: border-box;">
+        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+          <h2 style="font-size: 18px; font-weight: bold; margin: 0;">ໃບສະຫຼຸບລາຍຮັບພະນັກງານລາຍບຸກຄົນ / INDIVIDUAL PAYSLIP</h2>
+          <span style="font-size: 11px;">TADFANE RAFTING / ຕາດຟານ ລ່ອງແກ່ງ - ACCOUNTING DEPARTMENT</span>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
+          <tbody>
+            <tr>
+              <td style="border: 1px solid #000; padding: 8px; font-weight: bold; width: 25%; background: #f8fafc;">ລະຫັດພະນັກງານ / ID:</td>
+              <td style="border: 1px solid #000; padding: 8px; width: 25%;">${emp.id}</td>
+              <td style="border: 1px solid #000; padding: 8px; font-weight: bold; width: 25%; background: #f8fafc;">ຊື່ ແລະ ນາມສະກຸນ / Name:</td>
+              <td style="border: 1px solid #000; padding: 8px; width: 25%;">${emp.name}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 8px; font-weight: bold; background: #f8fafc;">ຕຳແໜ່ງ / Role:</td>
+              <td style="border: 1px solid #000; padding: 8px;">${roleLabel}</td>
+              <td style="border: 1px solid #000; padding: 8px; font-weight: bold; background: #f8fafc;">ປະເພດພະນັກງານ / Type:</td>
+              <td style="border: 1px solid #000; padding: 8px;">${emp.type === "freelance" ? "ອິດສະຫຼະ (OT)" : "ປະຈຳ"}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 8px; font-weight: bold; background: #f8fafc;">ເລກບັນຊີ / Bank Account:</td>
+              <td colSpan="3" style="border: 1px solid #000; padding: 8px;">${emp.bankAccount || "-"}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 8px;">ສະຫຼຸບຍອດເງິນ / Earnings Summary</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 30px;">
+          <tbody>
+            <tr>
+              <td style="border: 1px solid #000; padding: 8px; width: 75%;">ເງິນເດືອນພື້ນຖານ / Base Salary:</td>
+              <td style="border: 1px solid #000; padding: 8px; text-align: right;">${emp.type === "freelance" ? "0 ₭" : formatLAK(emp.salary)}</td>
+            </tr>
+            ${emp.allowance > 0 ? `
+              <tr>
+                <td style="border: 1px solid #000; padding: 8px;">ເງິນປະຈຳຕຳແໜ່ງ / Position Allowance:</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: right;">${formatLAK(emp.allowance)}</td>
+              </tr>
+            ` : ''}
+            ${emp.dailyWage > 0 ? `
+              <tr>
+                <td style="border: 1px solid #000; padding: 8px;">ຄ່າແຮງງານລາຍວັນ / Daily Wage Pay (${emp.daysWorked || 26} ວັນ):</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: right;">${formatLAK((emp.dailyWage || 0) * (emp.daysWorked || 26))}</td>
+              </tr>
+            ` : ''}
+            <tr>
+              <td style="border: 1px solid #000; padding: 8px;">ຄ່າທ່ຽວສະຫຼຸບ (${calc.tripCount} ທ່ຽວ) / Total Trip Fee:</td>
+              <td style="border: 1px solid #000; padding: 8px; text-align: right;">${formatLAK(calc.tripPay)}</td>
+            </tr>
+            ${emp.ot > 0 ? `
+              <tr>
+                <td style="border: 1px solid #000; padding: 8px;">ຄ່າລ່ວງເວລາ (OT) / Overtime Pay:</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: right;">${formatLAK(emp.ot)}</td>
+              </tr>
+            ` : ''}
+            ${emp.commission > 0 ? `
+              <tr>
+                <td style="border: 1px solid #000; padding: 8px;">ຄ່າຄອມມິດຊັນ / Commission:</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: right;">${formatLAK(emp.commission)}</td>
+              </tr>
+            ` : ''}
+            <tr>
+              <td style="border: 1px solid #000; padding: 8px;">ໂບນັດພິເສດ / Special Bonus:</td>
+              <td style="border: 1px solid #000; padding: 8px; text-align: right;">${formatLAK(emp.bonus || 0)}</td>
+            </tr>
+            <tr style="background: #e2e8f0; font-weight: bold;">
+              <td style="border: 1px solid #000; padding: 8px;">ຍອດຈ່າຍສຸດທິ / Net Payout:</td>
+              <td style="border: 1px solid #000; padding: 8px; text-align: right;">${formatLAK(calc.totalPayout)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top: 50px; display: flex; justify-content: space-between; font-size: 11px;">
+          <div>
+            Prepared by: _______________________<br />
+            Accountant / ເຈົ້າໜ້າທີ່ບັນຊີ
+          </div>
+          <div style="text-align: right;">
+            Received by: _______________________<br />
+            Employee / ພະນັກງານຜູ້ຮັບເງິນ
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(portal);
+
+    const _reflow = portal.offsetHeight;
     setTimeout(() => {
+      window.focus();
       window.print();
-    }, 300);
-
-    setTimeout(() => {
-      setPrintTemplate(null);
-    }, 60000); // 60s safety timeout to prevent early clearing on slow browsers
+      portal.remove();
+      styleEl.remove();
+    }, 150);
   };
 
   const triggerPrintPayroll = () => {
-    flushSync(() => {
-      setPrintTemplate("payroll");
-    });
+    document.getElementById('print-receipt-portal')?.remove();
+    document.getElementById('print-receipt-style')?.remove();
 
-    const handleAfterPrint = () => {
-      setTimeout(() => {
-        setPrintTemplate(null);
-      }, 1000);
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-    window.addEventListener("afterprint", handleAfterPrint);
+    const styleEl = document.createElement('style');
+    styleEl.id = 'print-receipt-style';
+    styleEl.innerHTML = `
+      @media print {
+        @page {
+          size: A4 landscape !important;
+          margin: 8mm !important;
+        }
+        body > #root {
+          display: none !important;
+        }
+        body > #print-receipt-portal {
+          display: block !important;
+          visibility: visible !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+      }
+      @media screen {
+        #print-receipt-portal {
+          display: none !important;
+        }
+      }
+    `;
+    document.head.appendChild(styleEl);
 
-    // Force synchronous layout reflow then wait for DOM paint
-    const forceReflow = document.body.offsetHeight;
+    let grandBaseSalary = 0;
+    let grandTripCount = 0;
+    let grandTripPay = 0;
+    let grandBonus = 0;
+    let grandTotal = 0;
+    let grandDailyWagePay = 0;
+    let grandOTPay = 0;
+    let grandCommission = 0;
+    let grandAllowance = 0;
 
+    const rowsHtml = db.employees.map(emp => {
+      const calc = calculatePayout(emp);
+      grandBaseSalary += emp.type === "freelance" ? 0 : emp.salary;
+      grandTripCount += calc.tripCount;
+      grandTripPay += calc.tripPay;
+      grandBonus += emp.bonus || 0;
+      grandTotal += calc.totalPayout;
+      grandAllowance += emp.type === "freelance" ? 0 : (emp.allowance || 0);
+      grandDailyWagePay += (emp.dailyWage || 0) * (emp.daysWorked !== undefined ? emp.daysWorked : 26);
+      grandOTPay += emp.ot || 0;
+      grandCommission += emp.commission || 0;
+
+      const roleLabel =
+        emp.role === "guide" ? "ໄກ້ດນຳທ່ຽວ" :
+        emp.role === "captain" ? "ກັປຕັນເຮືອ" :
+        emp.role === "driver" ? "ພະນັກງານຂັບລົດ" :
+        "ພະນັກງານຕ້ອນຮັບ";
+
+      return `
+        <tr>
+          <td style="border: 1px solid #000; padding: 6px;">${emp.id}</td>
+          <td style="border: 1px solid #000; padding: 6px; font-weight: bold;">${emp.name}</td>
+          <td style="border: 1px solid #000; padding: 6px;">${roleLabel}</td>
+          <td style="border: 1px solid #000; padding: 6px;">${emp.type === "freelance" ? "ອິດສະຫຼະ (OT)" : "ປະຈຳ"}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: right;">
+            ${emp.type === "freelance" ? "0 ₭" : formatLAK(emp.salary)}
+            ${emp.allowance > 0 ? `<div style="font-size: 8.5px; color: #0f766e; font-weight: 600;">+${formatLAK(emp.allowance)} (ຕຳແໜ່ງ)</div>` : ''}
+            ${emp.dailyWage > 0 ? `<div style="font-size: 8px; color: #64748b; margin-top: 2px;">${formatLAK(emp.dailyWage)}/ວັນ (${emp.daysWorked || 26} ວັນ)</div>` : ''}
+          </td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: center;">${calc.tripCount}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: right;">
+            ${formatLAK(calc.tripPay)}
+            ${(emp.ot > 0 || emp.commission > 0) ? `
+              <div style="font-size: 8px; color: #64748b; margin-top: 2px;">
+                ${emp.ot > 0 ? `OT: +${formatLAK(emp.ot)}` : ''} ${emp.commission > 0 ? `Comm: +${formatLAK(emp.commission)}` : ''}
+              </div>
+            ` : ''}
+          </td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: right;">${formatLAK(emp.bonus || 0)}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold;">${formatLAK(calc.totalPayout)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const portal = document.createElement('div');
+    portal.id = 'print-receipt-portal';
+    portal.className = 'printable-area';
+    portal.innerHTML = `
+      <div style="width: 100%; padding: 8mm; font-family: sans-serif; color: #000000; box-sizing: border-box;">
+        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+          <h2 style="font-size: 18px; font-weight: bold; margin: 0;">ລາຍງານສະຫຼຸບເງິນເດືອນ ແລະ ໂອທີພະນັກງານ / MONTHLY PAYROLL</h2>
+          <span style="font-size: 11px;">TADFANE RAFTING / ຕາດຟານ ລ່ອງແກ່ງ - ACCOUNTING DEPARTMENT</span>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <thead>
+            <tr style="background: #e2e8f0;">
+              <th style="border: 1px solid #000; padding: 6px; text-align: left;">ລະຫັດ</th>
+              <th style="border: 1px solid #000; padding: 6px; text-align: left;">ຊື່ ແລະ ນາມສະກຸນ</th>
+              <th style="border: 1px solid #000; padding: 6px; text-align: left;">ຕຳແໜ່ງ</th>
+              <th style="border: 1px solid #000; padding: 6px; text-align: left;">ປະເພດ</th>
+              <th style="border: 1px solid #000; padding: 6px; text-align: right;">ເງິນເດືອນພື້ນຖານ</th>
+              <th style="border: 1px solid #000; padding: 6px; text-align: center;">ຈຳນວນທ່ຽວ</th>
+              <th style="border: 1px solid #000; padding: 6px; text-align: right;">ເງິນທ່ຽວ (OT)</th>
+              <th style="border: 1px solid #000; padding: 6px; text-align: right;">ໂບນັດພິເສດ</th>
+              <th style="border: 1px solid #000; padding: 6px; text-align: right;">ຍອດລວມສຸດທິ (LAK)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+            <tr style="background: #e2e8f0; font-weight: bold;">
+              <td colSpan="4" style="border: 1px solid #000; padding: 6px; text-align: center;">ຍອດລວມທັງໝົດ (Grand Total)</td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: right;">
+                ${formatLAK(grandBaseSalary)}
+                ${grandAllowance > 0 ? `<div style="font-size: 8.5px; color: #0f766e;">+${formatLAK(grandAllowance)} (ຕຳແໜ່ງ)</div>` : ''}
+                ${grandDailyWagePay > 0 ? `<div style="font-size: 8px; color: #64748b; margin-top: 2px;">ລາຍວັນ: ${formatLAK(grandDailyWagePay)}</div>` : ''}
+              </td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: center;">${grandTripCount}</td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: right;">
+                ${formatLAK(grandTripPay)}
+                ${(grandOTPay > 0 || grandCommission > 0) ? `
+                  <div style="font-size: 8px; color: #64748b; margin-top: 2px;">
+                    ${grandOTPay > 0 ? `OT: +${formatLAK(grandOTPay)}` : ''} ${grandCommission > 0 ? ` Comm: +${formatLAK(grandCommission)}` : ''}
+                  </div>
+                ` : ''}
+              </td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: right;">${formatLAK(grandBonus)}</td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: right; color: #0f766e;">${formatLAK(grandTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top: 50px; display: flex; justify-content: space-between; font-size: 11px;">
+          <div>
+            Prepared by: _______________________<br />
+            Accountant / ເຈົ້າໜ້າທີ່ບັນຊີ
+          </div>
+          <div style="text-align: right;">
+            Approved by: _______________________<br />
+            General Manager / ຜູ້ຈັດການທົ່ວໄປ
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(portal);
+
+    const _reflow = portal.offsetHeight;
     setTimeout(() => {
+      window.focus();
       window.print();
-    }, 300);
-
-    setTimeout(() => {
-      setPrintTemplate(null);
-    }, 60000); // 60s safety timeout to prevent early clearing on slow browsers
+      portal.remove();
+      styleEl.remove();
+    }, 150);
   };
 
   const handlePrintIndividual = (emp) => {
-    setSelectedEmpDetails(emp);
-    setTimeout(() => {
-      triggerPrintPayslip();
-    }, 150);
+    triggerPrintPayslip(emp);
   };
 
   let grandBaseSalary = 0;

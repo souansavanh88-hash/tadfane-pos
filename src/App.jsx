@@ -2,7 +2,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import Sidebar from "./components/Sidebar";
 import LoginScreen from "./components/LoginScreen";
-import { migrateDb, getDb, saveDb } from "./db/mockDb";
+import { migrateDb, getDb, saveDb, saveDbLocally } from "./db/mockDb";
 import { useLanguage } from "./utils/LanguageContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { isFirebaseConfigured, listenToAllBookings, listenToEmployeeRegistrations, deleteEmployeeRegistrationFromFirebase } from "./db/firebaseSync";
@@ -210,8 +210,7 @@ export default function App() {
     const unsubscribe = listenToAllBookings((bookings) => {
       const currentDb = getDb();
       currentDb.bookings = bookings;
-      saveDb(currentDb);
-      window.dispatchEvent(new Event("db-update"));
+      saveDbLocally(currentDb);
     });
 
     return () => {

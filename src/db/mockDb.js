@@ -547,6 +547,26 @@ const syncTripsWithBookings = (db) => {
     });
 };
 
+export const saveDbLocally = (db) => {
+  try {
+    syncTripsWithBookings(db);
+  } catch (err) {
+    console.error("Trip sync failed:", err);
+  }
+  
+  if (db.isWiped) {
+    db.isWiped = false;
+  }
+  
+  memoryDb = db;
+  safeSetItem(DB_KEY, JSON.stringify(db));
+  safeSetItem("pos_local_db_backup", JSON.stringify(db));
+
+  try {
+    window.dispatchEvent(new Event("db-update"));
+  } catch (e) {}
+};
+
 export const saveDb = (db) => {
   try {
     syncTripsWithBookings(db);
