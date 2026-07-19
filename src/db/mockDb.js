@@ -554,6 +554,10 @@ export const saveDb = (db) => {
     console.error("Trip sync failed:", err);
   }
   
+  if (db.isWiped) {
+    db.isWiped = false;
+  }
+  
   memoryDb = db;
   safeSetItem(DB_KEY, JSON.stringify(db));
   

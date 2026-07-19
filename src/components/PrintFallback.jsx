@@ -93,6 +93,7 @@ export default function PrintFallback() {
   const idParam = params.get("id");
   const groupIdParam = params.get("groupId");
   const lang = params.get("lang") || "la";
+  const isReprint = params.get("reprint") === "true" || params.get("duplicate") === "true";
 
   const dbBooking = db.bookings?.find(b => b.id === idParam);
   const loadedBooking = dbBooking || (idParam ? {
@@ -164,6 +165,23 @@ export default function PrintFallback() {
 
   return (
     <div style={{ background: "#ffffff", color: "#000000", minHeight: "100vh", padding: "10px 10px 40px 10px", boxSizing: "border-box" }}>
+      <style>{`
+        @media print {
+          body > #root {
+            visibility: visible !important;
+            display: block !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          body {
+            background: #ffffff !important;
+            color: #000000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+        }
+      `}</style>
       
       {/* Screen action bar (hidden during print) */}
       <div className="no-print" style={{
@@ -214,6 +232,11 @@ export default function PrintFallback() {
       {/* RENDER RECEIPT */}
       {printParam === "receipt" && loadedBooking && (
         <div style={{ maxWidth: "320px", margin: "0 auto", padding: "12px", border: "1px solid #e2e8f0", fontFamily: "monospace", fontSize: "16px", lineHeight: "1.5", fontWeight: "700" }}>
+          {isReprint && (
+            <div style={{ border: "2px solid #000000", padding: "4px 8px", marginBottom: "12px", fontWeight: "900", textTransform: "uppercase", fontSize: "14px", letterSpacing: "1px", background: "#ffffff", color: "#000000", textAlign: "center" }}>
+              *** ພິມຄືນໃຫມ່ / REPRINT ***
+            </div>
+          )}
           <div style={{ textAlign: "center", borderBottom: "2px dashed #000000", paddingBottom: "8px", marginBottom: "8px" }}>
             {db.settings.logo && (
               <img src={db.settings.logo} alt="Logo" style={{ maxHeight: "80px", maxWidth: "220px", objectFit: "contain", marginBottom: "8px" }} />

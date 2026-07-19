@@ -266,16 +266,16 @@ export default function PayrollManager() {
 
           let payout = emp.tripRate || 50000;
           if (emp.role === "guide") {
-            let baseRate = emp.tourRate !== undefined ? emp.tourRate : 100000;
+            let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : 100000;
             if (trip.bookingId) {
               const bk = db.bookings.find(b => b.id === trip.bookingId);
               if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
-                baseRate = emp.raftingRate !== undefined ? emp.raftingRate : 150000;
+                baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
               }
             }
             payout = baseRate + (emp.specialRate || 0);
           } else if (emp.role === "driver") {
-            payout = emp.tripRate !== undefined ? emp.tripRate : 100000;
+            payout = (emp.tripRate !== undefined && emp.tripRate > 0) ? emp.tripRate : 100000;
           }
 
           tripsDetail.push({

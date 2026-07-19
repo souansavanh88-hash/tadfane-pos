@@ -191,11 +191,11 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
           if (emp) {
             let payout = emp.tripRate || 50000;
             if (emp.role === "guide") {
-              let baseRate = emp.tourRate !== undefined ? emp.tourRate : 100000;
+              let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : 100000;
               if (trip.bookingId) {
                 const bk = database.bookings.find(b => b.id === trip.bookingId);
                 if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
-                  baseRate = emp.raftingRate !== undefined ? emp.raftingRate : 150000;
+                  baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
                 }
               }
               payout = baseRate + (emp.specialRate || 0);
@@ -214,7 +214,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
         trip.driverIds.forEach(did => {
           const emp = database.employees.find(e => e.id === did);
           if (emp) {
-            const payout = emp.tripRate !== undefined ? emp.tripRate : 100000;
+            const payout = (emp.tripRate !== undefined && emp.tripRate > 0) ? emp.tripRate : 100000;
             todayCrewWages += payout;
             driverPayDue += payout;
           }
@@ -230,11 +230,11 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
           if (emp) {
             let payout = emp.tripRate || 50000;
             if (emp.role === "guide") {
-              let baseRate = emp.tourRate !== undefined ? emp.tourRate : 100000;
+              let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : 100000;
               if (trip.bookingId) {
                 const bk = database.bookings.find(b => b.id === trip.bookingId);
                 if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
-                  baseRate = emp.raftingRate !== undefined ? emp.raftingRate : 150000;
+                  baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
                 }
               }
               payout = baseRate + (emp.specialRate || 0);
@@ -253,7 +253,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
         trip.driverIds.forEach(did => {
           const emp = database.employees.find(e => e.id === did);
           if (emp) {
-            const payout = emp.tripRate !== undefined ? emp.tripRate : 100000;
+            const payout = (emp.tripRate !== undefined && emp.tripRate > 0) ? emp.tripRate : 100000;
             monthCrewWages += payout;
             driverWagesMonth += payout;
           }
@@ -405,7 +405,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
   };
 
   const exchangeRates = db.settings;
-  const isFinanceVisible = userRole === "admin" || userRole === "accounting";
+  const isFinanceVisible = userRole === "admin" || userRole === "accounting" || userRole === "owner";
 
   // Active boat deployments
   const activeTrips = db.trips.filter(t => t.status === "dispatched");
@@ -457,6 +457,56 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
   };
 
   const systemAlerts = getSystemAlerts();
+
+  const get7DayChartData = () => {
+    const data = [];
+    const basePrice = db.settings?.basePriceLAK || 250000;
+    
+    // Create map of booking prices for quick lookup
+    const bookingPricesMap = new Map();
+    (db.bookings || []).forEach(b => {
+      if (b.status !== "ยกเลิก" && b.status !== "ຍົກເລີກ") {
+        bookingPricesMap.set(b.id, (b.pricePaidLAK || 0) / (b.paxCount || 1));
+      }
+    });
+
+    const validBookingsMap = new Map();
+    (db.bookings || []).forEach(b => {
+      if (b.status !== "ยกเลิก" && b.status !== "ຍົກເລີກ") {
+        validBookingsMap.set(b.id, true);
+        if (b.groupId) validBookingsMap.set(b.groupId, true);
+      }
+    });
+
+    const filterValidCustomer = (c) => {
+      if (c.bookingId && validBookingsMap.has(c.bookingId)) return true;
+      if (c.groupId && validBookingsMap.has(c.groupId)) return true;
+      return !c.bookingId && !c.groupId;
+    };
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      
+      const dayCusts = (db.customers || []).filter(c => c.checkInDate === dateStr && filterValidCustomer(c));
+      const pax = dayCusts.length;
+      
+      const revenue = dayCusts.reduce((sum, c) => {
+        if (c.bookingId && bookingPricesMap.has(c.bookingId)) {
+          return sum + bookingPricesMap.get(c.bookingId);
+        }
+        return sum + basePrice;
+      }, 0);
+
+      // Label as DD/MM
+      const label = dateStr.slice(8, 10) + "/" + dateStr.slice(5, 7);
+      data.push({ dateStr, label, pax, revenue });
+    }
+    return data;
+  };
+
+  const chartData = get7DayChartData();
 
   return (
     <div>
@@ -767,11 +817,105 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
               {isFinanceVisible ? "ເບິ່ງລາຍງານລວມ" : "🔒 ສະເພາະບັນຊີ"}
             </div>
             <div className="metric-subvalue">
-              {isFinanceVisible ? "ລາຍຮັບ-ລາຍຈ່າຍ ທັງໝົດ" : "Restricted"}
+              {isFinanceVisible ? "ລາຍຮັບ-ລາຍຈ່າຍ ທັງໝົດ" : "🔒 ສະເພາະຜູ້ບໍລິຫານ / Owner Only"}
             </div>
           </div>
         </div>
       </div>
+
+      {/* 7-Day Performance Analytics Chart (Admin/Owner/Accounting Only) */}
+      {isFinanceVisible && (
+        <div className="card" style={{ padding: "24px", marginBottom: "1.5rem", borderRadius: "16px", background: "white", border: "1px solid var(--border-color)", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" }}>
+          <h2 style={{ fontSize: "1.1rem", fontWeight: "750", marginBottom: "1.5rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px" }}>
+            📈 ວິເຄາະແນວໂນ້ມລາຍຮັບ ແລະ ຈຳນວນລູກຄ້າ 7 ວັນຫຼ້າສຸດ (7-Day Sales & Pax Performance)
+          </h2>
+          
+          <div style={{ display: "flex", gap: "16px", marginBottom: "16px", fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <div style={{ width: "12px", height: "12px", borderRadius: "3px", background: "linear-gradient(to bottom, #0f766e, #2dd4bf)" }} />
+              <span>ລາຍຮັບ (Daily Revenue)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "0.85rem" }}>👥</span>
+              <span>ຈຳນວນລູກຄ້າ (Pax Count)</span>
+            </div>
+          </div>
+
+          <div style={{ overflowX: "auto" }}>
+            <div style={{ minWidth: "500px", padding: "10px" }}>
+              <svg viewBox="0 0 600 200" width="100%" height="200" style={{ overflow: "visible" }}>
+                <defs>
+                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0f766e" />
+                    <stop offset="100%" stopColor="#2dd4bf" />
+                  </linearGradient>
+                </defs>
+                {/* Grid Lines */}
+                <line x1="40" y1="30" x2="580" y2="30" stroke="#f1f5f9" strokeWidth="1" />
+                <line x1="40" y1="80" x2="580" y2="80" stroke="#f1f5f9" strokeWidth="1" />
+                <line x1="40" y1="130" x2="580" y2="130" stroke="#f1f5f9" strokeWidth="1" />
+                <line x1="40" y1="170" x2="580" y2="170" stroke="#cbd5e1" strokeWidth="1.5" />
+                
+                {(() => {
+                  const maxRev = Math.max(...chartData.map(d => d.revenue), 1000000);
+                  return chartData.map((d, idx) => {
+                    const x = 50 + idx * 75;
+                    const barHeight = (d.revenue / maxRev) * 120; // max height of 120px
+                    const y = 170 - barHeight;
+                    const formattedRev = d.revenue >= 1000000 
+                      ? (d.revenue / 1000000).toFixed(1) + "M" 
+                      : (d.revenue >= 1000 ? (d.revenue / 1000).toFixed(0) + "k" : d.revenue);
+                    
+                    return (
+                      <g key={idx}>
+                        {/* Bar */}
+                        <rect
+                          x={x}
+                          y={y}
+                          width="35"
+                          height={barHeight}
+                          rx="6"
+                          fill="url(#barGrad)"
+                          style={{ transition: "all 0.3s ease" }}
+                        />
+                        {/* Revenue Label */}
+                        <text
+                          x={x + 17.5}
+                          y={y - 8}
+                          textAnchor="middle"
+                          style={{ fontSize: "0.68rem", fontWeight: "750", fill: "#0f766e" }}
+                        >
+                          {d.revenue > 0 ? formattedRev : ""}
+                        </text>
+                        {/* Pax Label */}
+                        {d.pax > 0 && (
+                          <text
+                            x={x + 17.5}
+                            y={y + 16}
+                            textAnchor="middle"
+                            style={{ fontSize: "0.65rem", fontWeight: "700", fill: "white" }}
+                          >
+                            {d.pax}
+                          </text>
+                        )}
+                        {/* X Axis Label */}
+                        <text
+                          x={x + 17.5}
+                          y="188"
+                          textAnchor="middle"
+                          style={{ fontSize: "0.7rem", fontWeight: "600", fill: "#64748b" }}
+                        >
+                          {d.label}
+                        </text>
+                      </g>
+                    );
+                  });
+                })()}
+              </svg>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="dashboard-sections-grid">
         
