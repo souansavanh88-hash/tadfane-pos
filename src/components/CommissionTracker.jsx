@@ -1182,8 +1182,15 @@ export default function CommissionTracker() {
           // Trigger print dialog synchronously (forces direct user gesture stack matching in Safari)
           window.focus();
           window.print();
-          portal.remove();
-          styleEl.remove();
+          
+          const cleanup = () => {
+            try {
+              if (portal.parentNode) portal.remove();
+              if (styleEl.parentNode) styleEl.remove();
+            } catch (e) {}
+          };
+          window.addEventListener('afterprint', cleanup, { once: true });
+          setTimeout(cleanup, 15000);
         };
 
         return (

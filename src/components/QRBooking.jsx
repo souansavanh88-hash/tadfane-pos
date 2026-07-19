@@ -1102,14 +1102,20 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             window.focus();
             window.print();
             
-            // Cleanup
-            portal.remove();
-            styleEl.remove();
-            setIsPrintLoading(false);
+            // Asynchronous-safe cleanup: keep DOM elements alive while Safari print sheet renders
+            const cleanup = () => {
+              try {
+                if (portal.parentNode) portal.remove();
+                if (styleEl.parentNode) styleEl.remove();
+              } catch (e) {}
+              setIsPrintLoading(false);
+              if (onComplete) {
+                onComplete();
+              }
+            };
 
-            if (onComplete) {
-              onComplete();
-            }
+            window.addEventListener('afterprint', cleanup, { once: true });
+            setTimeout(cleanup, 15000); // 15 seconds safety timeout
           } catch (runErr) {
             alert("Error in runPrint: " + runErr.message + "\nStack: " + runErr.stack);
             setIsPrintLoading(false);
