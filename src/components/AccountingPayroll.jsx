@@ -341,7 +341,7 @@ export default function AccountingPayroll({ currentUser }) {
 
     setTimeout(() => {
       setPrintTemplate(null);
-    }, 5000);
+    }, 60000); // 60s safety timeout to prevent early clearing on slow browsers
   };
 
   // Helper label CSS styles
@@ -506,7 +506,7 @@ export default function AccountingPayroll({ currentUser }) {
 
     setTimeout(() => {
       setPrintTemplate(null);
-    }, 5000);
+    }, 60000); // 60s safety timeout to prevent early clearing on slow browsers
   };
 
   return (

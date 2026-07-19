@@ -340,7 +340,7 @@ export default function PayrollManager() {
 
     setTimeout(() => {
       setPrintTemplate(null);
-    }, 5000);
+    }, 60000); // 60s safety timeout to prevent early clearing on slow browsers
   };
 
   const triggerPrintPayroll = () => {
@@ -365,7 +365,14 @@ export default function PayrollManager() {
 
     setTimeout(() => {
       setPrintTemplate(null);
-    }, 5000);
+    }, 60000); // 60s safety timeout to prevent early clearing on slow browsers
+  };
+
+  const handlePrintIndividual = (emp) => {
+    setSelectedEmpDetails(emp);
+    setTimeout(() => {
+      triggerPrintPayslip();
+    }, 150);
   };
 
   let grandBaseSalary = 0;
