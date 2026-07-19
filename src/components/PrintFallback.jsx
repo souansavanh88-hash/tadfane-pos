@@ -94,6 +94,8 @@ export default function PrintFallback() {
   const groupIdParam = params.get("groupId");
   const lang = params.get("lang") || "la";
   const isReprint = params.get("reprint") === "true" || params.get("duplicate") === "true";
+  const partnerIdParam = params.get("partnerId");
+  const partnerNameParam = params.get("partnerName");
 
   const dbBooking = db.bookings?.find(b => b.id === idParam);
   const loadedBooking = dbBooking || (idParam ? {
@@ -428,16 +430,25 @@ export default function PrintFallback() {
           <h3 style={{ fontSize: "1.3rem", color: "#475569", marginBottom: "1.5rem" }}>ລົງທະບຽນຜູ້ໂດຍສານ / Customer Registration</h3>
           
           <div style={{ margin: "25px 0", display: "flex", justifyContent: "center" }}>
-            {loadedBooking ? (
+            {partnerIdParam ? (
+              <QRCodeSVG value={`${window.location.origin}/register?partnerId=${partnerIdParam}`} size={280} includeMargin={true} />
+            ) : loadedBooking ? (
               <QRCodeSVG value={getSelfRegUrl(loadedBooking.groupId, loadedBooking.partnerId, loadedBooking.paxCount, loadedBooking.id)} size={280} includeMargin={true} />
             ) : (
               <QRCodeSVG value={`${window.location.origin}/register?groupId=${groupIdParam}`} size={280} includeMargin={true} />
             )}
           </div>
 
-          <div style={{ fontSize: "1.3rem", fontWeight: "900", margin: "20px 0", color: "#000000" }}>
-            Group Code / ລະຫັດກຸ່ມ: <span style={{ textDecoration: "underline" }}>{loadedBooking?.groupId || groupIdParam}</span>
-          </div>
+          {partnerIdParam ? (
+            <div style={{ fontSize: "1.4rem", fontWeight: "900", margin: "20px 0", color: "#000000" }}>
+              ເອເຈນ / Agent: <span style={{ textDecoration: "underline" }}>{partnerNameParam}</span>
+              <div style={{ fontSize: "1rem", color: "#64748b", fontFamily: "monospace", marginTop: "5px" }}>Code: {partnerIdParam}</div>
+            </div>
+          ) : (
+            <div style={{ fontSize: "1.3rem", fontWeight: "900", margin: "20px 0", color: "#000000" }}>
+              Group Code / ລະຫັດກຸ່ມ: <span style={{ textDecoration: "underline" }}>{loadedBooking?.groupId || groupIdParam}</span>
+            </div>
+          )}
 
           <div style={{ textAlign: "left", maxWidth: "440px", margin: "0 auto", fontSize: "0.95rem", lineHeight: "1.6", fontWeight: "700" }}>
             <p>1. Scan the QR Code using your mobile phone camera.</p>

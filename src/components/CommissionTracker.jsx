@@ -1111,57 +1111,8 @@ export default function CommissionTracker() {
         };
 
         const handlePrint = () => {
-          const printWindow = window.open("", "_blank");
-          printWindow.document.write(`
-            <html>
-              <head>
-                <title>Print QR Code - ${qrPartnerModal.name}</title>
-                <style>
-                  body {
-                    font-family: 'Outfit', sans-serif;
-                    text-align: center;
-                    padding: 40px;
-                    margin: 0;
-                  }
-                  .container {
-                    border: 4px solid #0f766e;
-                    border-radius: 20px;
-                    padding: 40px;
-                    max-width: 500px;
-                    margin: 0 auto;
-                  }
-                  h1 { color: #0f766e; font-size: 28px; margin-bottom: 5px; }
-                  p { color: #475569; font-size: 16px; margin-top: 5px; }
-                  .qr-box { margin: 30px auto; }
-                  .agent-name { font-size: 22px; font-weight: bold; color: #0f172a; margin-top: 20px; }
-                  .footer { font-size: 12px; color: #94a3b8; margin-top: 40px; }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <h1>TADFANE RAFTING</h1>
-                  <p>ສະແກນເພື່ອລົງທະບຽນ ແລະ ກອກຂໍ້ມູນລູກຄ້າ</p>
-                  <div class="qr-box" id="qrcode"></div>
-                  <div class="agent-name">ເອເຈນ: ${qrPartnerModal.name}</div>
-                  <p style="font-size: 14px; font-family: monospace; color: #64748b;">Code: ${qrPartnerModal.id}</p>
-                  <div class="footer">Powered by Tadfane POS System</div>
-                </div>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-                <script>
-                  new QRCode(document.getElementById("qrcode"), {
-                    text: "${agentUrl}",
-                    width: 250,
-                    height: 250
-                  });
-                  window.onload = function() {
-                    window.print();
-                    setTimeout(function() { window.close(); }, 500);
-                  }
-                </script>
-              </body>
-            </html>
-          `);
-          printWindow.document.close();
+          const printUrl = `${window.location.origin}/?print=qr_sign&partnerId=${qrPartnerModal.id}&partnerName=${encodeURIComponent(qrPartnerModal.name)}`;
+          window.open(printUrl, "_blank");
         };
 
         return (
