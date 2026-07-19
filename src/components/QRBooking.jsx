@@ -753,9 +753,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
       if (!activeBooking) return;
 
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      const isStandalone = isIOS && ((window.navigator && window.navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches);
-      if (isStandalone) {
+      const isIOSStandalone = !!(window.navigator && window.navigator.standalone);
+      if (isIOSStandalone) {
         const printUrl = getPrintUrl(templateType, activeBooking);
         const win = window.open(printUrl, '_blank');
         if (!win) {
@@ -774,9 +773,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       setIsPrintLoading(true);
 
       const runPrint = (currentBooking) => {
-        // Wait 300ms to allow React to update state and render the QR SVG node in the DOM
-        setTimeout(() => {
-          try {
+        try {
             // Get QR SVGs dynamically from rendered hidden SVG elements
             const qrSignSvg = document.querySelector('#print-qr-svg-sign-node svg')?.outerHTML || '';
             const qrSlipSvg = document.querySelector('#print-qr-svg-slip-node svg')?.outerHTML || '';
@@ -1101,26 +1098,22 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             // Force DOM layout reflow
             const _reflow = portal.offsetHeight;
 
-            // Wait 150ms for layout to settle and paint, then trigger print
-            setTimeout(() => {
-              window.focus();
-              window.print();
-              
-              // Cleanup
-              portal.remove();
-              styleEl.remove();
-              setIsPrintLoading(false);
+            // Trigger print dialog synchronously (safari user gesture friendly)
+            window.focus();
+            window.print();
+            
+            // Cleanup
+            portal.remove();
+            styleEl.remove();
+            setIsPrintLoading(false);
 
-              if (onComplete) {
-                onComplete();
-              }
-            }, 150);
-
+            if (onComplete) {
+              onComplete();
+            }
           } catch (runErr) {
             alert("Error in runPrint: " + runErr.message + "\nStack: " + runErr.stack);
             setIsPrintLoading(false);
           }
-        }, 300); // 300ms wait for React render/DOM paint
       };
 
       runPrint(activeBooking);

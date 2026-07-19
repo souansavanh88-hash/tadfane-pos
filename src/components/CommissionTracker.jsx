@@ -1179,13 +1179,11 @@ export default function CommissionTracker() {
           // Force DOM layout reflow
           const _reflow = portal.offsetHeight;
 
-          // Trigger print dialog instantly
-          setTimeout(() => {
-            window.focus();
-            window.print();
-            portal.remove();
-            styleEl.remove();
-          }, 150);
+          // Trigger print dialog synchronously (forces direct user gesture stack matching in Safari)
+          window.focus();
+          window.print();
+          portal.remove();
+          styleEl.remove();
         };
 
         return (

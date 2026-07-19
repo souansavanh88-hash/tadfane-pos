@@ -450,12 +450,10 @@ export default function PayrollManager() {
     document.body.appendChild(portal);
 
     const _reflow = portal.offsetHeight;
-    setTimeout(() => {
-      window.focus();
-      window.print();
-      portal.remove();
-      styleEl.remove();
-    }, 150);
+    window.focus();
+    window.print();
+    portal.remove();
+    styleEl.remove();
   };
 
   const triggerPrintPayroll = () => {
@@ -606,12 +604,10 @@ export default function PayrollManager() {
     document.body.appendChild(portal);
 
     const _reflow = portal.offsetHeight;
-    setTimeout(() => {
-      window.focus();
-      window.print();
-      portal.remove();
-      styleEl.remove();
-    }, 150);
+    window.focus();
+    window.print();
+    portal.remove();
+    styleEl.remove();
   };
 
   const handlePrintIndividual = (emp) => {
