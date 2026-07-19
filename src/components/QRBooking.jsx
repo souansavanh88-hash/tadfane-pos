@@ -753,7 +753,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
       if (!activeBooking) return;
 
-      const isStandalone = (window.navigator && window.navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isStandalone = isIOS && ((window.navigator && window.navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches);
       if (isStandalone) {
         const printUrl = getPrintUrl(templateType, activeBooking);
         const win = window.open(printUrl, '_blank');

@@ -64,7 +64,7 @@ export default function TicketManifest({ activeTripId, onBack }) {
 
     setTimeout(() => {
       setPrintTemplate(null);
-    }, 5000);
+    }, 60000);
   };
 
   // Compute receipt variables if trip is selected

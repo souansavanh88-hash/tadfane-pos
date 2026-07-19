@@ -94,7 +94,7 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
 
     setTimeout(() => {
       setPrintBooking(null);
-    }, 5000);
+    }, 60000);
   };
 
   const handleSetReadyToPay = (bk) => {
