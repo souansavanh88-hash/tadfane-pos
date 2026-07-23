@@ -546,6 +546,7 @@ const syncTripsWithBookings = (db) => {
 };
 
 export const saveDbLocally = (db) => {
+  db.lastModified = Date.now();
   try {
     syncTripsWithBookings(db);
   } catch (err) {
@@ -566,6 +567,7 @@ export const saveDbLocally = (db) => {
 };
 
 export const saveDb = (db) => {
+  db.lastModified = Date.now();
   try {
     syncTripsWithBookings(db);
   } catch (err) {
@@ -596,9 +598,9 @@ export const initFirebase = () => {
   unsubscribeFirebase = startFirebaseSync((cloudData) => {
     // When cloud data arrives, update our memory and localStorage
     if (cloudData) {
-      // 🚨 CLOUD WIPE PROTECTION: Prevent empty cloud data from wiping out local data
-      const localBookings = memoryDb?.bookings?.length || 0;
-      const cloudBookings = cloudData?.bookings?.length || 0;
+      const localDb = memoryDb || getDb();
+      const localLastModified = localDb?.lastModified || 0;
+      const cloudLastModified = cloudData?.lastModified || 0;
       
       // If the cloud explicitly says it was intentionally wiped, accept it and bypass protection
       if (cloudData.isWiped) {
@@ -610,9 +612,21 @@ export const initFirebase = () => {
         return;
       }
 
+      // Check if local database has a newer lastModified timestamp than the incoming cloud data
+      if (localLastModified > cloudLastModified) {
+        console.warn("🚨 [PROTECTION] Local database is newer than cloud database. Ignoring cloud sync to prevent overwrite.", {localLastModified, cloudLastModified});
+        // Push our newer local database to the cloud to sync it back up
+        pushToFirebase(localDb).catch(err => console.error("Re-sync push failed:", err));
+        return;
+      }
+
+      // 🚨 CLOUD WIPE PROTECTION: Prevent empty cloud data from wiping out local data
+      const localBookings = localDb?.bookings?.length || 0;
+      const cloudBookings = cloudData?.bookings?.length || 0;
+
       if (cloudBookings === 0 && localBookings > 0) {
         console.warn("🚨 [PROTECTION] Cloud data is empty but local data exists! Rejecting cloud sync and forcing a cloud overwrite.");
-        pushToFirebase(memoryDb);
+        pushToFirebase(localDb);
         return;
       }
 
@@ -631,6 +645,7 @@ setTimeout(initFirebase, 100);
 export const resetDb = () => {
   memoryDb = JSON.parse(JSON.stringify(SEED_DATA));
   memoryDb.isWiped = true;
+  memoryDb.lastModified = Date.now();
   safeSetItem(DB_KEY, JSON.stringify(memoryDb));
   return memoryDb;
 };
