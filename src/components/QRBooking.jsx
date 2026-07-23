@@ -292,6 +292,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const [isAdvanceBooking, setIsAdvanceBooking] = useState(false);
   const [advanceDeposit, setAdvanceDeposit] = useState(0);
   const [advanceDiscount, setAdvanceDiscount] = useState(0);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerNotes, setCustomerNotes] = useState("");
   
   // Crew assignment form state (loaded from booking)
   const [selectedGuideIds, setSelectedGuideIds] = useState([]); // Multiple guides
@@ -313,6 +316,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const [editCustomPrice, setEditCustomPrice] = useState("");
   const [editPaymentMethod, setEditPaymentMethod] = useState("cash");
   const [editNotes, setEditNotes] = useState("");
+  const [editCustomerName, setEditCustomerName] = useState("");
+  const [editCustomerPhone, setEditCustomerPhone] = useState("");
+  const [editCustomerNotes, setEditCustomerNotes] = useState("");
   const [editPassengers, setEditPassengers] = useState([]);
   
   // Registration code & QR print helper state
@@ -431,6 +437,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       setEditCustomPrice(loadedBooking.customPricePerPax || "");
       setEditPaymentMethod(loadedBooking.paymentMethod || "cash");
       setEditNotes(loadedBooking.notes || "");
+      setEditCustomerName(loadedBooking.customerName || "");
+      setEditCustomerPhone(loadedBooking.customerPhone || "");
+      setEditCustomerNotes(loadedBooking.customerNotes || "");
       setEditPassengers(loadedBooking.passengers ? JSON.parse(JSON.stringify(loadedBooking.passengers)) : []);
       setManageBillTab("details");
     }
@@ -1165,6 +1174,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     setIsAdvanceBooking(false);
     setAdvanceDeposit(0);
     setAdvanceDiscount(0);
+    setCustomerName("");
+    setCustomerPhone("");
+    setCustomerNotes("");
   };
 
   // Handles creating a new booking in "registering"
@@ -1187,6 +1199,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         partnerId: partnerId || null,
         partnerName: sourceName,
         bookingSource: isAgent ? "agent" : "walk-in",
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerNotes: customerNotes.trim(),
         paxCount: parseInt(paxCount),
         date,
         time,
@@ -1208,7 +1223,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
           ? (advanceDeposit >= (totalPriceLAK - advanceDiscount) ? "paid" : (advanceDeposit > 0 ? "partially_paid" : "unpaid")) 
           : "pending",
         groupId: registrationGroupId,
-        passengers: [],
+        passengers: customerName.trim() ? [{ name: customerName.trim(), phone: customerPhone.trim() }] : [],
         auditLogs: [],
         guideIds: [],
         assignedBoats: [],
@@ -2048,6 +2063,45 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       />
                     </div>
                   </div>
+
+                  {/* Customer Information inputs */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: "bold" }}>👤 ຊື່ລູກຄ້າ / Customer Name</label>
+                      <input
+                        type="text"
+                        placeholder="ຊື່ລູກຄ້າ / Customer Name"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        style={inputStyle}
+                        disabled={isLocked}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: "bold" }}>📞 ເບີໂທ ຫຼື LINE / Phone or LINE ID</label>
+                      <input
+                        type="text"
+                        placeholder="ເບີໂທ ຫຼື LINE ID"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        style={inputStyle}
+                        disabled={isLocked}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: "bold" }}>📝 ໝາຍເຫດ / ຊ່ອງທາງຕິດຕໍ່ / Contact Channel & Notes</label>
+                    <input
+                      type="text"
+                      placeholder="ເຊັ່ນ: WhatsApp / Line / Facebook / ໝາຍເຫດ..."
+                      value={customerNotes}
+                      onChange={(e) => setCustomerNotes(e.target.value)}
+                      style={inputStyle}
+                      disabled={isLocked}
+                    />
+                  </div>
+
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: "800", color: "#0ea5e9", background: "rgba(14, 165, 233, 0.08)", padding: "6px 10px", borderRadius: "6px" }}>
                     <span>ຍອດຄ້າງຊຳລະ / Balance Due:</span>
                     <span>{formatLAK(Math.max(0, totalPriceLAK - advanceDiscount - advanceDeposit))} LAK</span>
@@ -2282,6 +2336,16 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "5px" }}>
                             ({bk.partnerName?.split(" ")[0] || "Walk-In"}) - {bk.paxCount} pax
                           </span>
+                          {bk.customerName && (
+                            <div style={{ fontSize: "0.75rem", color: "var(--primary)", fontWeight: "bold", marginTop: "2px" }}>
+                              👤 ລູກຄ້າ: {bk.customerName} {bk.customerPhone ? `(📞 ${bk.customerPhone})` : ''}
+                            </div>
+                          )}
+                          {bk.customerNotes && (
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                              📝 {bk.customerNotes}
+                            </div>
+                          )}
                           <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             🕒 ວັນທີ: {bk.date} ({bk.time}) - {bk.serviceName}
                           </div>
@@ -3266,6 +3330,40 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                     </div>
                   </div>
 
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>👤 ຊື່ລູກຄ້າ / Customer Name</label>
+                      <input 
+                        type="text"
+                        className="form-control"
+                        placeholder="ຊື່ລູກຄ້າ / Customer Name"
+                        value={editCustomerName}
+                        onChange={(e) => setEditCustomerName(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>📞 ເບີໂທ ຫຼື LINE / Phone or LINE ID</label>
+                      <input 
+                        type="text"
+                        className="form-control"
+                        placeholder="ເບີໂທ ຫຼື LINE ID"
+                        value={editCustomerPhone}
+                        onChange={(e) => setEditCustomerPhone(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>📝 ໝາຍເຫດ / ຊ່ອງທາງຕິດຕໍ່ / Contact Channel & Notes</label>
+                    <input 
+                      type="text"
+                      className="form-control"
+                      placeholder="ເຊັ່ນ: WhatsApp / Line / Facebook / ໝາຍເຫດ..."
+                      value={editCustomerNotes}
+                      onChange={(e) => setEditCustomerNotes(e.target.value)}
+                    />
+                  </div>
+
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>{t("notes", "ບັນທຶກ / Notes")}</label>
                     <textarea 
@@ -3622,6 +3720,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       paidLAK: (priceDetails.totalLAK - (loadedBooking.discountLAK || 0)) - (loadedBooking.debtLAK || 0),
                       paymentMethod: editPaymentMethod,
                       notes: editNotes,
+                      customerName: editCustomerName.trim(),
+                      customerPhone: editCustomerPhone.trim(),
+                      customerNotes: editCustomerNotes.trim(),
                       passengers: editPassengers.map(p => ({
                         ...p,
                         name: `${p.firstName || ""} ${p.lastName || ""}`.trim()
