@@ -13,8 +13,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
     { id: "manifest", label: t("trips_manifest", "ລາຍການຖ້ຽວ"), icon: "📅", color: "#f97316", bg: "rgba(249, 115, 22, 0.12)", permId: "checkin-tickets" },
     { id: "online-register", label: t("customer_registration", "ລົງທະບຽນລູກຄ້າ"), icon: "👥", color: "#0ea5e9", bg: "rgba(14, 165, 233, 0.12)", permId: "checkin-tickets" },
     { id: "commissions", label: t("commissions", "ຄ່າຄອມເອເຈນ"), icon: "🤝", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.12)", permId: "accounting-payroll" },
-    { id: "guides", label: t("guides_live", "ຕິດຕາມໄກດ໌"), icon: "🧑🌾", color: "#84cc16", bg: "rgba(132, 204, 22, 0.12)", permId: "checkin-tickets" },
-    { id: "drivers", label: t("drivers_live", "ຕິດຕາມຄົນຂັບ"), icon: "🚐", color: "#6b7280", bg: "rgba(107, 114, 128, 0.12)", permId: "checkin-tickets" },
+
 
     { id: "reports", label: t("reports", "ລາຍງານ"), icon: "📊", color: "#eab308", bg: "rgba(234, 179, 8, 0.12)", permId: "accounting-payroll" },
     { id: "accounting-payroll", label: t("financials", "ການເງິນ"), icon: "💵", color: "#15803d", bg: "rgba(21, 128, 61, 0.12)", permId: "accounting-payroll" },
