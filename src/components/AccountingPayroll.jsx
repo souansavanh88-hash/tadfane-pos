@@ -887,12 +887,14 @@ export default function AccountingPayroll({ currentUser }) {
                       <label style={labelStyle}>{t("category", "ໝວດໝູ່ / Category")}</label>
                       <select value={expCategory} onChange={(e) => setExpCategory(e.target.value)} style={inputStyle}>
                         <option value="Utilities">Utilities (ຄ່ານ້ຳ/ໄຟ/ເນັດ)</option>
-                        <option value="Supplies">Supplies (ຊື້ເຄື່ອງໃຊ້/ເຄື່ອງດື່ມ)</option>
-                        <option value="Boat Repair">Boat Repair (ຄ່າຊ່おມເຮືອ)</option>
+                        <option value="Supplies">Supplies (ຊື້ເຄື່ອງໃຊ້/ເຄື່ອງດື່ม)</option>
+                        <option value="Boat Repair">Boat Repair (ຄ່າຊ່ອມເຮືອ)</option>
                         <option value="Marketing">Marketing (ການຕະຫຼາດ)</option>
                         <option value="Office Rent">Office Rent (ຄ່າເຊົ່າ)</option>
-                        <option value="Food & Drinks">Food & Drinks (ອາຫານ/ເຄື່ອງດື່ມ)</option>
-                        <option value="Extra Fuel">Extra Fuel (ນ້ຳມັນເສີມ)</option>
+                        <option value="Food & Drinks">Food & Drinks (ອາຫານ/ເຄື່ອງດື່ม)</option>
+                        <option value="Extra Fuel">Extra Fuel (ນ້ຳມັນເສີມ / Boat Fuel)</option>
+                        <option value="Car Fuel">Car Fuel (ນ້ຳມັນລົດ / Car Fuel)</option>
+                        <option value="Equipment Purchase">Equipment Purchase (ຊື້ອຸປະກອນເພີ່ມ / Buy Equipment)</option>
                         <option value="Miscellaneous">Miscellaneous (ອື່ນໆ)</option>
                       </select>
                     </div>

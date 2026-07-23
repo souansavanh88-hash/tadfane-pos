@@ -1639,8 +1639,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const completedBookings = firebaseBookings.filter(b => 
     b.status === "completed" || 
     b.status === "dispatched" || 
-    b.status === "เสร็จสิ้น" ||
-    b.status === "cancelled"
+    b.status === "เสร็จสิ้น"
   );
   
   // Queue 1: กำลังลงทะเบียน
