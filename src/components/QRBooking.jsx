@@ -902,12 +902,19 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                         ${formatLAK(currentBooking.pricePaidLAK)} LAK
                       </span>
                     </div>
-                    ${(currentBooking.discountLAK || 0) > 0 ? `
-                      <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px;">
-                        <span>${rt.discount}</span>
-                        <span>-${formatLAK(currentBooking.discountLAK)} LAK</span>
-                      </div>
-                    ` : ''}
+                    ${(currentBooking.discountLAK || 0) > 0 ? (() => {
+                      const pctStr = currentBooking.discountPercent 
+                        ? `(${currentBooking.discountPercent}%)` 
+                        : (currentBooking.discountType === "percent" 
+                          ? `(${Math.round((currentBooking.discountLAK / currentBooking.pricePaidLAK) * 100)}%)`
+                          : "");
+                      return `
+                        <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px;">
+                          <span>${rt.discount} ${pctStr}</span>
+                          <span>-${formatLAK(currentBooking.discountLAK)} LAK</span>
+                        </div>
+                      `;
+                    })() : ''}
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 900; font-size: 18px; margin-top: 8px; border-top: 2px solid #000000; padding-top: 6px;">
                       <span style="flex: 1; text-align: left;">${(currentBooking.discountLAK || 0) > 0 || (currentBooking.debtLAK || 0) > 0 ? rt.netTotal : rt.total}</span>
                       <span style="white-space: nowrap; text-align: right;">
@@ -1188,6 +1195,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         pricePerPax: activePricePerPax,
         pricePaidLAK: totalPriceLAK,
         discountLAK: isAdvanceBooking ? advanceDiscount : computedDiscountLAK,
+        discountType: isAdvanceBooking ? "lak" : discountMode,
+        discountPercent: isAdvanceBooking ? 0 : (discountMode === "percent" ? discountAmount : 0),
         netPriceLAK: isAdvanceBooking ? (totalPriceLAK - advanceDiscount) : (totalPriceLAK - computedDiscountLAK),
         debtLAK: isAdvanceBooking ? Math.max(0, totalPriceLAK - advanceDiscount - advanceDeposit) : debtAmount,
         paidLAK: isAdvanceBooking ? advanceDeposit : ((totalPriceLAK - computedDiscountLAK) - debtAmount),
@@ -1278,7 +1287,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       setSelectedTier("tier1");
     }
     setPaymentMethod(bk.paymentMethod || "cash");
-    setDiscountAmount(bk.discountLAK || 0);
+    const discMode = bk.discountType || "lak";
+    setDiscountMode(discMode);
+    setDiscountAmount(discMode === "percent" ? (bk.discountPercent || 0) : (bk.discountLAK || 0));
     setDebtAmount(bk.debtLAK || 0);
     
     // Load assigned crew
@@ -1452,6 +1463,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       paymentMethod: paymentMethod,
       paymentCurrency: paymentCurrency,
       discountLAK: computedDiscountLAK,
+      discountType: discountMode,
+      discountPercent: discountMode === "percent" ? discountAmount : 0,
       netPriceLAK: (loadedBooking.pricePaidLAK || totalPriceLAK) - computedDiscountLAK,
       debtLAK: debtAmount,
       paidLAK: ((loadedBooking.pricePaidLAK || totalPriceLAK) - computedDiscountLAK) - debtAmount,
@@ -1512,6 +1525,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       pricePerPax: activePricePerPax,
       pricePaidLAK: totalPriceLAK,
       discountLAK: computedDiscountLAK,
+      discountType: discountMode,
+      discountPercent: discountMode === "percent" ? discountAmount : 0,
       netPriceLAK: totalPriceLAK - computedDiscountLAK,
       debtLAK: debtAmount,
       paidLAK: (totalPriceLAK - computedDiscountLAK) - debtAmount,
