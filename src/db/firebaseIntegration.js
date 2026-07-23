@@ -46,7 +46,7 @@ export const pushToFirebase = async (dbState) => {
     await setDoc(docRef, {
       dbState: dbState,
       updatedAt: serverTimestamp()
-    }, { merge: true });
+    });
     
     isPushing = false;
     return true;
@@ -67,7 +67,7 @@ export const forcePushToFirebase = async (dbState) => {
   await setDoc(docRef, {
     dbState: dbState,
     updatedAt: serverTimestamp()
-  }, { merge: true });
+  });
   
   return true;
 };

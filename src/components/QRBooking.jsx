@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import { useLanguage } from "../utils/LanguageContext";
-import { getDb, addBooking, saveDb, purgeTestData } from "../db/mockDb";
+import { getDb, addBooking, saveDb, saveDbLocally, purgeTestData } from "../db/mockDb";
 import { fireDb } from "../db/firebaseConfig";
-import { isFirebaseConfigured, getBookingFromFirebase, listenToAllBookings, addBookingToFirebase, updateBookingInFirebase } from "../db/firebaseSync";
+import { isFirebaseConfigured, getBookingFromFirebase, listenToAllBookings, addBookingToFirebase, updateBookingInFirebase, clearAllBookingsFromFirebase } from "../db/firebaseSync";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { formatLAK, formatTHB, formatUSD, generateBillId, getStatusLabel } from "../utils/helpers";
 import { 
@@ -753,8 +753,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
       if (!activeBooking) return;
 
-      const isIOSStandalone = !!(window.navigator && window.navigator.standalone);
-      if (isIOSStandalone) {
+      const isStandalone = !!(window.navigator && window.navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches;
+      if (isStandalone) {
         const printUrl = getPrintUrl(templateType, activeBooking);
         const win = window.open(printUrl, '_blank');
         if (!win) {
@@ -1416,7 +1416,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       return b;
     });
 
-    saveDb(currentDb);
+    saveDbLocally(currentDb);
     setDb(currentDb);
     alert("ບัນทึกข้ອมูลจัດพນักงาນเรີยບร้ອยแล้ว / Crew updated successfully!");
   };
@@ -1465,7 +1465,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       setLoadedBooking({ ...loadedBooking, ...updates });
       const currentDb = getDb();
       currentDb.bookings = currentDb.bookings.map(b => b.id === loadedBooking.id ? { ...b, ...updates } : b);
-      saveDb(currentDb);
+      saveDbLocally(currentDb);
       setDb(currentDb);
     });
 
@@ -1538,7 +1538,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   };
 
   // Purge test customer and booking data
-  const handlePurgeData = () => {
+  const handlePurgeData = async () => {
     const confirmMsg = lang === "en" 
       ? "Warning: This will delete all bookings, registered customers, trip manifests, and custom expenses. Basic settings, agents, and staff will be kept. Proceed?" 
       : "ຄຳເຕືອນ: ນີ້ຈະລຶບຂໍ້ມູນການຈອງ, ຜູ້ໂດຍສານທີ່ລົງທະບຽນ, ປະຫວັດການເດີນເຮືອ ແລະ ຄ່າໃຊ້ຈ่ายທັງໝົດ. ຂໍ້ມູນພື້ນຖານອື່ນໆຈະຍັງຄົງຢູ່. ຕ້ອງການດຳເນີນການຕໍ່ແມ່ນບໍ່?";
@@ -1548,6 +1548,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       const updatedDb = getDb();
       setDb(updatedDb);
       setLoadedBooking(null);
+      try {
+        await clearAllBookingsFromFirebase();
+      } catch (err) {
+        console.error("Failed to clear bookings from firebase:", err);
+      }
       alert(lang === "en" ? "All customer and booking data has been reset!" : "ລຶບຂໍ້ມູນການຈອງ ແລະ ຜູ້ໂດຍສານທັງໝົດຮຽບຮ້ອຍແລ້ວ!");
       window.location.reload();
     }
@@ -3510,7 +3515,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
                     const currentDb = getDb();
                     currentDb.bookings = currentDb.bookings.map(b => b.id === loadedBooking.id ? updatedBooking : b);
-                    saveDb(currentDb);
+                    saveDbLocally(currentDb);
                     setDb(currentDb);
                     setLoadedBooking(updatedBooking);
                     setIsManageBillOpen(false);
