@@ -1262,25 +1262,7 @@ export default function PayrollManager() {
                 </div>
               </div>
 
-              {empRole === "guide" && (
-                <div style={{ background: "rgba(15, 118, 110, 0.05)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(15, 118, 110, 0.15)", marginBottom: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#0f766e" }}>⚙️ ຕັ້ງຄ່າອັດຕາເງິນພິເສດໄກ້ດ / Guide Payout Rates</span>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
-                    <div>
-                      <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>ຄ່າພາທ່ຽວຕໍ່ຮອບ / Tour Rate</label>
-                      <input type="number" className="form-control" value={tourRate} onChange={(e) => setTourRate(e.target.value)} min="0" step="5000" />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>ຄ່າລ່ອງແກ່ງຕໍ່ຮອບ / Rafting Rate</label>
-                      <input type="number" className="form-control" value={raftingRate} onChange={(e) => setRaftingRate(e.target.value)} min="0" step="5000" />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>ຄ່າພິເສດ / Special Rate</label>
-                      <input type="number" className="form-control" value={specialRate} onChange={(e) => setSpecialRate(e.target.value)} min="0" step="5000" />
-                    </div>
-                  </div>
-                </div>
-              )}
+
 
               {/* Emergency Contact Group */}
               <div style={{ background: "rgba(239, 68, 68, 0.03)", padding: "12px", borderRadius: "8px", border: "1px dashed rgba(239, 68, 68, 0.2)", marginBottom: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
