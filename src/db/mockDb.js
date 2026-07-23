@@ -18,8 +18,6 @@ const SEED_DATA = {
   },
   services: [
     { id: "SRV-001", name: "ລ່ອງເຮືອ / Adult Boat Ride", price: 250000, priceTier1: 250000, priceTier1Type: "pax", priceTier2: 230000, priceTier2Type: "pax", priceTier3: 200000, priceTier3Type: "pax", currency: "LAK", status: "active" },
-    { id: "SRV-002", name: "ປີ້ເດັກນ້ອຍ / Child Ticket", price: 120000, priceTier1: 120000, priceTier1Type: "pax", priceTier2: 120000, priceTier2Type: "pax", priceTier3: 120000, priceTier3Type: "pax", currency: "LAK", status: "active" },
-    { id: "SRV-003", name: "ບໍລິການເສີມ / Extra Service", price: 50000, priceTier1: 50000, priceTier1Type: "pax", priceTier2: 50000, priceTier2Type: "pax", priceTier3: 50000, priceTier3Type: "pax", currency: "LAK", status: "active" },
     { id: "SRV-004", name: "🧗 Waterfall Rappelling (ໂຣຍຕົວນ້ຳຕົກ)", price: 1580, priceTier1: 1580, priceTier1Type: "pax", priceTier2: 1580, priceTier2Type: "pax", priceTier3: 1120, priceTier3Type: "pax", currency: "THB", status: "active" },
     { id: "SRV-005", name: "🚤 Adventure Boat (ລ່ອງເຮືອຜະຈົນໄພ)", price: 1900, priceTier1: 1900, priceTier1Type: "flat", priceTier2: 1900, priceTier2Type: "flat", priceTier3: 780, priceTier3Type: "pax", currency: "THB", status: "active" },
     { id: "SRV-006", name: "🚶 ເດີນປ່າ / Hiking (ກິດຈະກຳເດີນປ່າ)", price: 500, priceTier1: 500, priceTier1Type: "pax", priceTier2: 500, priceTier2Type: "pax", priceTier3: 500, priceTier3Type: "pax", currency: "THB", status: "active" }
