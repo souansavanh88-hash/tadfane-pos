@@ -1881,9 +1881,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   }}>
                     👤
                   </div>
-                  <span style={{ fontSize: "0.8rem", fontWeight: "700" }}>Walk In</span>
+                  <span style={{ fontSize: "0.8rem", fontWeight: "700", textAlign: "center" }}>{t("walk_in_card", "ລູກຄ້າທົ່ວໄປ (Walk In)")}</span>
                 </button>
-                {db.partners.map(p => {
+                {db.partners.filter(p => p.id !== "PTN-000").map(p => {
                   const isSelected = partnerId === p.id;
                   return (
                     <button
