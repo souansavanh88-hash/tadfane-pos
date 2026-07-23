@@ -289,6 +289,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountMode, setDiscountMode] = useState("lak"); // "lak" or "percent"
   const [debtAmount, setDebtAmount] = useState(0);
+  const [isAdvanceBooking, setIsAdvanceBooking] = useState(false);
+  const [advanceDeposit, setAdvanceDeposit] = useState(0);
+  const [advanceDiscount, setAdvanceDiscount] = useState(0);
   
   // Crew assignment form state (loaded from booking)
   const [selectedGuideIds, setSelectedGuideIds] = useState([]); // Multiple guides
@@ -1152,6 +1155,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     setPaymentMethod("cash");
     setPaymentCurrency("LAK");
     setLoadedBooking(null);
+    setIsAdvanceBooking(false);
+    setAdvanceDeposit(0);
+    setAdvanceDiscount(0);
   };
 
   // Handles creating a new booking in "registering"
@@ -1181,15 +1187,17 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         serviceName: currentService.name,
         pricePerPax: activePricePerPax,
         pricePaidLAK: totalPriceLAK,
-        discountLAK: computedDiscountLAK,
-        netPriceLAK: totalPriceLAK - computedDiscountLAK,
-        debtLAK: debtAmount,
-        paidLAK: (totalPriceLAK - computedDiscountLAK) - debtAmount,
+        discountLAK: isAdvanceBooking ? advanceDiscount : computedDiscountLAK,
+        netPriceLAK: isAdvanceBooking ? (totalPriceLAK - advanceDiscount) : (totalPriceLAK - computedDiscountLAK),
+        debtLAK: isAdvanceBooking ? Math.max(0, totalPriceLAK - advanceDiscount - advanceDeposit) : debtAmount,
+        paidLAK: isAdvanceBooking ? advanceDeposit : ((totalPriceLAK - computedDiscountLAK) - debtAmount),
         paymentMethod,
         paymentCurrency,
         billNumber,
-        status: "registering", // Enforce standard status
-        paymentStatus: "pending",
+        status: isAdvanceBooking ? "advance_booking" : "registering", // Enforce standard status
+        paymentStatus: isAdvanceBooking 
+          ? (advanceDeposit >= (totalPriceLAK - advanceDiscount) ? "paid" : (advanceDeposit > 0 ? "partially_paid" : "unpaid")) 
+          : "pending",
         groupId: registrationGroupId,
         passengers: [],
         auditLogs: [],
@@ -1215,7 +1223,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       });
 
       // Trigger print asynchronously and reset form after print preview is closed
-      triggerQrSlipPrint(newBooking, () => {
+      const printFn = isAdvanceBooking ? triggerReceiptPrint : triggerQrSlipPrint;
+      printFn(newBooking, () => {
         // Generate new group ID and bill number for next customer
         setRegistrationGroupId("REG-" + Math.floor(1000 + Math.random() * 9000));
         setBillNumber(generateBillId());
@@ -1965,6 +1974,74 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
               </div>
             </div>
 
+            {/* Advance Booking Checkbox and inputs */}
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+              margin: "5px 0",
+              background: isAdvanceBooking ? "rgba(59, 130, 246, 0.06)" : "transparent",
+              border: isAdvanceBooking ? "1px solid rgba(59, 130, 246, 0.2)" : "1px dashed var(--border-color)",
+              padding: "12px",
+              borderRadius: "10px",
+              transition: "all 0.2s ease"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <input
+                  type="checkbox"
+                  id="isAdvanceBooking"
+                  checked={isAdvanceBooking}
+                  onChange={(e) => {
+                    setIsAdvanceBooking(e.target.checked);
+                    if (!e.target.checked) {
+                      setAdvanceDeposit(0);
+                      setAdvanceDiscount(0);
+                    }
+                  }}
+                  style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                  disabled={isLocked}
+                />
+                <label htmlFor="isAdvanceBooking" style={{ fontWeight: "800", fontSize: "0.8rem", color: isAdvanceBooking ? "#3b82f6" : "var(--text-muted)", cursor: "pointer", userSelect: "none" }}>
+                  📅 ຈອງລ່ວງໜ້າ (ມີເງິນມັດຈຳ) / Advance Booking with Deposit
+                </label>
+              </div>
+
+              {isAdvanceBooking && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "5px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: "bold" }}>ມັດຈຳແລ້ວ / Deposit Paid (LAK)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0 LAK"
+                        value={advanceDeposit || ""}
+                        onChange={(e) => setAdvanceDeposit(Math.max(0, parseInt(e.target.value) || 0))}
+                        style={inputStyle}
+                        disabled={isLocked}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: "bold" }}>ສ່ວນຫຼຸດ / Discount (LAK)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0 LAK"
+                        value={advanceDiscount || ""}
+                        onChange={(e) => setAdvanceDiscount(Math.max(0, parseInt(e.target.value) || 0))}
+                        style={inputStyle}
+                        disabled={isLocked}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: "800", color: "#0ea5e9", background: "rgba(14, 165, 233, 0.08)", padding: "6px 10px", borderRadius: "6px" }}>
+                    <span>ຍອດຄ້າງຊຳລະ / Balance Due:</span>
+                    <span>{formatLAK(Math.max(0, totalPriceLAK - advanceDiscount - advanceDeposit))} LAK</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Service selection blocks */}
             <div style={{ marginBottom: "15px" }}>
               <label style={{ ...fieldLabelStyle, marginBottom: "8px", display: "block" }}>ປະເພດການບໍລິການ / Activity Service</label>
@@ -2169,6 +2246,75 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
         {/* Right Column: Queues & Bill Details Preview */}
         <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+          
+          {/* QUEUE 0: จองล่วงหน้า / Advance Bookings Queue */}
+          {(() => {
+            const advanceBookings = firebaseBookings.filter(b => b.status === "advance_booking");
+            return (
+              <div className="card" style={{ padding: "15px", border: "1.5px solid #3b82f6", background: "rgba(59, 130, 246, 0.03)", borderRadius: "10px" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: "800", color: "#3b82f6", display: "flex", alignItems: "center", gap: "6px", marginBottom: "5px" }}>
+                  📅 0. {t("advance_bookings_title", "ຈອງລ່ວງໜ້າ / Advance Bookings")} ({advanceBookings.length})
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "140px", overflowY: "auto" }}>
+                  {advanceBookings.length === 0 ? (
+                    <div style={{ fontStyle: "italic", fontSize: "0.8rem", color: "var(--text-muted)", padding: "10px", textAlign: "center" }}>
+                      {t("no_advance_bookings", "ບໍ່ມີລາຍການຈອງລ່ວງໜ້າ / No advance bookings")}
+                    </div>
+                  ) : (
+                    advanceBookings.map(bk => (
+                      <div key={bk.id} style={queueCardStyle}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <strong style={{ fontSize: "0.9rem", color: "#3b82f6" }}>{bk.id}</strong>
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "5px" }}>
+                            ({bk.partnerName?.split(" ")[0] || "Walk-In"}) - {bk.paxCount} pax
+                          </span>
+                          <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            🕒 ວັນທີ: {bk.date} ({bk.time}) - {bk.serviceName}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "#0f766e", marginTop: "2px", fontWeight: "bold" }}>
+                            💵 ມັດຈຳ: {formatLAK(bk.paidLAK)} / ຄ້າງຊຳລະ: {formatLAK(bk.debtLAK)} LAK
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQrShowModalBooking(bk);
+                            }}
+                            style={queueActionBtnStyle("#3b82f6")}
+                            title={t("show_qr_screen", "ສະແດງ QR ເທິງຈໍ / Show QR on Screen")}
+                          >
+                            <QrCode size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              flushSync(() => {
+                                setLoadedBooking(bk);
+                                setRegistrationGroupId(bk.groupId);
+                              });
+                              triggerQrSlipPrint();
+                            }}
+                            style={queueActionBtnStyle("#0d9488")}
+                            title={t("print_qr_slip", "ພິມໃບ QR / Print QR Slip")}
+                          >
+                            <Printer size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleLoadBooking(bk)}
+                            style={queueActionBtnStyle("var(--primary)")}
+                          >
+                            {t("load_btn", "ໂຫລດ / Load")}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })()}
           
           {/* QUEUE 1: กำลังลงทะเบียน / Registering Queue */}
           <div className="card" style={{ padding: "15px", border: "1.5px dashed #0284c7", background: "rgba(2, 132, 199, 0.03)", borderRadius: "10px" }}>
@@ -2757,6 +2903,34 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
               {/* Payment Method Selector & Checkout Actions */}
               {!isPaidStatus ? (
                 <div style={{ borderTop: "1px dashed #000000", marginTop: "12px", paddingTop: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {loadedBooking && loadedBooking.status === "advance_booking" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "8px", background: "rgba(59, 130, 246, 0.06)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
+                      <span style={{ fontSize: "0.8rem", color: "#1e40af", fontWeight: "bold", textAlign: "center", display: "block" }}>
+                        📅 ບິນຈອງລ່ວງໜ້າ / Advance Booking Ticket
+                      </span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (window.confirm("ທ່ານຕ້ອງການເຊັກອິນ ແລະ ຍ້າຍກຸ່ມນີ້ໄປຄິວລົງທະບຽນແມ່ນບໍ່? / Transition to Passenger Check-In?")) {
+                            try {
+                              const updates = { status: "registering" };
+                              await updateBookingInFirebase(loadedBooking.id, updates);
+                              const currentDb = getDb();
+                              currentDb.bookings = currentDb.bookings.map(b => b.id === loadedBooking.id ? { ...b, ...updates } : b);
+                              saveDbLocally(currentDb);
+                              setLoadedBooking({ ...loadedBooking, ...updates });
+                              alert("ເຊັກອິນສຳເລັດ! ກະລຸນາໃຫ້ລູກຄ້າສະແກນ QR ລົງທະບຽນ / Checked in successfully!");
+                            } catch (err) {
+                              alert("Failed to check in");
+                            }
+                          }
+                        }}
+                        style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "#3b82f6", border: "none", color: "#fff", fontWeight: "800", fontSize: "0.85rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", boxShadow: "0 4px 10px rgba(59, 130, 246, 0.2)", outline: "none" }}
+                      >
+                        📥 ເຂົ້າຮ່ວມ & ລົງທະບຽນ / Check In & Register
+                      </button>
+                    </div>
+                  )}
                   {/* Discount & Debt Inputs */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                     <div>
