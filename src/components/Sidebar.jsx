@@ -15,7 +15,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
     { id: "commissions", label: t("commissions", "ຄ່າຄອມເອເຈນ"), icon: "🤝", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.12)", permId: "accounting-payroll" },
     { id: "guides", label: t("guides_live", "ຕິດຕາມໄກດ໌"), icon: "🧑🌾", color: "#84cc16", bg: "rgba(132, 204, 22, 0.12)", permId: "checkin-tickets" },
     { id: "drivers", label: t("drivers_live", "ຕິດຕາມຄົນຂັບ"), icon: "🚐", color: "#6b7280", bg: "rgba(107, 114, 128, 0.12)", permId: "checkin-tickets" },
-    { id: "boats", label: t("boats_live", "ຕິດຕາມເຮືອ"), icon: "🚤", color: "#06b6d4", bg: "rgba(6, 182, 212, 0.12)", permId: "checkin-tickets" },
+
     { id: "reports", label: t("reports", "ລາຍງານ"), icon: "📊", color: "#eab308", bg: "rgba(234, 179, 8, 0.12)", permId: "accounting-payroll" },
     { id: "accounting-payroll", label: t("financials", "ການເງິນ"), icon: "💵", color: "#15803d", bg: "rgba(21, 128, 61, 0.12)", permId: "accounting-payroll" },
     { id: "settings", label: t("settings", "ຕັ້ງຄ່າ"), icon: "⚙️", color: "#4b5563", bg: "rgba(75, 85, 99, 0.12)", permId: "settings" },
