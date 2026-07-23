@@ -574,10 +574,6 @@ export const saveDb = (db) => {
     console.error("Trip sync failed:", err);
   }
   
-  if (db.isWiped) {
-    db.isWiped = false;
-  }
-  
   memoryDb = db;
   safeSetItem(DB_KEY, JSON.stringify(db));
   
@@ -586,6 +582,10 @@ export const saveDb = (db) => {
   
   // Push to Firebase Realtime Cloud DB
   pushToFirebase(db).catch(err => console.error("Firebase push error:", err));
+
+  if (db.isWiped) {
+    db.isWiped = false;
+  }
 
   try {
     window.dispatchEvent(new Event("db-update"));
@@ -604,7 +604,7 @@ export const initFirebase = () => {
       
       // If the cloud explicitly says it was intentionally wiped, accept it and bypass protection
       if (cloudData.isWiped) {
-        memoryDb = cloudData;
+        memoryDb = { ...cloudData, isWiped: false }; // Clear the flag in memory so subsequent edits don't propagate it
         safeSetItem(DB_KEY, JSON.stringify(memoryDb));
         try {
           window.dispatchEvent(new Event("db-update"));
