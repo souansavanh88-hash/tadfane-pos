@@ -5,7 +5,7 @@ import PayrollManager from "./PayrollManager";
 import Reports from "./Reports";
 import CommissionTracker from "./CommissionTracker";
 import { getDb, saveDb, addCustomExpense, deleteCustomExpense, approveExpense, rejectExpense } from "../db/mockDb";
-import { formatLAK, formatTHB, getLocalDateStr } from "../utils/helpers";
+import { formatLAK, formatTHB, formatUSD, getLocalDateStr } from "../utils/helpers";
 import { useLanguage } from "../utils/LanguageContext";
 import { 
   Users, BarChart3, Coins, ArrowLeft, ArrowRight, Wallet, Printer, 
@@ -15,6 +15,8 @@ import {
 export default function AccountingPayroll({ currentUser }) {
   const { lang, t } = useLanguage();
   const [db, setDb] = useState(getDb());
+  const rateTHB = (db.settings && db.settings.rateTHB) || 620;
+  const rateUSD = (db.settings && db.settings.rateUSD) || 21500;
   const [printTemplate, setPrintTemplate] = useState(null); // 'statement', 'summary', or null
   const [activeTab, setActiveTab] = useState("income"); // income, expenses, pl, reports, payroll_manager, commission_manager
   
@@ -144,6 +146,12 @@ export default function AccountingPayroll({ currentUser }) {
     let boatIncome = 0;
     let rappellingIncome = 0;
     let otherIncome = 0;
+    let totalLAK = 0;
+    let totalTHB = 0;
+    let totalUSD = 0;
+
+    const rateTHB = (db.settings && db.settings.rateTHB) || 620;
+    const rateUSD = (db.settings && db.settings.rateUSD) || 21500;
 
     bookings.forEach(b => {
       if (b.serviceId === "SRV-001" || b.serviceId === "SRV-002" || b.serviceId === "SRV-003") {
@@ -153,9 +161,27 @@ export default function AccountingPayroll({ currentUser }) {
       } else {
         otherIncome += b.pricePaidLAK;
       }
+
+      const currency = b.paymentCurrency || "LAK";
+      if (currency === "THB") {
+        totalTHB += b.pricePaidLAK / rateTHB;
+      } else if (currency === "USD") {
+        totalUSD += b.pricePaidLAK / rateUSD;
+      } else {
+        totalLAK += b.pricePaidLAK;
+      }
     });
 
-    return { bookings, boatIncome, rappellingIncome, otherIncome, total: boatIncome + rappellingIncome + otherIncome };
+    return { 
+      bookings, 
+      boatIncome, 
+      rappellingIncome, 
+      otherIncome, 
+      total: boatIncome + rappellingIncome + otherIncome,
+      totalLAK,
+      totalTHB,
+      totalUSD
+    };
   };
 
   // Calculations for EXPENSES tab and P&L
@@ -727,6 +753,27 @@ export default function AccountingPayroll({ currentUser }) {
             </div>
           </div>
 
+          {/* Currency Breakdown cards */}
+          <div style={{ marginBottom: "1.5rem" }}>
+            <h3 style={{ fontSize: "0.95rem", fontWeight: "700", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
+              💵 ລາຍຮັບແຍກຕາມສະກຸນເງິນສົດ / Cash Revenue by Currency
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "15px" }}>
+              <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #10b981", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "700" }}>LAK (ເງິນກີບ)</span>
+                <strong style={{ fontSize: "1.25rem", color: "#10b981", display: "block", marginTop: "4px" }}>{formatLAK(incomeDetails.totalLAK || 0)}</strong>
+              </div>
+              <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #3b82f6", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "700" }}>THB (ເງິນບາດ)</span>
+                <strong style={{ fontSize: "1.25rem", color: "#3b82f6", display: "block", marginTop: "4px" }}>{formatTHB(incomeDetails.totalTHB || 0)}</strong>
+              </div>
+              <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #eab308", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "700" }}>USD (ເງິນດອນລ່າ)</span>
+                <strong style={{ fontSize: "1.25rem", color: "#eab308", display: "block", marginTop: "4px" }}>{formatUSD(incomeDetails.totalUSD || 0)}</strong>
+              </div>
+            </div>
+          </div>
+
           {/* Bookings Transactions List */}
           <div className="card">
             <h2 style={{ fontSize: "1.1rem", color: "var(--text-primary)", marginBottom: "1rem" }}>
@@ -742,7 +789,7 @@ export default function AccountingPayroll({ currentUser }) {
                     <th>ຈຳນວນ / Pax</th>
                     <th>ປະເພດການບໍລິການ / Activity Service</th>
                     <th>ວິທີຊຳລະ / Method</th>
-                    <th style={{ textAlign: "right" }}>ຍອດເງິນ / Paid LAK</th>
+                    <th style={{ textAlign: "right" }}>ຍອດເງິນ / Paid Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -768,7 +815,13 @@ export default function AccountingPayroll({ currentUser }) {
                           </span>
                         </td>
                         <td style={{ textAlign: "right", fontWeight: "800", color: "var(--primary)" }}>
-                          {formatLAK(b.pricePaidLAK)} LAK
+                          {b.paymentCurrency === "THB" ? (
+                            <span>{formatTHB(b.pricePaidLAK / rateTHB)} <small style={{ color: "var(--text-muted)", fontWeight: "normal" }}>({formatLAK(b.pricePaidLAK)})</small></span>
+                          ) : b.paymentCurrency === "USD" ? (
+                            <span>{formatUSD(b.pricePaidLAK / rateUSD)} <small style={{ color: "var(--text-muted)", fontWeight: "normal" }}>({formatLAK(b.pricePaidLAK)})</small></span>
+                          ) : (
+                            <span>{formatLAK(b.pricePaidLAK)}</span>
+                          )}
                         </td>
                       </tr>
                     ))

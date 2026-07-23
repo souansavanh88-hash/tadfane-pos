@@ -105,7 +105,10 @@ export default function Reports() {
       return bk ? (bk.status !== "ยกเลิก" && bk.status !== "cancelled") : true;
     };
 
-    if (reportType === "daily") {
+    if (reportType === "all") {
+      trips = db.trips.filter(t => t.status === "completed" || t.status === "dispatched");
+      customers = db.customers.filter(c => filterValidCustomer(c));
+    } else if (reportType === "daily") {
       trips = db.trips.filter(t => t.date === todayStr && (t.status === "completed" || t.status === "dispatched"));
       customers = db.customers.filter(c => c.checkInDate === todayStr && filterValidCustomer(c));
     } else if (reportType === "monthly") {
@@ -152,7 +155,9 @@ export default function Reports() {
 
     // Determine bookings in period to compute total sales for each partner
     let periodBookings = [];
-    if (reportType === "daily") {
+    if (reportType === "all") {
+      periodBookings = db.bookings.filter(b => b.status !== "ยกเลิก" && b.status !== "cancelled");
+    } else if (reportType === "daily") {
       periodBookings = db.bookings.filter(b => b.date === selectedDate);
     } else if (reportType === "monthly") {
       periodBookings = db.bookings.filter(b => b.date && b.date.startsWith(selectedMonth));
@@ -416,6 +421,9 @@ export default function Reports() {
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
           
           <div className="tabs-container" style={{ border: "none", margin: 0 }}>
+            <button className={`tab-btn ${reportType === "all" ? "active" : ""}`} onClick={() => setReportType("all")}>
+              📊 {t("all_time", "ທັງໝົດ / All Time")}
+            </button>
             <button className={`tab-btn ${reportType === "daily" ? "active" : ""}`} onClick={() => setReportType("daily")}>
               {t("daily", "ລາຍວັນ / Daily")}
             </button>

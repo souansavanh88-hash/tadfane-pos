@@ -589,11 +589,11 @@ export default function CommissionTracker() {
                       <div><strong>Commission:</strong> <span style={{ color: "var(--primary)", fontWeight: "bold" }}>{formatLAK(stats.totalCommission)}</span></div>
                     </div>
 
-                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
                       {partner.type === "agent" && (
                         <button 
                           className="btn btn-primary"
-                          style={{ padding: "4px 8px", fontSize: "0.75rem", background: "#0f766e", border: "none", color: "#fff" }}
+                          style={{ padding: "4px 8px", fontSize: "0.75rem", background: "#0f766e", border: "none", color: "#fff", whiteSpace: "nowrap" }}
                           onClick={(e) => {
                             e.stopPropagation();
                             setQrPartnerModal(partner);
@@ -604,7 +604,7 @@ export default function CommissionTracker() {
                       )}
                       <button 
                         className="btn btn-secondary" 
-                        style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                        style={{ padding: "4px 8px", fontSize: "0.75rem", whiteSpace: "nowrap" }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedPartnerId(partner.id);
@@ -615,7 +615,7 @@ export default function CommissionTracker() {
                       </button>
                       <button 
                         className="btn btn-secondary" 
-                        style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                        style={{ padding: "4px 8px", fontSize: "0.75rem", whiteSpace: "nowrap" }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setEditingPartnerId(partner.id);
@@ -630,7 +630,7 @@ export default function CommissionTracker() {
                       </button>
                       <button 
                         className="btn btn-danger" 
-                        style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                        style={{ padding: "4px 8px", fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center" }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeletePartner(partner.id);

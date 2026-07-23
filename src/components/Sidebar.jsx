@@ -10,7 +10,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
   const menuItems = [
     { id: "dashboard", label: t("dashboard", "ໜ້າຫຼັກ"), icon: "🏠", color: "#10b981", bg: "rgba(16, 185, 129, 0.12)", permId: "dashboard" },
     { id: "checkin-tickets", label: t("ticket_sales", "ຂາຍປີ້"), icon: "🎫", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.12)", permId: "checkin-tickets" },
-    { id: "manifest", label: t("trips_manifest", "ລາຍການຖ້ຽວ"), icon: "📅", color: "#f97316", bg: "rgba(249, 115, 22, 0.12)", permId: "checkin-tickets" },
+
     { id: "online-register", label: t("customer_registration", "ລົງທະບຽນລູກຄ້າ"), icon: "👥", color: "#0ea5e9", bg: "rgba(14, 165, 233, 0.12)", permId: "checkin-tickets" },
     { id: "commissions", label: t("commissions", "ຄ່າຄອມເອເຈນ"), icon: "🤝", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.12)", permId: "accounting-payroll" },
 
@@ -141,7 +141,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
       </nav>
 
       <div className="sidebar-footer" style={{ padding: "15px 1.5rem 15px", borderTop: "1px solid rgba(255,255,255,0.08)", marginTop: "auto" }}>
-        <div className="sidebar-footer-version" style={{ fontSize: "0.7rem", color: "#64748b" }}>Version 3.0.8 - Instant Print (July 23, 2026)</div>
+        <div className="sidebar-footer-version" style={{ fontSize: "0.7rem", color: "#64748b" }}>Version 3.0.10 - Instant Print (July 23, 2026)</div>
         <div className="sidebar-footer-lang" style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px" }}>
           <button 
             type="button"

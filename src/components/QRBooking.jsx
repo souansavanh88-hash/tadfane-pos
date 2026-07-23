@@ -2705,80 +2705,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   </div>
                 </div>
 
-                {isBoatTrip && (
-                  <>
-                    {/* 3. Multiple Boats */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
-                      <label style={{ fontSize: "0.85rem", fontWeight: "800", color: "#475569" }}>
-                        3. Boat ({t("select_multiple_boats", "ເລືອກໄດ້ຫຼາຍກວ່າ 1 ລຳ")})
-                      </label>
-                      <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(75px, 1fr))",
-                        gap: "8px",
-                        marginTop: "6px"
-                      }}>
-                        {db.boats.map(b => {
-                          const isSelected = selectedBoatIds.includes(b.id);
 
-                          const handleCardClick = () => {
-                            setSelectedBoatIds(prev => {
-                              const next = prev.includes(b.id) ? prev.filter(id => id !== b.id) : [...prev, b.id];
-                              setBoatCount(next.length || 1);
-                              return next;
-                            });
-                          };
 
-                          const boatNum = b.name.match(/\d+/) ? b.name.match(/\d+/)[0].padStart(2, "0") : b.name;
-
-                          return (
-                            <div 
-                              key={b.id}
-                              onClick={handleCardClick}
-                              style={{
-                                border: isSelected ? "2px solid #10b981" : "1.5px solid #cbd5e1",
-                                borderRadius: "10px",
-                                padding: "8px",
-                                cursor: "pointer",
-                                background: isSelected ? "#d1fae5" : "#ffffff",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                userSelect: "none",
-                                transition: "all 0.15s ease",
-                                color: "#0f172a",
-                                justifyContent: "center"
-                              }}
-                            >
-                              <span style={{ fontSize: "0.95rem" }}>🚤</span>
-                              <span style={{ fontSize: "0.85rem", fontWeight: "700" }}>{boatNum}</span>
-                              {isSelected && <span style={{ color: "#047857", fontWeight: "bold", fontSize: "0.75rem" }}>✓</span>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "10px" }}>
-                        <label style={{ fontSize: "0.8rem", fontWeight: "700", color: "#475569" }}>
-                          {t("actual_boats", "จำนวนเรือที่ใช้จริง / Actual Boats")}:
-                        </label>
-                        <input 
-                          type="number"
-                          min="1"
-                          value={boatCount}
-                          onChange={(e) => setBoatCount(Math.max(1, parseInt(e.target.value) || 1))}
-                          style={{
-                            padding: "8px 12px",
-                            border: "1.5px solid #cbd5e1",
-                            borderRadius: "8px",
-                            fontSize: "0.9rem",
-                            width: "100%",
-                            boxSizing: "border-box"
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
 
                 <button
                   type="button"

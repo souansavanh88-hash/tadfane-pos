@@ -479,22 +479,8 @@ export default function SettingsPanel({ currentUser }) {
           </h2>
 
           <form onSubmit={handleSaveSettings}>
-            <div className="form-group">
-              <label>{t("base_ticket_price", "ລາຄາປີ້ເຮືອພື້ນຖານຕໍ່ຄົນ / Base Ticket Price (LAK)")}</label>
-              <input 
-                type="number"
-                className="form-control"
-                value={basePrice}
-                onChange={(e) => setBasePrice(e.target.value)}
-                min="0"
-                step="1"
-                required
-                
-              />
-              <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem", display: "block" }}>
-                {t("base_price_walkin", "ລາຄາຕັ້ງຕົ້ນສຳລັບນັກທ່ອງທ່ຽວທົ່ວໄປ (Walk-in):")} <strong>{formatLAK(basePrice)}</strong>
-              </span>
-            </div>
+
+
 
             <div className="form-row" style={{ marginTop: "1rem" }}>
               <div className="form-group">
@@ -744,65 +730,7 @@ export default function SettingsPanel({ currentUser }) {
             </div>
           </div>
 
-          {/* Database Reset Action */}
-          <div className="card" style={{ borderColor: "rgba(239, 68, 68, 0.3)", background: "rgba(239, 68, 68, 0.02)" }}>
-            <h3 style={{ fontSize: "1.15rem", color: "var(--danger)", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "5px" }}>
-              <AlertTriangle size={18} />
-              {t("danger_zone", "ເຂດອັນຕະລາຍ / Danger Zone")}
-            </h3>
-            <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "1.25rem", lineHeight: "1.4" }}>
-              {t("reset_db_desc", "ການຣີເຊັດລະບົບຈະລຶບຂໍ້ມູນທັງໝົດ ແລະ ປ່ຽນກັບເປັນຖານຂໍ້ມູນເລີ່ມຕົ້ນ")}
-            </p>
-            <button 
-              type="button" 
-              className="btn btn-danger" 
-              style={{ width: "100%", marginBottom: "12px" }}
-              onClick={handleResetSystem}
-            >
-              <RefreshCw size={16} /> {t("reset_db_btn", "ຣີເຊັດລະບົບທັງໝົດ (Reset Database)")}
-            </button>
 
-            <button 
-              type="button" 
-              className="btn" 
-              style={{ width: "100%", marginBottom: "12px", background: "#0ea5e9", color: "white", fontWeight: "bold" }}
-              onClick={handleForceSync}
-            >
-              <Cloud size={16} /> ອັບໂຫຼດຂໍ້ມູນຂຶ້ນ Cloud (Migrate Data)
-            </button>
-
-            <button 
-              type="button" 
-              className="btn" 
-              style={{ width: "100%", marginBottom: "12px", background: "#f59e0b", color: "white", fontWeight: "bold" }}
-              onClick={handleRestoreBackup}
-            >
-              🕒 ກູ້ຄືນຂໍ້ມູນສຳຮອງ (Restore Local Backup)
-            </button>
-
-            <button 
-              type="button" 
-              className="btn" 
-              style={{ width: "100%", marginBottom: "12px", background: "#10b981", color: "white", fontWeight: "bold" }}
-              onClick={handleForcePullCloud}
-            >
-              📥 ດຶງຂໍ້ມູນຫຼ້າສຸດຈາກ Cloud (Force Pull Cloud Data)
-            </button>
-
-            <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border-color)", paddingTop: "1rem" }}>
-                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: "1.4" }}>
-                  {t("purge_bookings_desc", "ລຶບສະເພາະຂໍ້ມູນການຂາຍທັງໝົດ ແຕ່ຍັງຄົງຂໍ້ມູນພື້ນຖານອື່ນໆໄວ້")}
-                </p>
-                <button 
-                  type="button" 
-                  className="btn" 
-                  style={{ width: "100%", background: "#be123c", color: "#ffffff", fontWeight: "bold" }}
-                  onClick={handlePurgeTestData}
-                >
-                  🧹 {t("clear_test_data", "ລຶບຂໍ້ມູນການຂາຍທັງໝົດ / Clear All Sales Data")}
-                </button>
-              </div>
-          </div>
 
         </div>
 
