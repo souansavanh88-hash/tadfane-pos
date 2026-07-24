@@ -154,21 +154,23 @@ export default function AccountingPayroll({ currentUser }) {
     const rateUSD = (db.settings && db.settings.rateUSD) || 21500;
 
     bookings.forEach(b => {
-      if (b.serviceId === "SRV-001" || b.serviceId === "SRV-002" || b.serviceId === "SRV-003") {
-        boatIncome += b.pricePaidLAK;
+      const currency = b.paymentCurrency || "LAK";
+      const lakAmt = (currency === "LAK" || !b.paymentCurrency) ? (b.pricePaidLAK || 0) : 0;
+
+      if (b.serviceId === "SRV-001" || b.serviceId === "SRV-002" || b.serviceId === "SRV-003" || b.serviceId === "SRV-005") {
+        boatIncome += lakAmt;
       } else if (b.serviceId === "SRV-004") {
-        rappellingIncome += b.pricePaidLAK;
+        rappellingIncome += lakAmt;
       } else {
-        otherIncome += b.pricePaidLAK;
+        otherIncome += lakAmt;
       }
 
-      const currency = b.paymentCurrency || "LAK";
       if (currency === "THB") {
-        totalTHB += b.pricePaidLAK / rateTHB;
+        totalTHB += b.pricePerPax || Math.round((b.pricePaidLAK || 0) / rateTHB);
       } else if (currency === "USD") {
-        totalUSD += b.pricePaidLAK / rateUSD;
+        totalUSD += b.pricePerPax || Math.round((b.pricePaidLAK || 0) / rateUSD);
       } else {
-        totalLAK += b.pricePaidLAK;
+        totalLAK += (b.pricePaidLAK || 0);
       }
     });
 
@@ -1494,7 +1496,39 @@ export default function AccountingPayroll({ currentUser }) {
               </button>
             </div>
 
-            {/* Metrics cards */}
+            {/* Monthly Revenue by Currency Breakdown */}
+            {(() => {
+              const monthInc = getIncomeDataForPeriod("month", summaryMonth);
+              return (
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <h3 style={{ fontSize: "1rem", fontWeight: "700", color: "var(--text-primary)", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "6px" }}>
+                    💵 {t("monthly_revenue_by_currency", "ລາຍຮັບປະຈຳເດືອນແຍກຕາມສະກຸນເງິນ / Monthly Revenue by Currency")}
+                  </h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
+                    <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #10b981" }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "700" }}>LAK (ເງິນກີບ)</span>
+                      <strong style={{ fontSize: "1.3rem", color: "#10b981", display: "block", marginTop: "4px" }}>
+                        {formatLAK(monthInc.totalLAK || 0)} LAK
+                      </strong>
+                    </div>
+                    <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #3b82f6" }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "700" }}>THB (ເງິນບາດ)</span>
+                      <strong style={{ fontSize: "1.3rem", color: "#3b82f6", display: "block", marginTop: "4px" }}>
+                        {formatTHB(monthInc.totalTHB || 0)}
+                      </strong>
+                    </div>
+                    <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #eab308" }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "700" }}>USD (ເງິນດອນລ່າ)</span>
+                      <strong style={{ fontSize: "1.3rem", color: "#eab308", display: "block", marginTop: "4px" }}>
+                        {formatUSD(monthInc.totalUSD || 0)}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Expenses & Payroll Metrics cards */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "15px", marginBottom: "1.5rem" }}>
               <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #ef4444" }}>
                 <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>

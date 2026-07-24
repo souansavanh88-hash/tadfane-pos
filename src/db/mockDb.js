@@ -4,15 +4,15 @@ import { startFirebaseSync, pushToFirebase } from "./firebaseIntegration";
 const SEED_DATA = {
   settings: {
     basePriceLAK: 250000, // 250,000 LAK per head
-    rateTHB: 620,         // 1 THB = 620 LAK
-    rateUSD: 21500,       // 1 USD = 21,500 LAK
-    expenseApprovalLimit: 500000, // 500,000 LAK default limit for manager approval
+    rateTHB: 700,         // 1 THB = 700 LAK
+    rateUSD: 20000,       // 1 USD = 20,000 LAK
+    expenseApprovalLimit: 5000000, // 5,000,000 LAK default limit for manager approval
     logo: "/tadfane_logo.jpg",
     shopName: "TADFANE RAFTING",
     shopNameLao: "ຕາດຟານ ລ່ອງແກ່ງ",
-    shopAddress: "Vang Vieng, Laos",
-    shopAddressLao: "ວັງວຽງ, ປະເທດລາວ",
-    shopTel: "+856 20 555-9000",
+    shopAddress: "Laos",
+    shopAddressLao: "ປາກຊ່ອງ, ປະເທດລາວ",
+    shopTel: "+856 20 58008188",
     shopTaxId: "",
     shopExtra: ""
   },
@@ -20,7 +20,8 @@ const SEED_DATA = {
     { id: "SRV-001", name: "ລ່ອງເຮືອ / Adult Boat Ride", price: 250000, priceTier1: 250000, priceTier1Type: "pax", priceTier2: 230000, priceTier2Type: "pax", priceTier3: 200000, priceTier3Type: "pax", currency: "LAK", status: "active" },
     { id: "SRV-004", name: "🧗 Waterfall Rappelling (ໂຣຍຕົວນ້ຳຕົກ)", price: 1580, priceTier1: 1580, priceTier1Type: "pax", priceTier2: 1580, priceTier2Type: "pax", priceTier3: 1120, priceTier3Type: "pax", currency: "THB", status: "active" },
     { id: "SRV-005", name: "🚤 Adventure Boat (ລ່ອງເຮືອຜະຈົນໄພ)", price: 1900, priceTier1: 1900, priceTier1Type: "flat", priceTier2: 1900, priceTier2Type: "flat", priceTier3: 780, priceTier3Type: "pax", currency: "THB", status: "active" },
-    { id: "SRV-006", name: "🚶 ເດີນປ່າ / Hiking (ກິດຈະກຳເດີນປ່າ)", price: 500, priceTier1: 500, priceTier1Type: "pax", priceTier2: 500, priceTier2Type: "pax", priceTier3: 500, priceTier3Type: "pax", currency: "THB", status: "active" }
+    { id: "SRV-006", name: "🚶 ເດີນປ່າ / Hiking (ກິດຈະກຳເດີນປ່າ)", price: 500, priceTier1: 500, priceTier1Type: "pax", priceTier2: 500, priceTier2Type: "pax", priceTier3: 500, priceTier3Type: "pax", currency: "THB", status: "active" },
+    { id: "SRV-007", name: "🚤🧗 Combo 2 กิจกรรม: ล่องเรือ + โหนสลิงน้ำตก (Rafting + Rappelling)", price: 2500, priceTier1: 2500, priceTier1Type: "pax", priceTier2: 2500, priceTier2Type: "pax", priceTier3: 2500, priceTier3Type: "pax", currency: "THB", status: "active" }
   ],
   boats: [
     { id: 1, name: "ເຮືອ 1 / Boat 1", capacity: 6, status: "available" },
@@ -34,9 +35,19 @@ const SEED_DATA = {
     { id: 9, name: "ເຮືອ 9 / Boat 9", capacity: 6, status: "available" },
     { id: 10, name: "ເຮືອ 10 / Boat 10", capacity: 6, status: "available" },
   ],
-  employees: [],
+  employees: [
+    { id: "EMP-001", name: "ທ ກູດ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-002", name: "ທ ໂມ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-003", name: "ທ ໂນລິນ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-004", name: "ທ ພຸດ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-005", name: "ທ ດາວ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-006", name: "ທ ຫຼີ", role: "guide", type: "permanent", status: "active", salary: 4000000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-007", name: "ທ ຍືນ", role: "guide", type: "permanent", status: "active", salary: 4000000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-008", name: "ທ ມິນ", role: "guide", type: "permanent", status: "active", salary: 4000000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-009", name: "ທ ຊຽງ", role: "guide", type: "permanent", status: "active", salary: 3400000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" }
+  ],
   partners: [
-    { id: "PTN-000", name: "Walk In (ລູກຄ້າທົ່ວໄປ)", type: "agent", commissionRate: 0, contact: "" }
+    { id: "PTN-000", name: "Walk In (ລູກຄ້າທົ່ວໄປ)", type: "agent", commissionRate: 0, contact: "", bankAccount: "" }
   ],
   customers: [],
   bookings: [],
@@ -59,7 +70,7 @@ const SEED_DATA = {
     {
       id: "USR-002",
       email: "min",
-      password: "min1122",
+      password: "m1122",
       name: "Min",
       role: "cashier",
       permissions: {
@@ -105,6 +116,17 @@ const SEED_DATA = {
 
 const DB_KEY = "pos_tadfane_db";
 
+// FORCE CLEAR LOCAL STORAGE ONCE
+try {
+  if (!localStorage.getItem("tadfane_force_wiped_v3")) {
+    localStorage.removeItem(DB_KEY);
+    localStorage.setItem("tadfane_force_wiped_v3", "true");
+    console.log("Forced clear of pos_tadfane_db in localStorage");
+  }
+} catch(e) {}
+
+
+
 // In-memory fallback if localStorage is blocked (e.g. mobile Safari private mode or WebView)
 let memoryDb = null;
 
@@ -134,7 +156,12 @@ export const migrateDb = (parsed) => {
       if (u.id === "USR-002" && (u.email === "cashier@tadfane.com" || u.name === "Naree (Cashier)")) {
         u.email = "min";
         u.name = "Min";
-        u.password = "min1122";
+        u.password = "m1122";
+        migrated = true;
+      }
+      // Fix old min1122 password to current m1122
+      if (u.id === "USR-002" && u.email === "min" && u.password === "min1122") {
+        u.password = "m1122";
         migrated = true;
       }
       return u;

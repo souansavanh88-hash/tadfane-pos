@@ -18,9 +18,15 @@ export default function LoginScreen({ onLoginSuccess }) {
 
     const inputVal = email.trim().toLowerCase();
     const matchedUser = db.users.find((u) => {
-      const dbEmail = u.email.toLowerCase();
-      const dbUsername = dbEmail.split("@")[0];
-      return (dbEmail === inputVal || dbUsername === inputVal) && u.password === password;
+      const dbEmail = (u.email || "").toLowerCase();
+      const dbUsername = (u.username || dbEmail.split("@")[0] || "").toLowerCase();
+      const passwordMatch = u.password === password;
+      // Match by: full email, email prefix (before @), or explicit username field
+      return passwordMatch && (
+        dbEmail === inputVal ||
+        dbUsername === inputVal ||
+        (dbEmail.includes("@") && dbEmail.split("@")[0] === inputVal)
+      );
     });
 
     if (matchedUser) {

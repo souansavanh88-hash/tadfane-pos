@@ -725,10 +725,16 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const defaultPrice = pricingDetails.rawPrice;
   const activePricePerPax = customPricePerPax !== "" ? parseFloat(customPricePerPax) : defaultPrice;
 
-  // Compute actual discount in LAK (supports both fixed LAK and percentage modes)
+  // Compute actual discount in LAK (supports percent, THB, USD, and LAK fixed currency modes)
+  const currencyLabel = paymentCurrency === "THB" ? "THB" : paymentCurrency === "USD" ? "USD" : "LAK";
+
   const computedDiscountLAK = discountMode === "percent"
     ? Math.round((totalPriceLAK * Math.min(discountAmount, 100)) / 100)
-    : discountAmount;
+    : (paymentCurrency === "THB"
+        ? Math.round(discountAmount * rateTHB)
+        : (paymentCurrency === "USD"
+            ? Math.round(discountAmount * rateUSD)
+            : discountAmount));
 
   const getSelfRegUrl = (grpId, bookingPartnerId = null, bookingPaxCount = null, bookingId = null) => {
     let baseUrl = customHostUrl.trim() || window.location.origin;
@@ -902,54 +908,153 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   </div>
 
                   <div style="border-top: 2px dashed #000000; margin: 6px 0;"></div>
+                  <div style="border-top: 2px dashed #000000; margin: 6px 0;"></div>
+                  <div style="border-top: 2px dashed #000000; margin: 6px 0;"></div>
                   <div style="font-size: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
-                      <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
-                        ${currentBooking.serviceName} x${currentBooking.paxCount}:
-                      </span>
-                      <span style="white-space: nowrap; text-align: right;">
-                        ${formatLAK(currentBooking.pricePaidLAK)} LAK
-                      </span>
-                    </div>
-                    ${(currentBooking.discountLAK || 0) > 0 ? (() => {
-                      const pctStr = currentBooking.discountPercent 
-                        ? `(${currentBooking.discountPercent}%)` 
-                        : (currentBooking.discountType === "percent" 
-                          ? `(${Math.round((currentBooking.discountLAK / currentBooking.pricePaidLAK) * 100)}%)`
-                          : "");
-                      return `
-                        <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px;">
-                          <span>${rt.discount} ${pctStr}</span>
-                          <span>-${formatLAK(currentBooking.discountLAK)} LAK</span>
-                        </div>
-                      `;
-                    })() : ''}
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 900; font-size: 18px; margin-top: 8px; border-top: 2px solid #000000; padding-top: 6px;">
-                      <span style="flex: 1; text-align: left;">${(currentBooking.discountLAK || 0) > 0 || (currentBooking.debtLAK || 0) > 0 ? rt.netTotal : rt.total}</span>
-                      <span style="white-space: nowrap; text-align: right;">
-                        ${formatLAK((currentBooking.netPriceLAK !== undefined ? currentBooking.netPriceLAK : currentBooking.pricePaidLAK))} LAK
-                      </span>
-                    </div>
-                    ${(currentBooking.debtLAK || 0) > 0 ? `
-                      <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px; border-top: 1px dotted #000000; padding-top: 4px;">
-                        <span>⚠️ ${rt.debt}</span>
-                        <span>-${formatLAK(currentBooking.debtLAK)} LAK</span>
-                      </div>
-                    ` : ''}
-                    ${((currentBooking.discountLAK || 0) > 0 || (currentBooking.debtLAK || 0) > 0) ? `
-                      <div style="display: flex; justify-content: space-between; font-weight: 900; font-size: 16px; margin-top: 6px; border-top: 2px solid #000000; padding-top: 6px;">
-                        <span>${rt.actualPaid}</span>
-                        <span>${formatLAK(currentBooking.paidLAK !== undefined ? currentBooking.paidLAK : currentBooking.pricePaidLAK)} LAK</span>
-                      </div>
-                    ` : ''}
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-top: 6px; font-weight: 700; border-top: 1px dotted #000000; padding-top: 4px;">
-                      <span>THB:</span>
-                      <span>${formatTHB((currentBooking.netPriceLAK !== undefined ? currentBooking.netPriceLAK : currentBooking.pricePaidLAK) / db.settings.rateTHB)}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700;">
-                      <span>USD:</span>
-                      <span>${formatUSD((currentBooking.netPriceLAK !== undefined ? currentBooking.netPriceLAK : currentBooking.pricePaidLAK) / db.settings.rateUSD)}</span>
-                    </div>
+                    ${(() => {
+                      const curr = currentBooking.paymentCurrency || 'LAK';
+                      const rTHB = db.settings.rateTHB || 700;
+                      const rUSD = db.settings.rateUSD || 20000;
+                      const paidLAK = currentBooking.paidLAK !== undefined ? currentBooking.paidLAK : currentBooking.pricePaidLAK;
+                      const netLAK = currentBooking.netPriceLAK !== undefined ? currentBooking.netPriceLAK : currentBooking.pricePaidLAK;
+                      
+                      const discLAK = (currentBooking.discountLAK !== undefined && currentBooking.discountLAK > 0)
+                        ? currentBooking.discountLAK
+                        : 0;
+                      const grossLAK = netLAK + discLAK;
+
+                      const discPercent = currentBooking.discountPercent > 0
+                        ? currentBooking.discountPercent
+                        : (currentBooking.discountType === 'percent' && currentBooking.discountAmount > 0
+                          ? currentBooking.discountAmount
+                          : (grossLAK > 0 && discLAK > 0 ? Math.round((discLAK / grossLAK) * 100) : 0));
+                      const pctStr = discPercent > 0 ? `(${discPercent}%)` : '';
+
+                      if (curr === 'THB') {
+                        // Gross price in THB — use pricePerPax if available (set at checkout), else convert from LAK
+                        const grossTHB = (currentBooking.pricePerPax && currentBooking.serviceCurrency === 'THB')
+                          ? (currentBooking.pricePerPax * currentBooking.paxCount)
+                          : Math.round(grossLAK / rTHB);
+                        // Discount in THB — always derive from discLAK (the authoritative value)
+                        const discTHB = currentBooking.discountType === 'percent'
+                          ? Math.round((grossTHB * discPercent) / 100)
+                          : Math.round(discLAK / rTHB);
+                        const netTHB = grossTHB - discTHB;
+
+                        return `
+                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
+                            <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
+                              ${currentBooking.serviceName} x${currentBooking.paxCount}:
+                            </span>
+                            <span style="white-space: nowrap; text-align: right;">
+                              ${formatTHB(grossTHB)}
+                            </span>
+                          </div>
+                          ${discTHB > 0 ? `
+                            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px; color: #000;">
+                              <span>${rt.discount || 'ສ່ວນຫຼຸດ / Discount'} ${pctStr}</span>
+                              <span>-${formatTHB(discTHB)}</span>
+                            </div>
+                          ` : ''}
+                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 900; font-size: 18px; margin-top: 8px; border-top: 2px solid #000000; padding-top: 6px;">
+                            <span style="flex: 1; text-align: left;">${(discTHB > 0 || (currentBooking.debtLAK || 0) > 0) ? rt.netTotal : rt.total}</span>
+                            <span style="white-space: nowrap; text-align: right;">
+                              ${formatTHB(netTHB)}
+                            </span>
+                          </div>
+                          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-top: 6px; font-weight: 700; border-top: 1px dotted #000000; padding-top: 4px;">
+                            <span>LAK (ເງິນກີບ):</span>
+                            <span>${formatLAK(netLAK)} LAK</span>
+                          </div>
+                          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700;">
+                            <span>USD (ເງິນດອນລ່າ):</span>
+                            <span>${formatUSD(netLAK / rUSD)}</span>
+                          </div>
+                        `;
+                      } else if (curr === 'USD') {
+                        const grossUSD = (currentBooking.pricePerPax && currentBooking.serviceCurrency === 'USD')
+                          ? (currentBooking.pricePerPax * currentBooking.paxCount)
+                          : (grossLAK / rUSD);
+                        const discUSD = currentBooking.discountType === 'percent'
+                          ? (grossUSD * discPercent / 100)
+                          : (discLAK / rUSD);
+                        const netUSD = grossUSD - discUSD;
+
+                        return `
+                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
+                            <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
+                              ${currentBooking.serviceName} x${currentBooking.paxCount}:
+                            </span>
+                            <span style="white-space: nowrap; text-align: right;">
+                              ${formatUSD(grossUSD)}
+                            </span>
+                          </div>
+                          ${(discUSD > 0 || discLAK > 0) ? `
+                            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px; color: #000;">
+                              <span>${rt.discount || 'ສ່ວນຫຼຸດ / Discount'} ${pctStr}</span>
+                              <span>-${formatUSD(discUSD)}</span>
+                            </div>
+                          ` : ''}
+                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 900; font-size: 18px; margin-top: 8px; border-top: 2px solid #000000; padding-top: 6px;">
+                            <span style="flex: 1; text-align: left;">${(discUSD > 0 || discLAK > 0 || (currentBooking.debtLAK || 0) > 0) ? rt.netTotal : rt.total}</span>
+                            <span style="white-space: nowrap; text-align: right;">
+                              ${formatUSD(netUSD)}
+                            </span>
+                          </div>
+                          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-top: 6px; font-weight: 700; border-top: 1px dotted #000000; padding-top: 4px;">
+                            <span>LAK (ເງິນກີບ):</span>
+                            <span>${formatLAK(netLAK)} LAK</span>
+                          </div>
+                          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700;">
+                            <span>THB (ເງິນບາດ):</span>
+                            <span>${formatTHB(netLAK / rTHB)}</span>
+                          </div>
+                        `;
+                      } else {
+                        return `
+                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
+                            <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
+                              ${currentBooking.serviceName} x${currentBooking.paxCount}:
+                            </span>
+                            <span style="white-space: nowrap; text-align: right;">
+                              ${formatLAK(grossLAK)} LAK
+                            </span>
+                          </div>
+                          ${discLAK > 0 ? `
+                            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px; color: #000;">
+                              <span>${rt.discount || 'ສ່ວນຫຼຸດ / Discount'} ${pctStr}</span>
+                              <span>-${formatLAK(discLAK)} LAK</span>
+                            </div>
+                          ` : ''}
+                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 900; font-size: 18px; margin-top: 8px; border-top: 2px solid #000000; padding-top: 6px;">
+                            <span style="flex: 1; text-align: left;">${discLAK > 0 || (currentBooking.debtLAK || 0) > 0 ? rt.netTotal : rt.total}</span>
+                            <span style="white-space: nowrap; text-align: right;">
+                              ${formatLAK(netLAK)} LAK
+                            </span>
+                          </div>
+                          ${(currentBooking.debtLAK || 0) > 0 ? `
+                            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px; border-top: 1px dotted #000000; padding-top: 4px;">
+                              <span>⚠️ ${rt.debt}</span>
+                              <span>-${formatLAK(currentBooking.debtLAK)} LAK</span>
+                            </div>
+                          ` : ''}
+                          ${(discLAK > 0 || (currentBooking.debtLAK || 0) > 0) ? `
+                            <div style="display: flex; justify-content: space-between; font-weight: 900; font-size: 16px; margin-top: 6px; border-top: 2px solid #000000; padding-top: 6px;">
+                              <span>${rt.actualPaid}</span>
+                              <span>${formatLAK(paidLAK)} LAK</span>
+                            </div>
+                          ` : ''}
+                          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-top: 6px; font-weight: 700; border-top: 1px dotted #000000; padding-top: 4px;">
+                            <span>THB (ເງິນບາດ):</span>
+                            <span>${formatTHB(netLAK / rTHB)}</span>
+                          </div>
+                          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700;">
+                            <span>USD (ເງິນດອນລ່າ):</span>
+                            <span>${formatUSD(netLAK / rUSD)}</span>
+                          </div>
+                        `;
+                      }
+                    })()}
                   </div>
 
                   <div style="margin-top: 20px; text-align: center; border-top: 2px dashed #000000; padding-top: 8px;">
@@ -1117,11 +1222,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             // Force DOM layout reflow
             const _reflow = portal.offsetHeight;
 
-            // Trigger print dialog synchronously (safari user gesture friendly)
+            // Trigger print dialog synchronously
             window.focus();
             window.print();
             
-            // Asynchronous-safe cleanup: keep DOM elements alive while Safari print sheet renders
+            // Asynchronous-safe cleanup: dismiss loading overlay quickly (800ms) for tablet browsers
             const cleanup = () => {
               try {
                 if (portal.parentNode) portal.remove();
@@ -1134,9 +1239,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             };
 
             window.addEventListener('afterprint', cleanup, { once: true });
-            setTimeout(cleanup, 15000); // 15 seconds safety timeout
+            setTimeout(cleanup, 800); // 800ms fast timeout for instant response on tablets
           } catch (runErr) {
-            alert("Error in runPrint: " + runErr.message + "\nStack: " + runErr.stack);
+            console.error("Error in runPrint:", runErr);
             setIsPrintLoading(false);
           }
       };
@@ -1211,6 +1316,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         pricePaidLAK: totalPriceLAK,
         discountLAK: isAdvanceBooking ? advanceDiscount : computedDiscountLAK,
         discountType: isAdvanceBooking ? "lak" : discountMode,
+        discountAmount: isAdvanceBooking ? advanceDiscount : discountAmount,
         discountPercent: isAdvanceBooking ? 0 : (discountMode === "percent" ? discountAmount : 0),
         netPriceLAK: isAdvanceBooking ? (totalPriceLAK - advanceDiscount) : (totalPriceLAK - computedDiscountLAK),
         debtLAK: isAdvanceBooking ? Math.max(0, totalPriceLAK - advanceDiscount - advanceDeposit) : debtAmount,
@@ -1479,10 +1585,14 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       paymentCurrency: paymentCurrency,
       discountLAK: computedDiscountLAK,
       discountType: discountMode,
+      discountAmount: discountAmount,
       discountPercent: discountMode === "percent" ? discountAmount : 0,
       netPriceLAK: (loadedBooking.pricePaidLAK || totalPriceLAK) - computedDiscountLAK,
       debtLAK: debtAmount,
       paidLAK: ((loadedBooking.pricePaidLAK || totalPriceLAK) - computedDiscountLAK) - debtAmount,
+      pricePerPax: activePricePerPax,
+      pricePerPaxLAK: pricingDetails.pricePerPaxLAK,
+      serviceCurrency: pricingDetails.currency,
       guideIds: selectedGuideIds,
       assignedBoats: computedBoats,
       driverId: selectedDriverIds[0] || null,
@@ -1498,18 +1608,19 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     };
 
     // Synchronously update local database and state before printing to ensure DOM is flushed
+    const mergedBooking = { ...loadedBooking, ...updates };
     flushSync(() => {
-      setLoadedBooking({ ...loadedBooking, ...updates });
+      setLoadedBooking(mergedBooking);
       const currentDb = getDb();
-      currentDb.bookings = currentDb.bookings.map(b => b.id === loadedBooking.id ? { ...b, ...updates } : b);
+      currentDb.bookings = currentDb.bookings.map(b => b.id === loadedBooking.id ? mergedBooking : b);
       saveDbLocally(currentDb);
       setDb(currentDb);
     });
 
     window.dispatchEvent(new Event("db-update"));
 
-    // Trigger print synchronously to preserve user gesture context
-    triggerReceiptPrint();
+    // Trigger print with the explicit merged booking that has discount fields
+    triggerReceiptPrint(mergedBooking);
     
     // Sync to cloud asynchronously in the background
     updateBookingInFirebase(loadedBooking.id, updates).catch(err => {
@@ -2955,12 +3066,12 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                           onClick={() => { setDiscountMode(discountMode === "lak" ? "percent" : "lak"); setDiscountAmount(0); }}
                           style={{ padding: "0 10px", height: "34px", borderRadius: "0 6px 6px 0", border: "1px solid #cbd5e1", borderLeft: "none", background: discountMode === "percent" ? "#3b82f6" : "#f1f5f9", color: discountMode === "percent" ? "#fff" : "#334155", fontWeight: "800", fontSize: "0.8rem", cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s ease" }}
                         >
-                          {discountMode === "percent" ? "%" : "LAK"}
+                          {discountMode === "percent" ? "%" : currencyLabel}
                         </button>
                       </div>
-                      {discountMode === "percent" && discountAmount > 0 && (
+                      {discountAmount > 0 && (
                         <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "2px" }}>
-                          = {formatLAK(computedDiscountLAK)} LAK
+                          = -{formatLAK(computedDiscountLAK)} LAK ({discountMode === "percent" ? `${discountAmount}%` : `${discountAmount} ${currencyLabel}`})
                         </div>
                       )}
                     </div>

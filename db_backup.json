@@ -1,1 +1,767 @@
-{"settings":{"basePriceLAK":250000,"rateTHB":620,"rateUSD":21500,"expenseApprovalLimit":500000,"logo":"/tadfane_logo.jpg","shopName":"TADFANE RAFTING","shopNameLao":"ຕາດຟານ ລ່ອງແກ່ງ","shopAddress":"Vang Vieng, Laos","shopAddressLao":"ວັງວຽງ, ປະເທດລາວ","shopTel":"+856 20 555-9000","shopTaxId":"","shopExtra":""},"services":[{"id":"SRV-001","name":"ค่าล่องเรือ / Adult Boat Ride","price":250000,"status":"active","priceTier1":250000,"priceTier2":230000,"priceTier3":200000,"currency":"LAK","priceTier1Type":"pax","priceTier2Type":"pax","priceTier3Type":"pax"},{"id":"SRV-002","name":"ค่าเด็ก / Child Ticket","price":120000,"status":"active","priceTier1":120000,"priceTier2":120000,"priceTier3":120000,"currency":"LAK","priceTier1Type":"pax","priceTier2Type":"pax","priceTier3Type":"pax"},{"id":"SRV-003","name":"ค่าบริการเสริม / Extra Service","price":50000,"status":"active","priceTier1":50000,"priceTier2":50000,"priceTier3":50000,"currency":"LAK","priceTier1Type":"pax","priceTier2Type":"pax","priceTier3Type":"pax"},{"id":"SRV-004","name":"🧗 Waterfall Rappelling (โรยตัวน้ำตก)","price":1580,"priceTier1":1580,"priceTier1Type":"pax","priceTier2":1580,"priceTier2Type":"pax","priceTier3":1120,"priceTier3Type":"pax","currency":"THB","status":"active"},{"id":"SRV-005","name":"🚤 Adventure Boat (ล่องเรือผจญภั���)","price":1900,"priceTier1":1900,"priceTier1Type":"flat","priceTier2":1900,"priceTier2Type":"flat","priceTier3":780,"priceTier3Type":"pax","currency":"THB","status":"active"}],"boats":[{"id":1,"name":"ເຮືອ 1 / Boat 1","capacity":6,"status":"available"},{"id":2,"name":"ເຮືອ 2 / Boat 2","capacity":6,"status":"available"},{"id":3,"name":"ເຮືອ 3 / Boat 3","capacity":6,"status":"available"},{"id":4,"name":"ເຮືອ 4 / Boat 4","capacity":6,"status":"available"},{"id":5,"name":"ເຮືອ 5 / Boat 5","capacity":6,"status":"available"},{"id":6,"name":"ເຮືອ 6 / Boat 6","capacity":6,"status":"available"},{"id":7,"name":"ເຮືອ 7 / Boat 7","capacity":6,"status":"available"},{"id":8,"name":"ເຮືອ 8 / Boat 8","capacity":6,"status":"available"},{"id":9,"name":"ເຮືອ 9 / Boat 9","capacity":6,"status":"available"},{"id":10,"name":"ເຮືອ 10 / Boat 10","capacity":6,"status":"available"}],"employees":[{"id":"EMP-001","name":"ສົມພົງ ລາວດີ (Somphong)","role":"guide","type":"permanent","status":"active","salary":2500000,"tripRate":50000,"bonus":0,"tourRate":50000,"raftingRate":150000,"specialRate":50000,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-002","name":"ບຸນມີ ໄຊຍະເສນ (Bounmy)","role":"guide","type":"permanent","status":"active","salary":2500000,"tripRate":50000,"bonus":0,"tourRate":50000,"raftingRate":150000,"specialRate":50000,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-003","name":"ແກ້ວ ມະນີວົງ (Keo)","role":"guide","type":"freelance","status":"active","salary":0,"tripRate":70000,"bonus":0,"tourRate":70000,"raftingRate":150000,"specialRate":50000,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-004","name":"ຄຳ ສຸວັນນະດີ (Kham)","role":"guide","type":"freelance","status":"active","salary":0,"tripRate":70000,"bonus":0,"dutyStatus":"available","tourRate":70000,"raftingRate":150000,"specialRate":50000,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-005","name":"ດາວ ເລີດວິໄລ (Dao)","role":"guide","type":"permanent","status":"active","salary":2500000,"tripRate":50000,"bonus":0,"tourRate":50000,"raftingRate":150000,"specialRate":50000,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-006","name":"ຈັນທອນ ແສງແກ້ວ (Chan)","role":"guide","type":"permanent","status":"active","salary":2500000,"tripRate":50000,"bonus":0,"tourRate":50000,"raftingRate":150000,"specialRate":50000,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-007","name":"ສົມບັດ ສີຫາລາດ (Sombath)","role":"captain","type":"permanent","status":"active","salary":3000000,"tripRate":40000,"bonus":0,"tourRate":0,"raftingRate":0,"specialRate":0,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-008","name":"ທອງສຸກ ປ້ອງສີ (Thongsouk)","role":"captain","type":"freelance","status":"active","salary":0,"tripRate":60000,"bonus":0,"tourRate":0,"raftingRate":0,"specialRate":0,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-013","name":"ສົມສັກ ແກ້ວມະນີ (Somsack)","role":"captain","type":"permanent","status":"active","salary":3000000,"tripRate":40000,"bonus":0,"tourRate":0,"raftingRate":0,"specialRate":0,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-009","name":"ຈັນຍา ກິ່ງແກ້ວ (Chanya)","role":"staff","type":"permanent","status":"active","salary":2200000,"tripRate":0,"bonus":0,"tourRate":0,"raftingRate":0,"specialRate":0,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-010","name":"ສົມຈິດ ວົງສາ (Somchit)","role":"driver","type":"permanent","status":"active","salary":1800000,"tripRate":30000,"bonus":0,"tourRate":0,"raftingRate":0,"specialRate":0,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-011","name":"������ຸນຕາ ແສງທ�������� (Bounta)","role":"driver","type":"permanent","status":"active","salary":1800000,"tripRate":30000,"bonus":0,"tourRate":0,"raftingRate":0,"specialRate":0,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-012","name":"ສອນໄຊ ວິໄລສັກ (Sonesay)","role":"driver","type":"freelance","status":"active","salary":0,"tripRate":50000,"bonus":0,"tourRate":0,"raftingRate":0,"specialRate":0,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-014","name":"ນ້ອຍ (Noy)","role":"driver","type":"freelance","status":"active","salary":0,"tripRate":50000,"bonus":0,"tourRate":0,"raftingRate":0,"specialRate":0,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""},{"id":"EMP-015","name":"ຄຳ (Kham)","role":"driver","type":"freelance","status":"active","salary":0,"tripRate":50000,"bonus":0,"tourRate":0,"raftingRate":0,"specialRate":0,"phone":"","hireDate":"2025-01-01","dailyWage":0,"commission":0,"ot":0,"daysWorked":26,"bankAccount":""}],"partners":[{"id":"PTN-001","name":"Noy (ເອເຈນ ນ້ອຍ)","type":"agent","commissionRate":40000,"contact":"+856 20 5551234","bankAccount":""},{"id":"PTN-002","name":"Anousone (ເອເຈນ ອານຸສອນ)","type":"agent","commissionRate":50000,"contact":"+856 20 7779876","bankAccount":""},{"id":"PTN-003","name":"Somchai (ເອເ��ນ �������ົມຊາຍ)","type":"agent","commissionRate":40000,"contact":"+66 81 2345678","bankAccount":""},{"id":"PTN-004","name":"Bounmy (ເອເຈນ ບຸນມີ)","type":"agent","commissionRate":40000,"contact":"+856 20 9993333","bankAccount":""},{"id":"PTN-005","name":"Seng (ເອເຈນ ແສງ)","type":"agent","commissionRate":35000,"contact":"+856 20 8882222","bankAccount":""},{"id":"PTN-006","name":"Bounxou (ໄກ້ດ ບຸນຊູ)","type":"guide","commissionRate":30000,"contact":"+856 20 2221111","bankAccount":""},{"id":"PTN-007","name":"Keo (ໄກ້ດ ແກ້ວ)","type":"guide","commissionRate":30000,"contact":"+856 20 3334444","bankAccount":""}],"customers":[{"id":"CUST-BK-1001-0","name":"่่่ยงฝ้ าา","firstName":"่่่ยงฝ้","lastName":"าา","nationality":"ทา","gender":"female","phone":"ารร","age":30,"dob":"1995-11-11","docExpiry":"","docNumber":"","emergencyName":"รำร","emergencyRelation":"าาา","emergencyPhone":"ีีรไยยหส","facePhoto":"","groupId":"REG-8434","bookingId":"BK-1001","partnerId":"PTN-001","status":"completed","checkInDate":"2026-06-13"},{"id":"CUST-BK-1002-0","name":"สสส สสส","firstName":"สสส","lastName":"สสส","nationality":"สสส","gender":"male","phone":"111111","age":21,"dob":"2004-11-11","docExpiry":"","docNumber":"","emergencyName":"ีีรร","emergencyRelation":"รรรคค","emergencyPhone":"นตต","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-1","name":"สนนน นน","firstName":"สนนน","lastName":"นน","nationality":"สนน","gender":"male","phone":"วสนน","age":20,"dob":"2005-11-11","docExpiry":"","docNumber":"","emergencyName":"ยย","emergencyRelation":"ววว","emergencyPhone":"ยยย","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-2","name":"าา นนน","firstName":"าา","lastName":"นนน","nationality":"ยยน","gender":"male","phone":"นนน","age":37,"dob":"1988-11-11","docExpiry":"","docNumber":"","emergencyName":"ยยยย","emergencyRelation":"จย","emergencyPhone":"บบบบ","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-3","name":"สส นน","firstName":"สส","lastName":"น�����","nationality":"ตจ","gender":"male","phone":"มมว","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"วว","emergencyRelation":"วยย","emergencyPhone":"วย","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-4","name":"สสส นนน","firstName":"สสส","lastName":"นนน","nationality":"นนนน","gender":"male","phone":"มส","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"สสย","emergencyRelation":"ย","emergencyPhone":"วว","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-5","name":"นนน ยย","firstName":"นนน","lastName":"ยย","nationality":"ยย","gender":"male","phone":"ทาส","age":26,"dob":"1999-11-28","docExpiry":"","docNumber":"","emergencyName":"สสสน","emergencyRelation":"นนน","emergencyPhone":"น","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-6","name":"รรร นน","firstName":"รรร","lastName":"นน","nationality":"นน","gender":"female","phone":"สส","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"สน","emergencyRelation":"นน","emergencyPhone":"น","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-7","name":"นนนน นน","firstName":"นนนน","lastName":"���น","nationality":"นยน","gender":"other","phone":"สสสว","age":37,"dob":"1988-11-11","docExpiry":"","docNumber":"","emergencyName":"ยย","emergencyRelation":"ยย","emergencyPhone":"ย","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-8","name":"ส���นน นน","firstName":"สนนน","lastName":"นน","nationality":"นยยย","gender":"male","phone":"สสว","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"ว","emergencyRelation":"นน","emergencyPhone":"ววว","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-9","name":"ย ยย","firstName":"ย","lastName":"ยย","nationality":"ยยย","gender":"male","phone":"สสสว","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"ว","emergencyRelation":"วว","emergencyPhone":"���","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-10","name":"ย วว","firstName":"ย","lastName":"วว","nationality":"ววว","gender":"female","phone":"ตน","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"นนน","emergencyRelation":"นน","emergencyPhone":"ยย","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-11","name":"มดส สสส","firstName":"มดส","lastName":"สสส","nationality":"สสน","gender":"male","phone":"าพา","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"รรน","emergencyRelation":"น","emergencyPhone":"สนน","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-12","name":"มสส มม","firstName":"มสส","lastName":"มม","nationality":"สส","gender":"male","phone":"&&","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"นน","emergencyRelation":"นน","emergencyPhone":"รรร","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-13","name":"าดา าเา","firstName":"าดา","lastName":"าเา","nationality":"นพน","gender":"female","phone":"สน","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"มส","emergencyRelation":"สส","emergencyPhone":"ววว","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1002-14","name":"า รน","firstName":"า","lastName":"รน","nationality":"ร","gender":"male","phone":"รร","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"รรร","emergencyRelation":"รรร","emergencyPhone":"นตต","facePhoto":"","groupId":"REG-2090","bookingId":"BK-1002","partnerId":"PTN-005","status":"assigned","checkInDate":"2026-06-15"},{"id":"CUST-BK-1003-0","name":"ี ท","firstName":"ี","lastName":"ท","nationality":"สา","gender":"male","phone":"สส","age":26,"dob":"1999-11-11","docExpiry":"","docNumber":"","emergencyName":"สส","emergencyRelation":"สสว","emergencyPhone":"วว","facePhoto":"","groupId":"REG-1846","bookingId":"BK-1003","partnerId":null,"status":"completed","checkInDate":"2026-06-15"},{"id":"CUST-BK-1004-0","name":"J J","firstName":"J","lastName":"J","nationality":"J","gender":"male","phone":"Hh","age":30,"dob":"1996-05-01","docExpiry":"","docNumber":"","emergencyName":"Hh","emergencyRelation":"Hh","emergencyPhone":"Hj","facePhoto":"","groupId":"REG-6758","bookingId":"BK-1004","partnerId":"PTN-007","status":"completed","checkInDate":"2026-06-15"},{"id":"CUST-BK-1006-0","name":"່າ ່່","firstName":"່າ","lastName":"່່","nationality":"ີີ","gender":"female","phone":"່່່","age":19,"dob":"2006-09-05","docExpiry":"","docNumber":"","emergencyName":"ີ","emergencyRelation":"ີ","emergencyPhone":"ຮ","facePhoto":"","groupId":"REG-4708","bookingId":"BK-1006","partnerId":"PTN-007","status":"completed","checkInDate":"2026-06-15"},{"id":"CUST-BK-1006-1","name":"າ ��","firstName":"າ","lastName":"ສ","nationality":"າ","gender":"male","phone":"າ","age":5,"dob":"2020-09-04","docExpiry":"","docNumber":"","emergencyName":"ຮ","emergencyRelation":"ນ","emergencyPhone":"ນ","facePhoto":"","groupId":"REG-4708","bookingId":"BK-1006","partnerId":"PTN-007","status":"completed","checkInDate":"2026-06-15"},{"id":"CUST-BK-1007-0","name":"ส ส","firstName":"ส","lastName":"ส","nationality":"น","gender":"female","phone":"สดารน","age":7,"dob":"2018-09-06","docExpiry":"","docNumber":"","emergencyName":"นนน","emergencyRelation":"ยย","emergencyPhone":"วยย","facePhoto":"","groupId":"REG-1964","bookingId":"BK-1007","partnerId":"PTN-002","status":"completed","checkInDate":"2026-06-15"},{"id":"CUST-BK-1007-1","name":"Saychai Phothisan","firstName":"Saychai","lastName":"Phothisan","nationality":"Lao","gender":"female","phone":"02058008188","age":27,"dob":"1998-07-10","docExpiry":"","docNumber":"","emergencyName":"55908395","emergencyRelation":"ພໍ່","emergencyPhone":"55710549","facePhoto":"","groupId":"REG-1964","bookingId":"BK-1007","partnerId":"PTN-002","status":"completed","checkInDate":"2026-06-15"},{"id":"CUST-BK-1008-0","name":"ส น","firstName":"ส","lastName":"น","nationality":"น","gender":"female","phone":"สดส","age":16,"dob":"2009-07-05","docExpiry":"","docNumber":"","emergencyName":"สน","emergencyRelation":"นน","emergencyPhone":"นน","facePhoto":"","groupId":"REG-4848","bookingId":"BK-1008","partnerId":"PTN-001","status":"completed","checkInDate":"2026-06-15"}],"bookings":[{"id":"BK-1001","partnerId":"PTN-001","partnerName":"Noy (ເອເຈນ ນ້ອຍ)","bookingSource":"agent","paxCount":1,"date":"2026-06-13","time":"19:50","serviceId":"SRV-004","serviceName":"���� Waterfall Rappelling (โรยตัวน้ำตก)","pricePerPax":1580,"pricePaidLAK":979600,"paymentMethod":"cash","billNumber":"BILL-237099-700","status":"ออกเรือแล้ว","groupId":"REG-8434","passengers":[{"firstName":"่่่ยงฝ้","lastName":"าา","docNumber":"","nationality":"ทา","gender":"female","dob":"1995-11-11","docExpiry":"","phone":"ารร","age":30,"emergencyName":"รำร","emergencyRelation":"าาา","emergencyPhone":"ีีรไยยหส","facePhoto":"","dobInput":"11/11/1995","name":"่่่ยงฝ้ าา"}],"auditLogs":[],"guideIds":["EMP-001","EMP-002"],"assignedBoats":[],"driverId":"EMP-010","createdAt":"2026-06-13T12:37:28.751Z","guideId":"EMP-001","boatId":null,"discountLAK":0,"debtLAK":0,"netPriceLAK":979600,"paidLAK":979600},{"id":"BK-1002","partnerId":"PTN-005","partnerName":"Seng (ເອເຈນ ແສງ)","bookingSource":"agent","paxCount":15,"date":"2026-06-15","time":"11:53","serviceId":"SRV-005","serviceName":"🚤 Adventure Boat (ล่องเรือผจญภัย)","pricePerPax":780,"pricePaidLAK":7254000,"paymentMethod":"cash","billNumber":"BILL-430143-956","status":"ออกเรือแล้��","groupId":"REG-2090","passengers":[{"firstName":"สสส","lastName":"สสส","docNumber":"","nationality":"สสส","gender":"male","dob":"2004-11-11","docExpiry":"","phone":"111111","age":21,"emergencyName":"ีีรร","emergencyRelation":"รรรคค","emergencyPhone":"นตต","facePhoto":"","dobInput":"11/11/2004","name":"สสส สสส"},{"firstName":"สนนน","lastName":"นน","docNumber":"","nationality":"สนน","gender":"male","dob":"2005-11-11","docExpiry":"","phone":"วสนน","age":20,"emergencyName":"ยย","emergencyRelation":"ววว","emergencyPhone":"ยยย","facePhoto":"","dobInput":"11/11/2005","name":"สนนน นน"},{"firstName":"าา","lastName":"นนน","docNumber":"","nationality":"ยยน","gender":"male","dob":"1988-11-11","docExpiry":"","phone":"นนน","age":37,"emergencyName":"ยยยย","emergencyRelation":"จย","emergencyPhone":"บบบบ","facePhoto":"","dobInput":"11/11/1988","name":"าา นนน"},{"firstName":"สส","lastName":"น�����","docNumber":"","nationality":"ตจ","gender":"male","dob":"1999-11-11","docExpiry":"","phone":"มมว","age":26,"emergencyName":"วว","emergencyRelation":"วยย","emergencyPhone":"วย","facePhoto":"","dobInput":"11/11/1999","name":"สส นน"},{"firstName":"สสส","lastName":"นนน","docNumber":"","nationality":"นนนน","gender":"male","dob":"1999-11-11","docExpiry":"","phone":"มส","age":26,"emergencyName":"สสย","emergencyRelation":"ย","emergencyPhone":"วว","facePhoto":"","dobInput":"11/11/1999","name":"สสส นนน"},{"firstName":"นนน","lastName":"ยย","docNumber":"","nationality":"ยย","gender":"male","dob":"1999-11-28","docExpiry":"","phone":"ทาส","age":26,"emergencyName":"สสสน","emergencyRelation":"นนน","emergencyPhone":"น","facePhoto":"","dobInput":"28/11/1999","name":"นนน ยย"},{"firstName":"รรร","lastName":"นน","docNumber":"","nationality":"นน","gender":"female","dob":"1999-11-11","docExpiry":"","phone":"สส","age":26,"emergencyName":"สน","emergencyRelation":"นน","emergencyPhone":"น","facePhoto":"","dobInput":"11/11/1999","name":"รรร นน"},{"firstName":"นนนน","lastName":"���น","docNumber":"","nationality":"นยน","gender":"other","dob":"1988-11-11","docExpiry":"","phone":"สสสว","age":37,"emergencyName":"ยย","emergencyRelation":"ยย","emergencyPhone":"ย","facePhoto":"","dobInput":"11/11/1988","name":"นนนน นน"},{"firstName":"สนนน","lastName":"นน","docNumber":"","nationality":"นยยย","gender":"male","dob":"1999-11-11","docExpiry":"","phone":"สสว","age":26,"emergencyName":"ว","emergencyRelation":"นน","emergencyPhone":"ววว","facePhoto":"","dobInput":"11/11/1999","name":"ส���นน นน"},{"firstName":"ย","lastName":"ยย","docNumber":"","nationality":"ยยย","gender":"male","dob":"1999-11-11","docExpiry":"","phone":"สสสว","age":26,"emergencyName":"ว","emergencyRelation":"วว","emergencyPhone":"���","facePhoto":"","dobInput":"11/11/1999","name":"ย ยย"},{"firstName":"ย","lastName":"วว","docNumber":"","nationality":"ววว","gender":"female","dob":"1999-11-11","docExpiry":"","phone":"ตน","age":26,"emergencyName":"นนน","emergencyRelation":"นน","emergencyPhone":"ยย","facePhoto":"","dobInput":"11/11/1999","name":"ย วว"},{"firstName":"มดส","lastName":"สสส","docNumber":"","nationality":"สสน","gender":"male","dob":"1999-11-11","docExpiry":"","phone":"าพา","age":26,"emergencyName":"รรน","emergencyRelation":"น","emergencyPhone":"สนน","facePhoto":"","name":"มดส สสส"},{"firstName":"มสส","lastName":"มม","docNumber":"","nationality":"สส","gender":"male","dob":"1999-11-11","docExpiry":"","phone":"&&","age":26,"emergencyName":"นน","emergencyRelation":"นน","emergencyPhone":"รรร","facePhoto":"","dobInput":"11/11/1999","name":"มสส มม"},{"firstName":"าดา","lastName":"าเา","docNumber":"","nationality":"นพน","gender":"female","dob":"1999-11-11","docExpiry":"","phone":"สน","age":26,"emergencyName":"มส","emergencyRelation":"สส","emergencyPhone":"ววว","facePhoto":"","dobInput":"11/11/1999","name":"าดา าเา"},{"firstName":"า","lastName":"รน","docNumber":"","nationality":"ร","gender":"male","dob":"1999-11-11","docExpiry":"","phone":"รร","age":26,"emergencyName":"รรร","emergencyRelation":"รรร","emergencyPhone":"นตต","facePhoto":"","dobInput":"11/11/1999","name":"า รน"}],"auditLogs":[],"guideIds":["EMP-001","EMP-002","EMP-003","EMP-004","EMP-005","EMP-006"],"assignedBoats":[{"boatId":1,"guideId":"EMP-001","paxCount":4},{"boatId":2,"guideId":"EMP-002","paxCount":4},{"boatId":3,"guideId":"EMP-003","paxCount":4},{"boatId":4,"guideId":"EMP-004","paxCount":3}],"driverId":"EMP-010","createdAt":"2026-06-15T04:40:41.550Z","guideId":"EMP-001","boatId":1,"discountLAK":0,"debtLAK":0,"netPriceLAK":7254000,"paidLAK":7254000},{"id":"BK-1003","partnerId":null,"partnerName":"Walk-in (ລູກຄ້າທົ່ວ���ປ)","bookingSource":"walk-in","paxCount":1,"date":"2026-06-15","time":"12:06","serviceId":"SRV-005","serviceName":"🚤 Adventure Boat (ล่องเรือผจญภัย)","pricePerPax":1900,"pricePaidLAK":1178000,"paymentMethod":"cash","billNumber":"BILL-746819-191","status":"ชำระเงินแล้ว / ออกบิลแล้ว","groupId":"REG-1846","passengers":[{"firstName":"ี","lastName":"ท","docNumber":"","nationality":"สา","gender":"male","dob":"1999-11-11","docExpiry":"","phone":"สส","age":26,"emergencyName":"สส","emergencyRelation":"สสว","emergencyPhone":"วว","facePhoto":"","dobInput":"11/11/1999","name":"ี ท"}],"auditLogs":[],"guideIds":["EMP-001","EMP-004"],"assignedBoats":[{"boatId":1,"guideId":"EMP-001","paxCount":1}],"driverId":"EMP-010","createdAt":"2026-06-15T05:02:32.094Z","guideId":"EMP-001","boatId":1,"discountLAK":0,"debtLAK":0,"netPriceLAK":1178000,"paidLAK":1178000},{"id":"BK-1004","partnerId":"PTN-007","partnerName":"Keo (ໄກ້ດ ແກ້ວ)","bookingSource":"agent","paxCount":1,"date":"2026-06-15","time":"13:14","serviceId":"SRV-005","serviceName":"🚤 Adventure Boat (ล่องเรือผจญภัย)","pricePerPax":1900,"pricePaidLAK":1178000,"paymentMethod":"cash","billNumber":"BILL-227760-694","status":"ชำระเงินแล้ว / ออกบิลแล้ว","groupId":"REG-6758","passengers":[{"firstName":"J","lastName":"J","docNumber":"","nationality":"J","gender":"male","dob":"1996-05-01","dobInput":"01/05/1996","docExpiry":"","phone":"Hh","age":30,"emergencyName":"Hh","emergencyRelation":"Hh","emergencyPhone":"Hj","facePhoto":"","name":"J J"}],"auditLogs":[],"guideIds":["EMP-001","EMP-004"],"assignedBoats":[{"boatId":1,"guideId":"EMP-001","paxCount":1}],"driverId":"EMP-011","createdAt":"2026-06-15T06:00:40.694Z","driverIds":["EMP-011"],"vehicleCount":1,"boatCount":1,"guideId":"EMP-001","boatId":1,"discountLAK":0,"debtLAK":0,"netPriceLAK":1178000,"paidLAK":1178000},{"id":"BK-1005","partnerId":"PTN-006","partnerName":"Bounxou (ໄກ້ດ ບຸນຊູ)","bookingSource":"agent","paxCount":3,"date":"2026-06-15","time":"13:26","serviceId":"SRV-005","serviceName":"🚤 Adventure Boat (ล่องเรือผจญภัย)","pricePerPax":780,"pricePaidLAK":1450800,"paymentMethod":"cash","billNumber":"BILL-067921-254","status":"ชำระเงินแล้ว / ออกบิลแล้ว","groupId":"REG-4341","passengers":[],"auditLogs":[],"guideIds":[],"assignedBoats":[],"driverId":null,"createdAt":"2026-06-15T06:14:48.544Z","driverIds":[],"vehicleCount":1,"boatCount":1,"guideId":null,"boatId":null,"discountLAK":0,"debtLAK":0,"netPriceLAK":1450800,"paidLAK":1450800},{"id":"BK-1006","partnerId":"PTN-007","partnerName":"Keo (ໄກ້ດ ແກ້ວ)","bookingSource":"agent","paxCount":2,"date":"2026-06-15","time":"13:39","serviceId":"SRV-005","serviceName":"🚤 Adventure Boat (ล่องเรือผจญภัย)","pricePerPax":1900,"pricePaidLAK":1178000,"paymentMethod":"cash","billNumber":"BILL-778285-550","status":"ออกเรือแล้ว","groupId":"REG-4708","passengers":[{"firstName":"່າ","lastName":"່່","docNumber":"","nationality":"ີີ","gender":"female","dob":"2006-09-05","dobInput":"05/09/2006","docExpiry":"","phone":"່່່","age":19,"emergencyName":"ີ","emergencyRelation":"ີ","emergencyPhone":"ຮ","facePhoto":"","name":"່າ ່່"},{"firstName":"າ","lastName":"ສ","docNumber":"","nationality":"າ","gender":"male","dob":"2020-09-04","dobInput":"04/09/2020","docExpiry":"","phone":"າ","age":5,"emergencyName":"ຮ","emergencyRelation":"ນ","emergencyPhone":"ນ","facePhoto":"","name":"າ ��"}],"auditLogs":[],"guideIds":["EMP-001","EMP-004"],"assignedBoats":[{"boatId":1,"guideId":"EMP-001","paxCount":2}],"driverId":"EMP-010","createdAt":"2026-06-15T06:26:45.871Z","driverIds":["EMP-010"],"vehicleCount":1,"boatCount":1,"guideId":"EMP-001","boatId":1,"discountLAK":0,"debtLAK":0,"netPriceLAK":1178000,"paidLAK":1178000},{"id":"BK-1007","partnerId":"PTN-002","partnerName":"Anousone (ເອເຈນ ອານຸສອນ)","bookingSource":"agent","paxCount":2,"date":"2026-06-15","time":"13:51","serviceId":"SRV-005","serviceName":"🚤 Adventure Boat (ล่องเรือผจญภั��)","pricePerPax":1900,"pricePaidLAK":1178000,"paymentMethod":"cash","billNumber":"BILL-947917-837","status":"เสร็จสิ้น","groupId":"REG-1964","passengers":[{"firstName":"ส","lastName":"ส","docNumber":"","nationality":"น","gender":"female","dob":"2018-09-06","dobInput":"06/09/2018","docExpiry":"","phone":"สดารน","age":7,"emergencyName":"นนน","emergencyRelation":"ยย","emergencyPhone":"วยย","facePhoto":"","name":"ส ส"},{"firstName":"Saychai","lastName":"Phothisan","docNumber":"","nationality":"Lao","gender":"female","dob":"1998-07-10","dobInput":"10/07/1998","docExpiry":"","phone":"02058008188","age":27,"emergencyName":"55908395","emergencyRelation":"ພໍ່","emergencyPhone":"55710549","facePhoto":"","name":"Saychai Phothisan"}],"auditLogs":[],"guideIds":["EMP-001","EMP-005"],"assignedBoats":[{"boatId":3,"guideId":"EMP-001","paxCount":2}],"driverId":"EMP-010","createdAt":"2026-06-15T06:46:05.417Z","driverIds":["EMP-010"],"vehicleCount":1,"boatCount":1,"guideId":"EMP-001","boatId":3,"discountLAK":0,"debtLAK":0,"netPriceLAK":1178000,"paidLAK":1178000},{"id":"BK-1008","partnerId":"PTN-001","partnerName":"Noy (ເອເຈນ ນ້ອຍ)","bookingSource":"agent","paxCount":1,"date":"2026-06-15","time":"15:06","serviceId":"SRV-005","serviceName":"🚤 Adventure Boat (ล่องเรือผจญภั���)","pricePerPax":1900,"pricePaidLAK":1178000,"discountLAK":0,"netPriceLAK":1178000,"debtLAK":1178000,"paidLAK":0,"paymentMethod":"cash","billNumber":"BILL-680718-575","status":"ชำระเงินแล้ว / ออกบิลแล้ว","groupId":"REG-4848","passengers":[{"firstName":"ส","lastName":"น","docNumber":"","nationality":"น","gender":"female","dob":"2009-07-05","dobInput":"05/07/2009","docExpiry":"","phone":"สดส","age":16,"emergencyName":"สน","emergencyRelation":"นน","emergencyPhone":"นน","facePhoto":"","name":"ส น"}],"auditLogs":[],"guideIds":["EMP-002","EMP-005"],"assignedBoats":[{"boatId":1,"guideId":"EMP-002","paxCount":1}],"driverId":"EMP-014","createdAt":"2026-06-15T08:04:49.109Z","driverIds":["EMP-014"],"vehicleCount":1,"boatCount":1,"guideId":"EMP-002","boatId":1},{"id":"BK-1009","partnerId":null,"partnerName":"Walk-in (ລູກຄ້າທົ່ວໄປ)","bookingSource":"walk-in","paxCount":2,"date":"2026-06-16","time":"13:32","serviceId":"SRV-005","serviceName":"🚤 Adventure Boat (ล่องเรือผจญภั���)","pricePerPax":1900,"pricePaidLAK":1178000,"discountLAK":0,"netPriceLAK":1178000,"debtLAK":0,"paidLAK":1178000,"paymentMethod":"cash","billNumber":"BILL-523096-437","status":"รอลูกค้ากรอกข้อมูล","groupId":"REG-6899","passengers":[],"auditLogs":[],"guideIds":[],"assignedBoats":[],"driverId":"","createdAt":"2026-06-16T06:32:10.214Z"}],"trips":[{"id":"TRIP-1001-0","date":"2026-06-13","time":"19:50","boatId":null,"boatIds":[],"captainId":"EMP-007","captainIds":["EMP-007"],"guideIds":["EMP-001"],"driverIds":["EMP-010"],"customerIds":["CUST-BK-1001-0"],"bookingId":"BK-1001","status":"dispatched","createdAt":"2026-06-13T12:37:28.751Z","paymentMethod":"cash","pricePaidLAK":979600},{"id":"TRIP-1002-0","date":"2026-06-15","time":"11:53","boatId":1,"boatIds":[1],"captainId":"EMP-008","captainIds":["EMP-008"],"guideIds":["EMP-001"],"driverIds":["EMP-010"],"customerIds":["CUST-BK-1002-0","CUST-BK-1002-1","CUST-BK-1002-2","CUST-BK-1002-3","CUST-BK-1002-4","CUST-BK-1002-5","CUST-BK-1002-6","CUST-BK-1002-7","CUST-BK-1002-8","CUST-BK-1002-9","CUST-BK-1002-10","CUST-BK-1002-11","CUST-BK-1002-12","CUST-BK-1002-13","CUST-BK-1002-14"],"bookingId":"BK-1002","status":"dispatched","createdAt":"2026-06-15T04:40:41.550Z","paymentMethod":"cash","pricePaidLAK":7254000},{"id":"TRIP-1002-1","date":"2026-06-15","time":"11:53","boatId":2,"boatIds":[2],"captainId":"EMP-013","captainIds":["EMP-013"],"guideIds":["EMP-002"],"driverIds":["EMP-010"],"customerIds":["CUST-BK-1002-0","CUST-BK-1002-1","CUST-BK-1002-2","CUST-BK-1002-3","CUST-BK-1002-4","CUST-BK-1002-5","CUST-BK-1002-6","CUST-BK-1002-7","CUST-BK-1002-8","CUST-BK-1002-9","CUST-BK-1002-10","CUST-BK-1002-11","CUST-BK-1002-12","CUST-BK-1002-13","CUST-BK-1002-14"],"bookingId":"BK-1002","status":"dispatched","createdAt":"2026-06-15T04:40:41.550Z","paymentMethod":"cash","pricePaidLAK":0},{"id":"TRIP-1002-2","date":"2026-06-15","time":"11:53","boatId":3,"boatIds":[3],"captainId":"EMP-007","captainIds":["EMP-007"],"guideIds":["EMP-003"],"driverIds":["EMP-010"],"customerIds":["CUST-BK-1002-0","CUST-BK-1002-1","CUST-BK-1002-2","CUST-BK-1002-3","CUST-BK-1002-4","CUST-BK-1002-5","CUST-BK-1002-6","CUST-BK-1002-7","CUST-BK-1002-8","CUST-BK-1002-9","CUST-BK-1002-10","CUST-BK-1002-11","CUST-BK-1002-12","CUST-BK-1002-13","CUST-BK-1002-14"],"bookingId":"BK-1002","status":"dispatched","createdAt":"2026-06-15T04:40:41.550Z","paymentMethod":"cash","pricePaidLAK":0},{"id":"TRIP-1002-3","date":"2026-06-15","time":"11:53","boatId":4,"boatIds":[4],"captainId":"EMP-008","captainIds":["EMP-008"],"guideIds":["EMP-004"],"driverIds":["EMP-010"],"customerIds":["CUST-BK-1002-0","CUST-BK-1002-1","CUST-BK-1002-2","CUST-BK-1002-3","CUST-BK-1002-4","CUST-BK-1002-5","CUST-BK-1002-6","CUST-BK-1002-7","CUST-BK-1002-8","CUST-BK-1002-9","CUST-BK-1002-10","CUST-BK-1002-11","CUST-BK-1002-12","CUST-BK-1002-13","CUST-BK-1002-14"],"bookingId":"BK-1002","status":"dispatched","createdAt":"2026-06-15T04:40:41.550Z","paymentMethod":"cash","pricePaidLAK":0},{"id":"TRIP-1003-0","date":"2026-06-15","time":"12:06","boatId":1,"boatIds":[1],"captainId":"EMP-013","captainIds":["EMP-013"],"guideIds":["EMP-001"],"driverIds":["EMP-010"],"customerIds":["CUST-BK-1003-0"],"bookingId":"BK-1003","status":"dispatched","createdAt":"2026-06-15T05:02:32.094Z","paymentMethod":"cash","pricePaidLAK":1178000},{"id":"TRIP-1004-0","date":"2026-06-15","time":"13:14","boatId":1,"boatIds":[1],"captainId":"EMP-007","captainIds":["EMP-007"],"guideIds":["EMP-001"],"driverIds":["EMP-011"],"customerIds":["CUST-BK-1004-0"],"bookingId":"BK-1004","status":"dispatched","createdAt":"2026-06-15T06:00:40.694Z","paymentMethod":"cash","pricePaidLAK":1178000},{"id":"TRIP-1005-0","date":"2026-06-15","time":"13:26","boatId":null,"boatIds":[],"captainId":"EMP-008","captainIds":["EMP-008"],"guideIds":[],"driverIds":[],"customerIds":[],"bookingId":"BK-1005","status":"dispatched","createdAt":"2026-06-15T06:14:48.544Z","paymentMethod":"cash","pricePaidLAK":1450800},{"id":"TRIP-1006-0","date":"2026-06-15","time":"13:39","boatId":1,"boatIds":[1],"captainId":"EMP-013","captainIds":["EMP-013"],"guideIds":["EMP-001"],"driverIds":["EMP-010"],"customerIds":["CUST-BK-1006-0","CUST-BK-1006-1"],"bookingId":"BK-1006","status":"dispatched","createdAt":"2026-06-15T06:26:45.871Z","paymentMethod":"cash","pricePaidLAK":1178000},{"id":"TRIP-1007-0","date":"2026-06-15","time":"13:51","boatId":3,"boatIds":[3],"captainId":"EMP-007","captainIds":["EMP-007"],"guideIds":["EMP-001"],"driverIds":["EMP-010"],"customerIds":["CUST-BK-1007-0","CUST-BK-1007-1"],"bookingId":"BK-1007","status":"completed","createdAt":"2026-06-15T06:46:05.417Z","paymentMethod":"cash","pricePaidLAK":1178000},{"id":"TRIP-1008-0","date":"2026-06-15","time":"15:06","boatId":1,"boatIds":[1],"captainId":"EMP-008","captainIds":["EMP-008"],"guideIds":["EMP-002"],"driverIds":["EMP-014"],"customerIds":["CUST-BK-1008-0"],"bookingId":"BK-1008","status":"dispatched","createdAt":"2026-06-15T08:04:49.109Z","paymentMethod":"cash","pricePaidLAK":1178000}],"users":[{"id":"USR-001","email":"admin@tadfane.com","password":"admin123","name":"Somchai (Admin)","role":"owner","permissions":{"dashboard":{"view":true,"add":true,"edit":true,"approve":true,"delete":true},"checkin-tickets":{"view":true,"add":true,"edit":true,"approve":true,"delete":true},"accounting-payroll":{"view":true,"add":true,"edit":true,"approve":true,"delete":true},"settings":{"view":true,"add":true,"edit":true,"approve":true,"delete":true}},"responsibilities":{"accounting":true,"tickets":true,"crew_dispatch":true}},{"id":"USR-002","email":"cashier@tadfane.com","password":"cashier123","name":"Naree (Cashier)","role":"cashier","permissions":{"dashboard":{"view":false,"add":false,"edit":false,"approve":false,"delete":false},"checkin-tickets":{"view":true,"add":true,"edit":false,"approve":false,"delete":false},"accounting-payroll":{"view":false,"add":false,"edit":false,"approve":false,"delete":false},"settings":{"view":false,"add":false,"edit":false,"approve":false,"delete":false}},"responsibilities":{"accounting":false,"tickets":true,"crew_dispatch":false}},{"id":"USR-003","email":"accounting@tadfane.com","password":"accounting123","name":"Bounmy (Accountant)","role":"accounting","permissions":{"dashboard":{"view":true,"add":false,"edit":false,"approve":false,"delete":false},"checkin-tickets":{"view":false,"add":false,"edit":false,"approve":false,"delete":false},"accounting-payroll":{"view":true,"add":true,"edit":true,"approve":false,"delete":false},"settings":{"view":false,"add":false,"edit":false,"approve":false,"delete":false}},"responsibilities":{"accounting":true,"tickets":false,"crew_dispatch":false}},{"id":"USR-004","email":"dispatcher@tadfane.com","password":"dispatcher123","name":"Kham (Dispatcher)","role":"tour_operation","permissions":{"dashboard":{"view":true,"add":false,"edit":false,"approve":false,"delete":false},"checkin-tickets":{"view":true,"add":false,"edit":true,"approve":false,"delete":false},"accounting-payroll":{"view":false,"add":false,"edit":false,"approve":false,"delete":false},"settings":{"view":false,"add":false,"edit":false,"approve":false,"delete":false}},"responsibilities":{"accounting":false,"tickets":false,"crew_dispatch":true}}],"customExpenses":[]}
+{
+  "services": [
+    {
+      "priceTier2": 1580,
+      "status": "active",
+      "priceTier3": 1120,
+      "priceTier1": 1580,
+      "priceTier2Type": "pax",
+      "priceTier3Type": "pax",
+      "price": 1580,
+      "name": "🧗 Waterfall Rappelling (โรยตัวน้ำตก)",
+      "priceTier1Type": "pax",
+      "id": "SRV-004",
+      "currency": "THB"
+    },
+    {
+      "currency": "THB",
+      "id": "SRV-005",
+      "priceTier1Type": "flat",
+      "name": "🚤 Adventure Boat (ล่องเรือผจญภั���)",
+      "price": 1900,
+      "priceTier3Type": "pax",
+      "priceTier2Type": "flat",
+      "priceTier1": 1900,
+      "priceTier2": 1900,
+      "priceTier3": 780,
+      "status": "active"
+    }
+  ],
+  "users": [
+    {
+      "permissions": {
+        "settings": {
+          "approve": true,
+          "edit": true,
+          "view": true,
+          "delete": true,
+          "add": true
+        },
+        "dashboard": {
+          "edit": true,
+          "approve": true,
+          "delete": true,
+          "add": true,
+          "view": true
+        },
+        "accounting-payroll": {
+          "approve": true,
+          "edit": true,
+          "add": true,
+          "delete": true,
+          "view": true
+        },
+        "checkin-tickets": {
+          "view": true,
+          "add": true,
+          "delete": true,
+          "approve": true,
+          "edit": true
+        }
+      },
+      "password": "admin123",
+      "email": "admin@tadfane.com",
+      "id": "USR-001",
+      "role": "owner",
+      "responsibilities": {
+        "accounting": true,
+        "tickets": true,
+        "crew_dispatch": true
+      },
+      "name": "Somchai (Admin)"
+    },
+    {
+      "role": "cashier",
+      "password": "m1122",
+      "email": "min",
+      "id": "USR-002",
+      "permissions": {
+        "checkin-tickets": {
+          "edit": false,
+          "approve": false,
+          "view": true,
+          "add": true,
+          "delete": false
+        },
+        "accounting-payroll": {
+          "approve": false,
+          "edit": false,
+          "view": false,
+          "add": false,
+          "delete": false
+        },
+        "dashboard": {
+          "add": false,
+          "delete": false,
+          "view": false,
+          "edit": false,
+          "approve": false
+        },
+        "settings": {
+          "delete": false,
+          "add": false,
+          "view": false,
+          "edit": false,
+          "approve": false
+        }
+      },
+      "responsibilities": {
+        "crew_dispatch": false,
+        "tickets": true,
+        "accounting": false
+      },
+      "name": "Min"
+    },
+    {
+      "responsibilities": {
+        "crew_dispatch": false,
+        "accounting": true,
+        "tickets": false
+      },
+      "name": "Bounmy (Accountant)",
+      "permissions": {
+        "settings": {
+          "view": false,
+          "add": false,
+          "delete": false,
+          "approve": false,
+          "edit": false
+        },
+        "dashboard": {
+          "add": false,
+          "delete": false,
+          "view": true,
+          "approve": false,
+          "edit": false
+        },
+        "accounting-payroll": {
+          "approve": false,
+          "edit": true,
+          "add": true,
+          "delete": false,
+          "view": true
+        },
+        "checkin-tickets": {
+          "edit": false,
+          "approve": false,
+          "view": false,
+          "delete": false,
+          "add": false
+        }
+      },
+      "role": "accounting",
+      "password": "accounting123",
+      "id": "USR-003",
+      "email": "accounting@tadfane.com"
+    },
+    {
+      "role": "tour_operation",
+      "id": "USR-004",
+      "email": "dispatcher@tadfane.com",
+      "password": "dispatcher123",
+      "permissions": {
+        "accounting-payroll": {
+          "approve": false,
+          "edit": false,
+          "view": false,
+          "add": false,
+          "delete": false
+        },
+        "checkin-tickets": {
+          "edit": true,
+          "approve": false,
+          "view": true,
+          "delete": false,
+          "add": false
+        },
+        "settings": {
+          "edit": false,
+          "approve": false,
+          "add": false,
+          "delete": false,
+          "view": false
+        },
+        "dashboard": {
+          "add": false,
+          "delete": false,
+          "view": true,
+          "approve": false,
+          "edit": false
+        }
+      },
+      "name": "Kham (Dispatcher)",
+      "responsibilities": {
+        "crew_dispatch": true,
+        "tickets": false,
+        "accounting": false
+      }
+    }
+  ],
+  "customers": [],
+  "partners": [
+    {
+      "bankAccount": "",
+      "type": "agent",
+      "name": "Walk In (ລູກຄ້າທົ່ວໄປ)",
+      "contact": "",
+      "commissionRate": 0,
+      "id": "PTN-000"
+    }
+  ],
+  "trips": [
+    {
+      "createdAt": "2026-07-24T05:06:33.892Z",
+      "guideIds": [
+        "EMP-007"
+      ],
+      "paymentMethod": "transfer",
+      "id": "TRIP-1784869593892-0",
+      "captainId": null,
+      "time": "12:07",
+      "customerIds": [],
+      "boatIds": [],
+      "captainIds": [],
+      "driverIds": [],
+      "boatId": null,
+      "pricePaidLAK": 2352000,
+      "status": "dispatched",
+      "bookingId": "BK-1784869593892",
+      "date": "2026-07-24"
+    },
+    {
+      "boatIds": [],
+      "captainIds": [],
+      "time": "12:02",
+      "customerIds": [],
+      "captainId": null,
+      "paymentMethod": "transfer",
+      "id": "TRIP-1784869283314-0",
+      "createdAt": "2026-07-24T05:01:23.314Z",
+      "guideIds": [
+        "EMP-007"
+      ],
+      "bookingId": "BK-1784869283314",
+      "date": "2026-07-24",
+      "pricePaidLAK": 2352000,
+      "boatId": null,
+      "status": "dispatched",
+      "driverIds": []
+    },
+    {
+      "boatIds": [],
+      "captainIds": [],
+      "customerIds": [],
+      "time": "11:54",
+      "id": "TRIP-1784868855999-0",
+      "paymentMethod": "transfer",
+      "captainId": null,
+      "createdAt": "2026-07-24T04:54:15.999Z",
+      "guideIds": [
+        "EMP-001"
+      ],
+      "bookingId": "BK-1784868855999",
+      "date": "2026-07-24",
+      "boatId": null,
+      "pricePaidLAK": 1638000,
+      "status": "dispatched",
+      "driverIds": []
+    },
+    {
+      "time": "11:54",
+      "customerIds": [],
+      "boatIds": [],
+      "captainIds": [],
+      "createdAt": "2026-07-24T04:53:32.612Z",
+      "guideIds": [
+        "EMP-007"
+      ],
+      "captainId": null,
+      "id": "TRIP-1784868812612-0",
+      "paymentMethod": "transfer",
+      "boatId": null,
+      "pricePaidLAK": 2352000,
+      "status": "dispatched",
+      "bookingId": "BK-1784868812612",
+      "date": "2026-07-24",
+      "driverIds": []
+    }
+  ],
+  "bookings": [
+    {
+      "status": "completed",
+      "customerNotes": "",
+      "date": "2026-07-24",
+      "_serverTimestamp": {
+        "type": "firestore/timestamp/1.0",
+        "nanoseconds": 395000000,
+        "seconds": 1784869593
+      },
+      "driverId": null,
+      "billNumber": "BILL-587307-107",
+      "guideId": "EMP-007",
+      "discountLAK": 376320,
+      "updatedAt": "2026-07-24T05:07:16.013Z",
+      "bookingSource": "walk-in",
+      "driverIds": [],
+      "vehicleCount": 1,
+      "serviceId": "SRV-004",
+      "discountPercent": 16,
+      "netPriceLAK": 1975680,
+      "passengers": [],
+      "customerPhone": "",
+      "createdAt": "2026-07-24T05:06:33.892Z",
+      "paidAt": "2026-07-24T05:07:12.523Z",
+      "paymentStatus": "paid",
+      "paidLAK": 1975680,
+      "paymentCurrency": "THB",
+      "_serverUpdatedAt": {
+        "seconds": 1784869635,
+        "nanoseconds": 352000000,
+        "type": "firestore/timestamp/1.0"
+      },
+      "serviceName": "🧗 Waterfall Rappelling (โรยตัวน้ำตก)",
+      "boatId": null,
+      "pricePaidLAK": 2352000,
+      "paxCount": 3,
+      "customerName": "",
+      "discountType": "percent",
+      "boatCount": 1,
+      "partnerId": null,
+      "groupId": "REG-2073",
+      "pricePerPax": 1120,
+      "time": "12:07",
+      "partnerName": "Walk-in (ລູກຄ້າທົ່ວໄປ)",
+      "assignedBoats": [],
+      "guideIds": [
+        "EMP-007",
+        "EMP-006"
+      ],
+      "id": "BK-1784869593892",
+      "paymentMethod": "transfer",
+      "debtLAK": 0,
+      "auditLogs": []
+    },
+    {
+      "partnerName": "Walk-in (ລູກຄ້າທົ່ວໄປ)",
+      "groupId": "REG-8562",
+      "time": "12:02",
+      "pricePerPax": 1120,
+      "debtLAK": 0,
+      "paymentMethod": "transfer",
+      "id": "BK-1784869283314",
+      "auditLogs": [],
+      "guideIds": [
+        "EMP-007",
+        "EMP-006"
+      ],
+      "assignedBoats": [],
+      "paxCount": 3,
+      "boatId": null,
+      "pricePaidLAK": 2352000,
+      "serviceName": "🧗 Waterfall Rappelling (โรยตัวน้ำตก)",
+      "_serverUpdatedAt": {
+        "type": "firestore/timestamp/1.0",
+        "seconds": 1784869323,
+        "nanoseconds": 517000000
+      },
+      "boatCount": 1,
+      "discountType": "percent",
+      "partnerId": null,
+      "customerName": "",
+      "serviceId": "SRV-004",
+      "discountPercent": 16,
+      "vehicleCount": 1,
+      "paidLAK": 1975680,
+      "paymentStatus": "paid",
+      "paidAt": "2026-07-24T05:02:01.833Z",
+      "paymentCurrency": "THB",
+      "passengers": [],
+      "netPriceLAK": 1975680,
+      "createdAt": "2026-07-24T05:01:23.314Z",
+      "customerPhone": "",
+      "customerNotes": "",
+      "date": "2026-07-24",
+      "status": "completed",
+      "updatedAt": "2026-07-24T05:02:04.167Z",
+      "discountLAK": 376320,
+      "guideId": "EMP-007",
+      "bookingSource": "walk-in",
+      "driverIds": [],
+      "_serverTimestamp": {
+        "type": "firestore/timestamp/1.0",
+        "nanoseconds": 780000000,
+        "seconds": 1784869282
+      },
+      "driverId": null,
+      "billNumber": "BILL-269945-477"
+    },
+    {
+      "bookingSource": "walk-in",
+      "driverIds": [],
+      "discountLAK": 262080,
+      "guideId": "EMP-001",
+      "updatedAt": "2026-07-24T04:54:50.054Z",
+      "billNumber": "BILL-843696-148",
+      "driverId": null,
+      "_serverTimestamp": {
+        "type": "firestore/timestamp/1.0",
+        "seconds": 1784868855,
+        "nanoseconds": 886000000
+      },
+      "date": "2026-07-24",
+      "customerNotes": "",
+      "status": "completed",
+      "paymentCurrency": "THB",
+      "paymentStatus": "paid",
+      "paidAt": "2026-07-24T04:54:48.010Z",
+      "paidLAK": 1375920,
+      "customerPhone": "",
+      "createdAt": "2026-07-24T04:54:15.999Z",
+      "passengers": [],
+      "netPriceLAK": 1375920,
+      "discountPercent": 16,
+      "serviceId": "SRV-005",
+      "vehicleCount": 1,
+      "partnerId": null,
+      "discountType": "percent",
+      "boatCount": 1,
+      "customerName": "",
+      "paxCount": 3,
+      "serviceName": "🚤 Adventure Boat (ล่องเรือผจญภั���)",
+      "_serverUpdatedAt": {
+        "nanoseconds": 943000000,
+        "seconds": 1784868889,
+        "type": "firestore/timestamp/1.0"
+      },
+      "pricePaidLAK": 1638000,
+      "boatId": null,
+      "auditLogs": [],
+      "id": "BK-1784868855999",
+      "paymentMethod": "transfer",
+      "debtLAK": 0,
+      "assignedBoats": [],
+      "guideIds": [
+        "EMP-001",
+        "EMP-002"
+      ],
+      "partnerName": "Walk-in (ລູກຄ້າທົ່ວໄປ)",
+      "time": "11:54",
+      "pricePerPax": 780,
+      "groupId": "REG-5837"
+    },
+    {
+      "paxCount": 3,
+      "_serverUpdatedAt": {
+        "type": "firestore/timestamp/1.0",
+        "nanoseconds": 657000000,
+        "seconds": 1784868843
+      },
+      "serviceName": "🧗 Waterfall Rappelling (โรยตัวน้ำตก)",
+      "boatId": null,
+      "pricePaidLAK": 2352000,
+      "partnerId": null,
+      "discountType": "percent",
+      "boatCount": 1,
+      "customerName": "",
+      "partnerName": "Walk-in (ລູກຄ້າທົ່ວໄປ)",
+      "time": "11:54",
+      "pricePerPax": 1120,
+      "groupId": "REG-9347",
+      "auditLogs": [],
+      "paymentMethod": "transfer",
+      "id": "BK-1784868812612",
+      "debtLAK": 0,
+      "assignedBoats": [],
+      "guideIds": [
+        "EMP-007",
+        "EMP-006"
+      ],
+      "date": "2026-07-24",
+      "customerNotes": "",
+      "status": "completed",
+      "bookingSource": "walk-in",
+      "driverIds": [],
+      "guideId": "EMP-007",
+      "discountLAK": 376320,
+      "updatedAt": "2026-07-24T04:54:03.697Z",
+      "billNumber": "BILL-806060-629",
+      "driverId": null,
+      "_serverTimestamp": {
+        "seconds": 1784868812,
+        "nanoseconds": 632000000,
+        "type": "firestore/timestamp/1.0"
+      },
+      "discountPercent": 16,
+      "serviceId": "SRV-004",
+      "vehicleCount": 1,
+      "paymentCurrency": "THB",
+      "paymentStatus": "paid",
+      "paidAt": "2026-07-24T04:54:01.910Z",
+      "paidLAK": 1975680,
+      "customerPhone": "",
+      "createdAt": "2026-07-24T04:53:32.612Z",
+      "netPriceLAK": 1975680,
+      "passengers": []
+    }
+  ],
+  "lastModified": 1784869930913,
+  "customExpenses": [],
+  "settings": {
+    "shopExtra": "",
+    "shopTaxId": "",
+    "rateUSD": 20000,
+    "shopName": "TADFANE RAFTING",
+    "logo": "/tadfane_logo.jpg",
+    "rateTHB": 700,
+    "basePriceLAK": 250000,
+    "expenseApprovalLimit": 5000000,
+    "shopAddressLao": "ປາກຊ່ອງ, ປະເທດລາວ",
+    "shopTel": "+856 20 58008188",
+    "shopAddress": "Laos",
+    "shopNameLao": "ຕາດຟານ ລ່ອງແກ່ງ"
+  },
+  "boats": [
+    {
+      "id": 1,
+      "status": "available",
+      "name": "ເຮືອ 1 / Boat 1",
+      "capacity": 6
+    },
+    {
+      "name": "ເຮືອ 2 / Boat 2",
+      "capacity": 6,
+      "status": "available",
+      "id": 2
+    },
+    {
+      "id": 3,
+      "status": "available",
+      "capacity": 6,
+      "name": "ເຮືອ 3 / Boat 3"
+    },
+    {
+      "id": 4,
+      "status": "available",
+      "capacity": 6,
+      "name": "ເຮືອ 4 / Boat 4"
+    },
+    {
+      "status": "available",
+      "id": 5,
+      "name": "ເຮືອ 5 / Boat 5",
+      "capacity": 6
+    },
+    {
+      "capacity": 6,
+      "name": "ເຮືອ 6 / Boat 6",
+      "id": 6,
+      "status": "available"
+    },
+    {
+      "capacity": 6,
+      "name": "ເຮືອ 7 / Boat 7",
+      "status": "available",
+      "id": 7
+    },
+    {
+      "capacity": 6,
+      "name": "ເຮືອ 8 / Boat 8",
+      "status": "available",
+      "id": 8
+    },
+    {
+      "name": "ເຮືອ 9 / Boat 9",
+      "capacity": 6,
+      "id": 9,
+      "status": "available"
+    },
+    {
+      "name": "ເຮືອ 10 / Boat 10",
+      "capacity": 6,
+      "id": 10,
+      "status": "available"
+    }
+  ],
+  "employees": [
+    {
+      "bankAccount": "",
+      "dailyWage": 0,
+      "raftingRate": 0,
+      "ot": 0,
+      "hireDate": "2025-01-01",
+      "specialRate": 0,
+      "id": "EMP-001",
+      "bonus": 0,
+      "role": "guide",
+      "tourRate": 0,
+      "tripRate": 65000,
+      "name": "ທ ກູດ",
+      "salary": 2800000,
+      "type": "permanent",
+      "daysWorked": 26,
+      "status": "active",
+      "phone": "",
+      "commission": 0
+    },
+    {
+      "bonus": 0,
+      "role": "guide",
+      "ot": 0,
+      "dailyWage": 0,
+      "bankAccount": "",
+      "raftingRate": 0,
+      "hireDate": "2025-01-01",
+      "specialRate": 0,
+      "id": "EMP-002",
+      "type": "permanent",
+      "status": "active",
+      "daysWorked": 26,
+      "phone": "",
+      "commission": 0,
+      "tourRate": 0,
+      "salary": 2800000,
+      "name": "ທ ໂມ",
+      "tripRate": 65000
+    },
+    {
+      "type": "permanent",
+      "daysWorked": 26,
+      "status": "active",
+      "phone": "",
+      "commission": 0,
+      "tourRate": 0,
+      "name": "ທ ໂນລິນ",
+      "tripRate": 65000,
+      "salary": 2800000,
+      "bonus": 0,
+      "role": "guide",
+      "raftingRate": 0,
+      "dailyWage": 0,
+      "bankAccount": "",
+      "ot": 0,
+      "hireDate": "2025-01-01",
+      "id": "EMP-003",
+      "specialRate": 0
+    },
+    {
+      "role": "guide",
+      "bonus": 0,
+      "id": "EMP-004",
+      "specialRate": 0,
+      "hireDate": "2025-01-01",
+      "raftingRate": 0,
+      "bankAccount": "",
+      "dailyWage": 0,
+      "ot": 0,
+      "commission": 0,
+      "phone": "",
+      "daysWorked": 26,
+      "status": "active",
+      "type": "permanent",
+      "name": "ທ ພຸດ",
+      "tripRate": 65000,
+      "salary": 2800000,
+      "tourRate": 0
+    },
+    {
+      "tourRate": 0,
+      "salary": 2800000,
+      "name": "ທ ດາວ",
+      "tripRate": 65000,
+      "phone": "",
+      "commission": 0,
+      "type": "permanent",
+      "status": "active",
+      "daysWorked": 26,
+      "id": "EMP-005",
+      "specialRate": 0,
+      "ot": 0,
+      "dailyWage": 0,
+      "raftingRate": 0,
+      "bankAccount": "",
+      "hireDate": "2025-01-01",
+      "role": "guide",
+      "bonus": 0
+    },
+    {
+      "bonus": 0,
+      "role": "guide",
+      "ot": 0,
+      "dailyWage": 0,
+      "raftingRate": 0,
+      "bankAccount": "",
+      "hireDate": "2025-01-01",
+      "specialRate": 0,
+      "id": "EMP-006",
+      "type": "permanent",
+      "daysWorked": 26,
+      "status": "active",
+      "phone": "",
+      "commission": 0,
+      "tourRate": 0,
+      "salary": 4000000,
+      "tripRate": 65000,
+      "name": "ທ ຫຼີ"
+    },
+    {
+      "role": "guide",
+      "bonus": 0,
+      "id": "EMP-007",
+      "specialRate": 0,
+      "ot": 0,
+      "dailyWage": 0,
+      "bankAccount": "",
+      "raftingRate": 0,
+      "hireDate": "2025-01-01",
+      "phone": "",
+      "commission": 0,
+      "type": "permanent",
+      "daysWorked": 26,
+      "status": "active",
+      "tourRate": 0,
+      "salary": 4000000,
+      "name": "ທ ຍືນ",
+      "tripRate": 65000
+    },
+    {
+      "bankAccount": "",
+      "dailyWage": 0,
+      "raftingRate": 0,
+      "ot": 0,
+      "hireDate": "2025-01-01",
+      "specialRate": 0,
+      "id": "EMP-008",
+      "bonus": 0,
+      "role": "guide",
+      "tourRate": 0,
+      "tripRate": 65000,
+      "name": "ທ ມິນ",
+      "salary": 4000000,
+      "type": "permanent",
+      "daysWorked": 26,
+      "status": "active",
+      "phone": "",
+      "commission": 0
+    },
+    {
+      "phone": "",
+      "commission": 0,
+      "type": "permanent",
+      "daysWorked": 26,
+      "status": "active",
+      "tourRate": 0,
+      "salary": 3400000,
+      "name": "ທ ຊຽງ",
+      "tripRate": 65000,
+      "role": "guide",
+      "bonus": 0,
+      "id": "EMP-009",
+      "specialRate": 0,
+      "ot": 0,
+      "raftingRate": 0,
+      "bankAccount": "",
+      "dailyWage": 0,
+      "hireDate": "2025-01-01"
+    }
+  ]
+}

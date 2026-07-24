@@ -529,7 +529,7 @@ export default function PayrollManager() {
           <td style="border: 1px solid #000; padding: 6px;">${roleLabel}</td>
           <td style="border: 1px solid #000; padding: 6px;">${emp.type === "freelance" ? "ອິດສະຫຼະ (OT)" : "ປະຈຳ"}</td>
           <td style="border: 1px solid #000; padding: 6px; text-align: right;">
-            ${emp.type === "freelance" ? "0 ₭" : formatLAK(emp.salary)}
+            ${formatLAK(emp.salary > 0 ? emp.salary : calc.totalPayout)}
             ${emp.allowance > 0 ? `<div style="font-size: 8.5px; color: #0f766e; font-weight: 600;">+${formatLAK(emp.allowance)} (ຕຳແໜ່ງ)</div>` : ''}
             ${emp.dailyWage > 0 ? `<div style="font-size: 8px; color: #64748b; margin-top: 2px;">${formatLAK(emp.dailyWage)}/ວັນ (${emp.daysWorked || 26} ວັນ)</div>` : ''}
           </td>
@@ -936,7 +936,7 @@ export default function PayrollManager() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", color: "var(--text-secondary)" }}>
                     <span>ເງິນເດືອນ (Gross):</span>
-                    <span style={{ fontWeight: "600", color: "#1e293b" }}>{emp.type === "freelance" ? "0 ₭" : formatLAK(emp.salary)}</span>
+                    <span style={{ fontWeight: "600", color: "#1e293b" }}>{formatLAK(emp.salary > 0 ? emp.salary : calc.totalPayout)}</span>
                   </div>
                   {emp.allowance > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", color: "#0284c7" }}>

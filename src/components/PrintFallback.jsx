@@ -345,46 +345,139 @@ export default function PrintFallback() {
 
           <div style={{ borderTop: "2px dashed #000000", margin: "6px 0" }}></div>
           <div style={{ fontSize: "15px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
-              <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
-                {loadedBooking.serviceName} x{loadedBooking.paxCount}:
-              </span>
-              <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                {formatLAK(loadedBooking.pricePaidLAK)} LAK
-              </span>
-            </div>
-            {(loadedBooking.discountLAK || 0) > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px" }}>
-                <span>{rt.discount}</span>
-                <span>-{formatLAK(loadedBooking.discountLAK)} LAK</span>
-              </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "900", fontSize: "20px", marginTop: "8px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
-              <span style={{ flex: 1, textAlign: "left" }}>{(loadedBooking.discountLAK || 0) > 0 || (loadedBooking.debtLAK || 0) > 0 ? rt.netTotal : rt.total}</span>
-              <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                {formatLAK((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK))} LAK
-              </span>
-            </div>
-            {(loadedBooking.debtLAK || 0) > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px", borderTop: "1px dotted #000000", paddingTop: "4px" }}>
-                <span>⚠️ {rt.debt}</span>
-                <span>-{formatLAK(loadedBooking.debtLAK)} LAK</span>
-              </div>
-            )}
-            {((loadedBooking.discountLAK || 0) > 0 || (loadedBooking.debtLAK || 0) > 0) && (
-              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "900", fontSize: "18px", marginTop: "6px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
-                <span>{rt.actualPaid}</span>
-                <span>{formatLAK(loadedBooking.paidLAK !== undefined ? loadedBooking.paidLAK : loadedBooking.pricePaidLAK)} LAK</span>
-              </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", marginTop: "6px", fontWeight: "700" }}>
-              <span>THB:</span>
-              <span>{formatTHB((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK) / db.settings.rateTHB)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", fontWeight: "700" }}>
-              <span>USD:</span>
-              <span>{formatUSD((loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK) / db.settings.rateUSD)}</span>
-            </div>
+            {(() => {
+              const curr = loadedBooking.paymentCurrency || 'LAK';
+              const rTHB = db.settings?.rateTHB || 700;
+              const rUSD = db.settings?.rateUSD || 20000;
+              const paidLAK = loadedBooking.paidLAK !== undefined ? loadedBooking.paidLAK : loadedBooking.pricePaidLAK;
+              const netLAK = loadedBooking.netPriceLAK !== undefined ? loadedBooking.netPriceLAK : loadedBooking.pricePaidLAK;
+              const discLAK = loadedBooking.discountLAK || 0;
+              const grossLAK = netLAK + discLAK;
+
+              const pct = loadedBooking.discountPercent || (grossLAK > 0 ? Math.round((discLAK / grossLAK) * 100) : 0);
+              const pctStr = pct > 0 ? `(${pct}%)` : '';
+
+              if (curr === 'THB') {
+                const grossTHB = loadedBooking.pricePerPax ? (loadedBooking.pricePerPax * loadedBooking.paxCount) : Math.round(grossLAK / rTHB);
+                const discTHB = Math.round(discLAK / rTHB);
+                const netTHB = grossTHB - discTHB;
+
+                return (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
+                      <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
+                        {loadedBooking.serviceName} x{loadedBooking.paxCount}:
+                      </span>
+                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                        {formatTHB(grossTHB)}
+                      </span>
+                    </div>
+                    {discTHB > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px" }}>
+                        <span>{rt.discount || "ສ່ວນຫຼຸດ / Discount"} {pctStr}</span>
+                        <span>-{formatTHB(discTHB)}</span>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "900", fontSize: "20px", marginTop: "8px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
+                      <span style={{ flex: 1, textAlign: "left" }}>{discTHB > 0 || (loadedBooking.debtLAK || 0) > 0 ? rt.netTotal : rt.total}</span>
+                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                        {formatTHB(netTHB)}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", marginTop: "6px", fontWeight: "700", borderTop: "1px dotted #000000", paddingTop: "4px" }}>
+                      <span>LAK (ເງິນກີບ):</span>
+                      <span>{formatLAK(netLAK)} LAK</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", fontWeight: "700" }}>
+                      <span>USD (ເງິນດອນລ່າ):</span>
+                      <span>{formatUSD(netLAK / rUSD)}</span>
+                    </div>
+                  </>
+                );
+              } else if (curr === 'USD') {
+                const grossUSD = loadedBooking.pricePerPax ? (loadedBooking.pricePerPax * loadedBooking.paxCount) : (grossLAK / rUSD);
+                const discUSD = discLAK / rUSD;
+                const netUSD = grossUSD - discUSD;
+
+                return (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
+                      <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
+                        {loadedBooking.serviceName} x{loadedBooking.paxCount}:
+                      </span>
+                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                        {formatUSD(grossUSD)}
+                      </span>
+                    </div>
+                    {discUSD > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px" }}>
+                        <span>{rt.discount || "ສ່ວນຫຼຸດ / Discount"} {pctStr}</span>
+                        <span>-{formatUSD(discUSD)}</span>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "900", fontSize: "20px", marginTop: "8px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
+                      <span style={{ flex: 1, textAlign: "left" }}>{discUSD > 0 || (loadedBooking.debtLAK || 0) > 0 ? rt.netTotal : rt.total}</span>
+                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                        {formatUSD(netUSD)}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", marginTop: "6px", fontWeight: "700", borderTop: "1px dotted #000000", paddingTop: "4px" }}>
+                      <span>LAK (ເງິນກີບ):</span>
+                      <span>{formatLAK(netLAK)} LAK</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", fontWeight: "700" }}>
+                      <span>THB (ເງິນບາດ):</span>
+                      <span>{formatTHB(netLAK / rTHB)}</span>
+                    </div>
+                  </>
+                );
+              } else {
+                return (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
+                      <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
+                        {loadedBooking.serviceName} x{loadedBooking.paxCount}:
+                      </span>
+                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                        {formatLAK(grossLAK)} LAK
+                      </span>
+                    </div>
+                    {discLAK > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px" }}>
+                        <span>{rt.discount || "ສ່ວນຫຼຸດ / Discount"} {pctStr}</span>
+                        <span>-{formatLAK(discLAK)} LAK</span>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "900", fontSize: "20px", marginTop: "8px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
+                      <span style={{ flex: 1, textAlign: "left" }}>{discLAK > 0 || (loadedBooking.debtLAK || 0) > 0 ? rt.netTotal : rt.total}</span>
+                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                        {formatLAK(netLAK)} LAK
+                      </span>
+                    </div>
+                    {(loadedBooking.debtLAK || 0) > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px", borderTop: "1px dotted #000000", paddingTop: "4px" }}>
+                        <span>⚠️ {rt.debt}</span>
+                        <span>-{formatLAK(loadedBooking.debtLAK)} LAK</span>
+                      </div>
+                    )}
+                    {(discLAK > 0 || (loadedBooking.debtLAK || 0) > 0) && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "900", fontSize: "18px", marginTop: "6px", borderTop: "2px solid #000000", paddingTop: "6px" }}>
+                        <span>{rt.actualPaid}</span>
+                        <span>{formatLAK(paidLAK)} LAK</span>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", marginTop: "6px", fontWeight: "700", borderTop: "1px dotted #000000", paddingTop: "4px" }}>
+                      <span>THB (ເງິນບາດ):</span>
+                      <span>{formatTHB(netLAK / rTHB)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", fontWeight: "700" }}>
+                      <span>USD (ເງິນດອນລ່າ):</span>
+                      <span>{formatUSD(netLAK / rUSD)}</span>
+                    </div>
+                  </>
+                );
+              }
+            })()}
           </div>
 
           <div style={{ marginTop: "20px", textAlign: "center", borderTop: "2px dashed #000000", paddingTop: "8px" }}>
