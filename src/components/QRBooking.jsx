@@ -477,10 +477,14 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     }
   }, [firebaseBookings, loadedBooking]);
 
-  // 2b. Automatically update selectedTier when paxCount or selectedServiceId changes
+  // 2b. Automatically update selectedTier & paymentCurrency when paxCount or selectedServiceId changes
   useEffect(() => {
     const autoTier = paxCount >= 3 ? "tier3" : "tier1";
     setSelectedTier(autoTier);
+    const srv = db.services.find(s => s.id === selectedServiceId);
+    if (srv && srv.currency) {
+      setPaymentCurrency(srv.currency);
+    }
   }, [paxCount, selectedServiceId]);
 
   // 2c. Auto-load preloadedBookingId from props if navigating from Customer Registration
@@ -931,20 +935,16 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       const pctStr = discPercent > 0 ? `(${discPercent}%)` : '';
 
                       if (curr === 'THB') {
-                        // Gross price in THB — use pricePerPax if available (set at checkout), else convert from LAK
-                        const grossTHB = (currentBooking.pricePerPax && currentBooking.serviceCurrency === 'THB')
-                          ? (currentBooking.pricePerPax * currentBooking.paxCount)
-                          : Math.round(grossLAK / rTHB);
-                        // Discount in THB — always derive from discLAK (the authoritative value)
-                        const discTHB = currentBooking.discountType === 'percent'
-                          ? Math.round((grossTHB * discPercent) / 100)
-                          : Math.round(discLAK / rTHB);
+                        const isFlat = currentBooking.isFlatRate || (currentBooking.serviceId === 'SRV-005' && (currentBooking.pricePerPax === 1900 || currentBooking.selectedTier === 'tier1' || currentBooking.tier === 'tier1'));
+                        const grossTHB = Math.round(grossLAK / rTHB);
+                        const discTHB = Math.round(discLAK / rTHB);
                         const netTHB = grossTHB - discTHB;
+                        const itemQtyLabel = isFlat ? `(เหมาลำ / ${currentBooking.paxCount} ${rt.paxUnit})` : `x${currentBooking.paxCount}`;
 
                         return `
                           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
                             <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
-                              ${currentBooking.serviceName} x${currentBooking.paxCount}:
+                              ${currentBooking.serviceName} ${itemQtyLabel}:
                             </span>
                             <span style="white-space: nowrap; text-align: right;">
                               ${formatTHB(grossTHB)}
@@ -972,18 +972,16 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                           </div>
                         `;
                       } else if (curr === 'USD') {
-                        const grossUSD = (currentBooking.pricePerPax && currentBooking.serviceCurrency === 'USD')
-                          ? (currentBooking.pricePerPax * currentBooking.paxCount)
-                          : (grossLAK / rUSD);
-                        const discUSD = currentBooking.discountType === 'percent'
-                          ? (grossUSD * discPercent / 100)
-                          : (discLAK / rUSD);
+                        const isFlat = currentBooking.isFlatRate || (currentBooking.serviceId === 'SRV-005' && (currentBooking.pricePerPax === 1900 || currentBooking.selectedTier === 'tier1' || currentBooking.tier === 'tier1'));
+                        const grossUSD = grossLAK / rUSD;
+                        const discUSD = discLAK / rUSD;
                         const netUSD = grossUSD - discUSD;
+                        const itemQtyLabel = isFlat ? `(เหมาลำ / ${currentBooking.paxCount} ${rt.paxUnit})` : `x${currentBooking.paxCount}`;
 
                         return `
                           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
                             <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
-                              ${currentBooking.serviceName} x${currentBooking.paxCount}:
+                              ${currentBooking.serviceName} ${itemQtyLabel}:
                             </span>
                             <span style="white-space: nowrap; text-align: right;">
                               ${formatUSD(grossUSD)}
@@ -1011,10 +1009,13 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                           </div>
                         `;
                       } else {
+                        const isFlat = currentBooking.isFlatRate || (currentBooking.serviceId === 'SRV-005' && (currentBooking.pricePerPax === 1900 || currentBooking.selectedTier === 'tier1' || currentBooking.tier === 'tier1'));
+                        const itemQtyLabel = isFlat ? `(เหมาลำ / ${currentBooking.paxCount} ${rt.paxUnit})` : `x${currentBooking.paxCount}`;
+
                         return `
                           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
                             <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
-                              ${currentBooking.serviceName} x${currentBooking.paxCount}:
+                              ${currentBooking.serviceName} ${itemQtyLabel}:
                             </span>
                             <span style="white-space: nowrap; text-align: right;">
                               ${formatLAK(grossLAK)} LAK
@@ -1408,6 +1409,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       setSelectedTier("tier1");
     }
     setPaymentMethod(bk.paymentMethod || "cash");
+    setPaymentCurrency(bk.paymentCurrency || bk.serviceCurrency || "LAK");
     const discMode = bk.discountType || "lak";
     setDiscountMode(discMode);
     setDiscountAmount(discMode === "percent" ? (bk.discountPercent || 0) : (bk.discountLAK || 0));
@@ -3094,7 +3096,12 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                         {["LAK", "THB", "USD"].map(cur => (
                           <button
                             key={cur}
-                            onClick={() => setPaymentCurrency(cur)}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setPaymentCurrency(cur);
+                            }}
                             style={paymentCurrency === cur ? activePaymentBtnStyle : inactivePaymentBtnStyle}
                           >
                             {cur === "LAK" ? "₭" : cur === "THB" ? "฿" : "$"} {cur}
@@ -3106,19 +3113,34 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       <label style={receiptFieldLabelStyle}>{rt.paymentMethodLabel}</label>
                       <div style={{ display: "flex", gap: "5px" }}>
                       <button
-                        onClick={() => setPaymentMethod("cash")}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setPaymentMethod("cash");
+                        }}
                         style={paymentMethod === "cash" ? activePaymentBtnStyle : inactivePaymentBtnStyle}
                       >
                         <Banknote size={14} /> ເງິນສົດ
                       </button>
                       <button
-                        onClick={() => setPaymentMethod("transfer")}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setPaymentMethod("transfer");
+                        }}
                         style={paymentMethod === "transfer" ? activePaymentBtnStyle : inactivePaymentBtnStyle}
                       >
                         <Wallet size={14} /> ໂອນເງິນ
                       </button>
                       <button
-                        onClick={() => setPaymentMethod("card")}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setPaymentMethod("card");
+                        }}
                         style={paymentMethod === "card" ? activePaymentBtnStyle : inactivePaymentBtnStyle}
                       >
                         <CreditCard size={14} /> ບັດ

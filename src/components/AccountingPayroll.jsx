@@ -166,9 +166,9 @@ export default function AccountingPayroll({ currentUser }) {
       }
 
       if (currency === "THB") {
-        totalTHB += b.pricePerPax || Math.round((b.pricePaidLAK || 0) / rateTHB);
+        totalTHB += Math.round((b.pricePaidLAK || 0) / rateTHB);
       } else if (currency === "USD") {
-        totalUSD += b.pricePerPax || Math.round((b.pricePaidLAK || 0) / rateUSD);
+        totalUSD += (b.pricePaidLAK || 0) / rateUSD;
       } else {
         totalLAK += (b.pricePaidLAK || 0);
       }

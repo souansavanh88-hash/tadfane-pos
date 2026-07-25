@@ -21,7 +21,8 @@ const translations = {
 
     // Sidebar Menus
     dashboard: "Dashboard",
-    ticket_sales: "Ticket Sales",
+    ticket_sales: "Booking & Tickets",
+    create_new_booking_btn: "+ Customer Booking",
     trips_manifest: "Trips Manifest",
     customer_registration: "Customer Registration",
     commissions: "Commissions",
@@ -326,7 +327,8 @@ const translations = {
 
     // Sidebar Menus
     dashboard: "ໜ້າຫຼັກ",
-    ticket_sales: "ຂາຍປີ້",
+    ticket_sales: "ຈອງຕ໋ອງ & ຂາຍປີ້",
+    create_new_booking_btn: "➕ ຈອງຕ໋ອງລູກຄ້າ",
     trips_manifest: "ລາຍການຖ້ຽວ",
     customer_registration: "ລົງທະບຽນລູກຄ້າ",
     commissions: "ຄ່າຄອມເອເຈນ",
@@ -630,7 +632,8 @@ const translations = {
 
     // Sidebar Menus
     dashboard: "หน้าแรก",
-    ticket_sales: "ขายตั๋ว",
+    ticket_sales: "จองตั๋ว & ขายตั๋ว",
+    create_new_booking_btn: "➕ จองตั๋วลูกค้า",
     trips_manifest: "รายการเที่ยวเรือ",
     customer_registration: "ลงทะเบียนลูกค้า",
     commissions: "ค่าคอมมิชชั่นเอเจนท์",

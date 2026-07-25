@@ -94,6 +94,34 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         </div>
       )}
 
+      {/* Prominent Quick Customer Booking Button */}
+      <div style={{ padding: "0 0.85rem 10px 0.85rem" }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab("checkin-tickets")}
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: "10px",
+            background: "linear-gradient(135deg, #059669 0%, #0d9488 100%)",
+            color: "#ffffff",
+            border: "none",
+            fontWeight: "700",
+            fontSize: "0.85rem",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            boxShadow: "0 4px 12px rgba(5, 150, 105, 0.35)",
+            transition: "all 0.25s ease"
+          }}
+        >
+          <span style={{ fontSize: "1.1rem" }}>📝</span>
+          <span>{t("create_new_booking_btn", "ຈອງຕ໋ອງລູກຄ້າ / จองตั๋วลูกค้า")}</span>
+        </button>
+      </div>
+
       <nav className="sidebar-nav" style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1, overflowY: "auto", padding: "0 0.85rem" }}>
         {filteredMenuItems.map((item) => {
           const isActive = activeTab === item.id;

@@ -358,15 +358,17 @@ export default function PrintFallback() {
               const pctStr = pct > 0 ? `(${pct}%)` : '';
 
               if (curr === 'THB') {
-                const grossTHB = loadedBooking.pricePerPax ? (loadedBooking.pricePerPax * loadedBooking.paxCount) : Math.round(grossLAK / rTHB);
+                const isFlat = loadedBooking.isFlatRate || (loadedBooking.serviceId === 'SRV-005' && (loadedBooking.pricePerPax === 1900 || loadedBooking.selectedTier === 'tier1' || loadedBooking.tier === 'tier1'));
+                const grossTHB = Math.round(grossLAK / rTHB);
                 const discTHB = Math.round(discLAK / rTHB);
                 const netTHB = grossTHB - discTHB;
+                const itemQtyLabel = isFlat ? `(เหมาลำ / ${loadedBooking.paxCount} ${rt.paxUnit})` : `x${loadedBooking.paxCount}`;
 
                 return (
                   <>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
                       <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
-                        {loadedBooking.serviceName} x{loadedBooking.paxCount}:
+                        {loadedBooking.serviceName} {itemQtyLabel}:
                       </span>
                       <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                         {formatTHB(grossTHB)}
@@ -395,15 +397,17 @@ export default function PrintFallback() {
                   </>
                 );
               } else if (curr === 'USD') {
-                const grossUSD = loadedBooking.pricePerPax ? (loadedBooking.pricePerPax * loadedBooking.paxCount) : (grossLAK / rUSD);
+                const isFlat = loadedBooking.isFlatRate || (loadedBooking.serviceId === 'SRV-005' && (loadedBooking.pricePerPax === 1900 || loadedBooking.selectedTier === 'tier1' || loadedBooking.tier === 'tier1'));
+                const grossUSD = grossLAK / rUSD;
                 const discUSD = discLAK / rUSD;
                 const netUSD = grossUSD - discUSD;
+                const itemQtyLabel = isFlat ? `(เหมาลำ / ${loadedBooking.paxCount} ${rt.paxUnit})` : `x${loadedBooking.paxCount}`;
 
                 return (
                   <>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
                       <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
-                        {loadedBooking.serviceName} x{loadedBooking.paxCount}:
+                        {loadedBooking.serviceName} {itemQtyLabel}:
                       </span>
                       <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                         {formatUSD(grossUSD)}
@@ -432,11 +436,14 @@ export default function PrintFallback() {
                   </>
                 );
               } else {
+                const isFlat = loadedBooking.isFlatRate || (loadedBooking.serviceId === 'SRV-005' && (loadedBooking.pricePerPax === 1900 || loadedBooking.selectedTier === 'tier1' || loadedBooking.tier === 'tier1'));
+                const itemQtyLabel = isFlat ? `(เหมาลำ / ${loadedBooking.paxCount} ${rt.paxUnit})` : `x${loadedBooking.paxCount}`;
+
                 return (
                   <>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
                       <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
-                        {loadedBooking.serviceName} x{loadedBooking.paxCount}:
+                        {loadedBooking.serviceName} {itemQtyLabel}:
                       </span>
                       <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                         {formatLAK(grossLAK)} LAK
