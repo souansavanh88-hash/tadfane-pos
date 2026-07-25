@@ -808,11 +808,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
             if (templateType === 'receipt') {
               const driversNames = currentBooking.driverIds && currentBooking.driverIds.length > 0
-                ? currentBooking.driverIds.map(id => getDriverName(id).split(" (")[1]?.replace(")", "") || getDriverName(id).split(" ")[0]).join(", ")
+                ? currentBooking.driverIds.map(id => getDriverName(id)).join(", ")
                 : (currentBooking.driverId ? getDriverName(currentBooking.driverId) : rt.unassigned);
               const vehCount = currentBooking.vehicleCount !== undefined ? currentBooking.vehicleCount : 1;
               const driverStr = `${driversNames} (รถ: ${vehCount} คัน)`;
-              const guideStr = currentBooking.guideIds?.map(gId => getGuideName(gId).split(" ")[0]).join(" & ") || rt.unassigned;
+              const guideStr = currentBooking.guideIds?.map(gId => getGuideName(gId)).join(", ") || rt.unassigned;
 
               let boatsHtml = '';
               if (currentBooking.assignedBoats && currentBooking.assignedBoats.length > 0) {
@@ -3232,7 +3232,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   <div>
                     <strong>{bk.billNumber}</strong> ({bk.partnerName?.split(" ")[0]}) - {bk.paxCount} {t("pax_unit", "ຄົນ")}
                     <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                      Guides: {bk.guideIds?.map(gid => getGuideName(gid).split(" ")[0]).join(", ") || "None"} | 
+                      Guides: {bk.guideIds?.map(gid => getGuideName(gid)).join(", ") || "None"} | 
                       Boats: {bk.assignedBoats?.map(ab => getBoatName(ab.boatId).split(" ")[0]).join(", ") || "None"}
                     </div>
                   </div>

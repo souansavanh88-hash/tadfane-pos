@@ -287,7 +287,7 @@ export default function PrintFallback() {
               <span>
                 {(() => {
                   const driversNames = loadedBooking.driverIds && loadedBooking.driverIds.length > 0
-                    ? loadedBooking.driverIds.map(id => getDriverName(id).split(" (")[1]?.replace(")", "") || getDriverName(id).split(" ")[0]).join(", ")
+                    ? loadedBooking.driverIds.map(id => getDriverName(id)).join(", ")
                     : (loadedBooking.driverId ? getDriverName(loadedBooking.driverId) : rt.unassigned);
                   const vehCount = loadedBooking.vehicleCount !== undefined ? loadedBooking.vehicleCount : 1;
                   return `${driversNames} (รถ: ${vehCount} คัน)`;
@@ -296,7 +296,7 @@ export default function PrintFallback() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <strong>{rt.guides}</strong>
-              <span>{loadedBooking.guideIds?.map(gId => getGuideName(gId).split(" ")[0]).join(" & ") || rt.unassigned}</span>
+              <span>{loadedBooking.guideIds?.map(gId => getGuideName(gId)).join(", ") || rt.unassigned}</span>
             </div>
             
             <div style={{ borderTop: "2px dotted #000000", margin: "4px 0", paddingTop: "4px" }}>
