@@ -840,13 +840,11 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
               let passengersHtml = '';
               if (currentBooking.passengers && currentBooking.passengers.length > 0) {
                 passengersHtml = currentBooking.passengers.map((pax, idx) => `
-                  <div style="padding-left: 6px; font-weight: 700; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 2px; font-size: 13px;">
-                    <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
-                      ${idx + 1}. ${pax?.name || "N/A"}
-                    </span>
-                    <span style="white-space: nowrap; text-align: right;">
-                      (${pax?.age || "-"} ${rt.ageUnit} | ${getGenderLabel(pax?.gender, lang)} | ${pax?.nationality || "-"})
-                    </span>
+                  <div style="padding-left: 6px; font-weight: 700; margin-bottom: 4px;">
+                    <div>${idx + 1}. ${pax?.name || "N/A"}</div>
+                    <div style="padding-left: 12px; font-weight: 400; font-size: 12px; color: #333;">
+                      ${pax?.age || "-"} ${rt.ageUnit} | ${getGenderLabel(pax?.gender, lang)} | ${pax?.nationality || "-"}
+                    </div>
                   </div>
                 `).join('');
               } else {

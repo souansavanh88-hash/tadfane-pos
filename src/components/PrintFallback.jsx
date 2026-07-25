@@ -337,13 +337,11 @@ export default function PrintFallback() {
             </div>
             {loadedBooking.passengers && loadedBooking.passengers.length > 0 ? (
               loadedBooking.passengers.map((pax, idx) => (
-                <div key={idx} style={{ paddingLeft: "6px", fontWeight: "700", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-                  <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
-                    {idx + 1}. {pax?.name || "N/A"}
-                  </span>
-                  <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                    ({pax?.age || "-"} {rt.ageUnit} | {getGenderLabel(pax?.gender, lang)} | {pax?.nationality || "-"})
-                  </span>
+                <div key={idx} style={{ paddingLeft: "6px", fontWeight: "700", marginBottom: "4px" }}>
+                  <div>{idx + 1}. {pax?.name || "N/A"}</div>
+                  <div style={{ paddingLeft: "12px", fontWeight: "400", fontSize: "12px", color: "#333" }}>
+                    {pax?.age || "-"} {rt.ageUnit} | {getGenderLabel(pax?.gender, lang)} | {pax?.nationality || "-"}
+                  </div>
                 </div>
               ))
             ) : (
