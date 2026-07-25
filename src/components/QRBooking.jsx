@@ -730,6 +730,8 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const activePricePerPax = customPricePerPax !== "" ? parseFloat(customPricePerPax) : defaultPrice;
 
   // Compute actual discount in LAK (supports percent, THB, USD, and LAK fixed currency modes)
+  const rateTHB = db.settings.rateTHB || 700;
+  const rateUSD = db.settings.rateUSD || 20000;
   const currencyLabel = paymentCurrency === "THB" ? "THB" : paymentCurrency === "USD" ? "USD" : "LAK";
 
   const computedDiscountLAK = discountMode === "percent"
