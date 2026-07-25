@@ -807,12 +807,18 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             let contentHtml = '';
 
             if (templateType === 'receipt') {
-              const driversNames = currentBooking.driverIds && currentBooking.driverIds.length > 0
-                ? currentBooking.driverIds.map(id => getDriverName(id)).join(", ")
-                : (currentBooking.driverId ? getDriverName(currentBooking.driverId) : rt.unassigned);
+              const driverIds = currentBooking.driverIds && currentBooking.driverIds.length > 0
+                ? currentBooking.driverIds
+                : currentBooking.driverId ? [currentBooking.driverId] : [];
               const vehCount = currentBooking.vehicleCount !== undefined ? currentBooking.vehicleCount : 1;
-              const driverStr = `${driversNames} (รถ: ${vehCount} คัน)`;
-              const guideStr = currentBooking.guideIds?.map(gId => getGuideName(gId)).join(", ") || rt.unassigned;
+              const driverLinesHtml = driverIds.length > 0
+                ? driverIds.map(id => `<div style="padding-left:8px;">${getDriverName(id)}</div>`).join('') + `<div style="padding-left:8px;font-size:11px;color:#444;">(รถ: ${vehCount} คัน)</div>`
+                : `<div style="padding-left:8px;">${rt.unassigned}</div>`;
+
+              const guideIds = currentBooking.guideIds && currentBooking.guideIds.length > 0 ? currentBooking.guideIds : [];
+              const guideLinesHtml = guideIds.length > 0
+                ? guideIds.map(gId => `<div style="padding-left:8px;">${getGuideName(gId)}</div>`).join('')
+                : `<div style="padding-left:8px;">${rt.unassigned}</div>`;
 
               let boatsHtml = '';
               if (currentBooking.assignedBoats && currentBooking.assignedBoats.length > 0) {
@@ -890,13 +896,13 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                     </div>
 
                     <div style="border-top: 2px dashed #000000; margin: 6px 0;"></div>
-                    <div style="display: flex; justify-content: space-between;">
+                    <div style="margin-bottom: 4px;">
                       <strong>${rt.driver}</strong>
-                      <span>${driverStr}</span>
+                      ${driverLinesHtml}
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
+                    <div style="margin-bottom: 4px;">
                       <strong>${rt.guides}</strong>
-                      <span>${guideStr}</span>
+                      ${guideLinesHtml}
                     </div>
 
                     <div style="border-top: 2px dotted #000000; margin: 4px 0; padding-top: 4px;">

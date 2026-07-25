@@ -282,21 +282,31 @@ export default function PrintFallback() {
             </div>
             
             <div style={{ borderTop: "2px dashed #000000", margin: "6px 0" }}></div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div style={{ marginBottom: "2px" }}>
               <strong>{rt.driver}</strong>
-              <span>
-                {(() => {
-                  const driversNames = loadedBooking.driverIds && loadedBooking.driverIds.length > 0
-                    ? loadedBooking.driverIds.map(id => getDriverName(id)).join(", ")
-                    : (loadedBooking.driverId ? getDriverName(loadedBooking.driverId) : rt.unassigned);
-                  const vehCount = loadedBooking.vehicleCount !== undefined ? loadedBooking.vehicleCount : 1;
-                  return `${driversNames} (รถ: ${vehCount} คัน)`;
-                })()}
-              </span>
+              {(() => {
+                const driverIds = loadedBooking.driverIds && loadedBooking.driverIds.length > 0
+                  ? loadedBooking.driverIds
+                  : loadedBooking.driverId ? [loadedBooking.driverId] : [];
+                const vehCount = loadedBooking.vehicleCount !== undefined ? loadedBooking.vehicleCount : 1;
+                return driverIds.length > 0
+                  ? driverIds.map((id, i) => (
+                    <div key={i} style={{ paddingLeft: "8px" }}>{getDriverName(id)}</div>
+                  ))
+                  : <div style={{ paddingLeft: "8px" }}>{rt.unassigned}</div>;
+              })()}
+              <div style={{ paddingLeft: "8px", fontSize: "12px", color: "#444" }}>
+                ({(() => { const vehCount = loadedBooking.vehicleCount !== undefined ? loadedBooking.vehicleCount : 1; return `รถ: ${vehCount} คัน`; })()})
+              </div>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div style={{ marginBottom: "2px" }}>
               <strong>{rt.guides}</strong>
-              <span>{loadedBooking.guideIds?.map(gId => getGuideName(gId)).join(", ") || rt.unassigned}</span>
+              {loadedBooking.guideIds && loadedBooking.guideIds.length > 0
+                ? loadedBooking.guideIds.map((gId, i) => (
+                  <div key={i} style={{ paddingLeft: "8px" }}>{getGuideName(gId)}</div>
+                ))
+                : <div style={{ paddingLeft: "8px" }}>{rt.unassigned}</div>
+              }
             </div>
             
             <div style={{ borderTop: "2px dotted #000000", margin: "4px 0", paddingTop: "4px" }}>
