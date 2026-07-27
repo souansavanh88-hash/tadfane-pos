@@ -45,6 +45,10 @@ export default function PayrollManager() {
   const [bonusValue, setBonusValue] = useState(0);
   const [deleteConfirmId, setDeleteConfirmId] = useState("");
   const [showAddEditModal, setShowAddEditModal] = useState(false);
+  const [showManualTripModal, setShowManualTripModal] = useState(false);
+  const [manualTripEmpId, setManualTripEmpId] = useState("");
+  const [manualTripDate, setManualTripDate] = useState(new Date().toISOString().split("T")[0]);
+  const [manualTripRate, setManualTripRate] = useState(65000);
 
   useEffect(() => {
     const handleDbUpdate = () => setDb(getDb());
@@ -240,40 +244,46 @@ export default function PayrollManager() {
   };
 
   const handleAddManualTrip = (empId) => {
-    const defaultDate = new Date().toISOString().split("T")[0];
-    const dateInput = window.prompt("ກະລຸນາລະບຸວັນທີ (Format: YYYY-MM-DD) / Enter Date:", defaultDate);
-    if (!dateInput || !dateInput.trim()) return;
-
     const emp = db.employees.find(e => e.id === empId);
     if (!emp) return;
+    setManualTripEmpId(empId);
+    setManualTripDate(new Date().toISOString().split("T")[0]);
+    setManualTripRate(emp.tripRate || 65000);
+    setShowManualTripModal(true);
+  };
 
-    const defaultRate = emp.tripRate || 65000;
-    const rateInput = window.prompt(`ກະລຸນາລະບຸຄ່າທ່ຽວ (ກີບ) / Enter Trip Rate:`, defaultRate);
-    if (rateInput === null) return;
-    const finalRate = parseInt(rateInput) || 0;
+  const handleSaveManualTrip = (e) => {
+    e.preventDefault();
+    if (!manualTripEmpId) return;
+
+    const emp = db.employees.find(e => e.id === manualTripEmpId);
+    if (!emp) return;
 
     const newTrip = {
       id: `TRIP-MANUAL-${Date.now()}`,
       bookingId: `BK-MANUAL-${Date.now()}`,
-      date: dateInput.trim(),
+      date: manualTripDate.trim(),
       time: "Manual",
-      guideIds: emp.role === "guide" ? [empId] : [],
-      captainIds: emp.role === "captain" ? [empId] : [],
-      captainId: emp.role === "captain" ? empId : null,
-      driverIds: emp.role === "driver" ? [empId] : [],
+      guideIds: emp.role === "guide" ? [manualTripEmpId] : [],
+      captainIds: emp.role === "captain" ? [manualTripEmpId] : [],
+      captainId: emp.role === "captain" ? manualTripEmpId : null,
+      driverIds: emp.role === "driver" ? [manualTripEmpId] : [],
       boatIds: [],
       status: "completed",
       pricePaidLAK: 0,
       createdAt: new Date().toISOString(),
       isManual: true,
-      manualRate: finalRate
+      manualRate: parseInt(manualTripRate) || 0
     };
 
     const currentDb = getDb();
     currentDb.trips = [...(currentDb.trips || []), newTrip];
     saveDb(currentDb);
     window.dispatchEvent(new Event("db-update"));
-    alert("ເພີ່ມທ່ຽວສຳເລັດ! / Manual trip added successfully!");
+    setShowManualTripModal(false);
+    setManualTripEmpId("");
+    alert(lang === "en" ? "Manual trip added successfully!" : "ເພີ່ມທ່ຽວສຳເລັດ!");
+    refreshState();
   };
 
   const calculatePayout = (emp) => {
@@ -1106,6 +1116,69 @@ export default function PayrollManager() {
                 <button type="submit" className="btn btn-warning" style={{ flex: 1 }}>บันทึก / Save</button>
                 <button type="button" className="btn btn-secondary" onClick={() => setEditBonusEmpId("")}>
                   {t("cancel_btn", "ຍົກເລີກ / Cancel")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Trip Modal */}
+      {showManualTripModal && manualTripEmpId && (
+        <div className="modal-overlay no-print" style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+          background: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(4px)",
+          display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1010
+        }}>
+          <div className="card" style={{ maxWidth: "420px", width: "100%", padding: "24px" }}>
+            <h3 style={{ fontSize: "1.1rem", color: "var(--primary)", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "5px" }}>
+              <Plus size={18} />
+              ປ້ອນຂໍ້ມູນການອອກທ່ຽວ / Add Manual Trip
+            </h3>
+            <form onSubmit={handleSaveManualTrip}>
+              <div className="form-group" style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: "600" }}>
+                  ພະນັກງານ / Staff:
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={db.employees.find(e => e.id === manualTripEmpId)?.name || ""}
+                  disabled
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: "600" }}>
+                  ວັນທີ / Date:
+                </label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={manualTripDate}
+                  onChange={(e) => setManualTripDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: "600" }}>
+                  ຄ່າທ່ຽວ (ກີບ) / Trip Rate (LAK):
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={manualTripRate}
+                  onChange={(e) => setManualTripRate(e.target.value)}
+                  min="0"
+                  required
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.5rem" }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>ບັນທຶກ / Save</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowManualTripModal(false); setManualTripEmpId(""); }}>
+                  ຍົກເລີກ / Cancel
                 </button>
               </div>
             </form>
