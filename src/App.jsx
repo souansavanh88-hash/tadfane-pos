@@ -338,7 +338,14 @@ export default function App() {
           const data = await response.json();
           if (data && data.bookings) {
             const currentLocalRaw = localStorage.getItem("pos_boat_db");
-            if (currentLocalRaw !== JSON.stringify(data)) {
+            let localDb = null;
+            try {
+              localDb = currentLocalRaw ? JSON.parse(currentLocalRaw) : null;
+            } catch (e) {}
+            const localTime = localDb?.lastModified || 0;
+            const serverTime = data?.lastModified || 0;
+
+            if (serverTime >= localTime && currentLocalRaw !== JSON.stringify(data)) {
               localStorage.setItem("pos_boat_db", JSON.stringify(data));
               window.dispatchEvent(new Event("db-update"));
             }
