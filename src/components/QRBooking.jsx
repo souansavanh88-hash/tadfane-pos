@@ -2431,11 +2431,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                         <div style={{ marginBottom: "3px" }}>
                           <strong>1-2 {lang === "en" ? "Pax:" : "ທ່ານ:"}</strong> {p1.toLocaleString()} {srv.currency}/{unit1}
                         </div>
-                        {p3 !== p1 && (
-                          <div>
-                            <strong>3+ {lang === "en" ? "Pax (Group):" : "ທ່ານ (ກຸ່ມ/ສ່ວນຫຼຸດ):"}</strong> {p3.toLocaleString()} {srv.currency}/{unit3}
-                          </div>
-                        )}
+                        <div style={{ color: p3 < p1 ? "#0f766e" : "#64748b", fontWeight: p3 < p1 ? "700" : "400" }}>
+                          <strong>3+ {lang === "en" ? "Pax (Group):" : "ທ່ານ (ກຸ່ມ/ສ່ວນຫຼຸດ):"}</strong> {p3.toLocaleString()} {srv.currency}/{unit3}
+                        </div>
                       </div>
                     </div>
                   );

@@ -251,8 +251,9 @@ export const migrateDb = (parsed) => {
 
   // Automatically migrate & enforce services to support tiered pricing and flat/pax type flags
   if (parsed.services && Array.isArray(parsed.services)) {
+    let srvChanged = false;
     parsed.services = parsed.services.map(s => {
-      if (s.id === "SRV-004") {
+      if (s.id === "SRV-004" && (s.priceTier3 !== 1120 || s.priceTier1 !== 1580)) {
         s.priceTier1 = 1580;
         s.priceTier1Type = "pax";
         s.priceTier2 = 1580;
@@ -260,7 +261,8 @@ export const migrateDb = (parsed) => {
         s.priceTier3 = 1120;
         s.priceTier3Type = "pax";
         s.currency = "THB";
-      } else if (s.id === "SRV-005") {
+        srvChanged = true;
+      } else if (s.id === "SRV-005" && (s.priceTier3 !== 780 || s.priceTier1 !== 1900)) {
         s.priceTier1 = 1900;
         s.priceTier1Type = "flat";
         s.priceTier2 = 1900;
@@ -268,7 +270,8 @@ export const migrateDb = (parsed) => {
         s.priceTier3 = 780;
         s.priceTier3Type = "pax";
         s.currency = "THB";
-      } else if (s.id === "SRV-006") {
+        srvChanged = true;
+      } else if (s.id === "SRV-006" && s.currency !== "THB") {
         s.priceTier1 = 500;
         s.priceTier1Type = "pax";
         s.priceTier2 = 500;
@@ -276,9 +279,11 @@ export const migrateDb = (parsed) => {
         s.priceTier3 = 500;
         s.priceTier3Type = "pax";
         s.currency = "THB";
+        srvChanged = true;
       }
       return s;
     });
+    if (srvChanged) migrated = true;
 
     // Deduplicate services by ID
     const uniqueMap = new Map();
