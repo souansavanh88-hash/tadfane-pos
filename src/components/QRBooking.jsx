@@ -2327,134 +2327,90 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             </div>
 
             {/* Service selection blocks */}
+            {/* Primary Price & Activity Presets */}
             <div style={{ marginBottom: "15px" }}>
               <label style={{ ...fieldLabelStyle, marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                <span>ປະເພດການບໍລິການ / Activity Service</span>
-                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm("ອັບເດດລະບົບ ແລະ ໂຫຼດຂໍ້ມູນໃໝ່? / Update & Refresh App?")) {
-                        if ('caches' in window) {
-                          caches.keys().then(names => {
-                            names.forEach(name => caches.delete(name));
-                          });
-                        }
-                        localStorage.removeItem("pos_main_db_v2");
-                        window.location.reload(true);
-                      }
-                    }}
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "6px",
-                      fontSize: "0.75rem",
-                      fontWeight: "800",
-                      border: "1.5px solid #3b82f6",
-                      background: "#eff6ff",
-                      color: "#1d4ed8",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease"
-                    }}
-                  >
-                    🔄 ອັບເດດລະບົບ (Update App)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextMode = !isMultiSelectMode;
-                      setIsMultiSelectMode(nextMode);
-                      if (!nextMode && selectedServiceIds.length > 1) {
-                        setSelectedServiceIds([selectedServiceIds[0]]);
-                      }
-                    }}
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "6px",
-                      fontSize: "0.75rem",
-                      fontWeight: "800",
-                      border: isMultiSelectMode ? "1.5px solid #10b981" : "1.5px solid #cbd5e1",
-                      background: isMultiSelectMode ? "#10b981" : "#f8fafc",
-                      color: isMultiSelectMode ? "#ffffff" : "#475569",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease"
-                    }}
-                  >
-                    {isMultiSelectMode ? "✓ ໂຫມດເລືອກຫຼາຍກິດຈະກຳ (Multi-Select ON)" : "+ ເລືອກຫຼາຍກິດຈະກຳ (Multi-Select)"}
-                  </button>
-                </div>
+                <span>🏷️ ເລືອກກິດຈະກຳ & ເລດລາຄາ / Select Activity & Price</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextMode = !isMultiSelectMode;
+                    setIsMultiSelectMode(nextMode);
+                    if (!nextMode && selectedServiceIds.length > 1) {
+                      setSelectedServiceIds([selectedServiceIds[0]]);
+                    }
+                  }}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: "800",
+                    border: isMultiSelectMode ? "1.5px solid #10b981" : "1.5px solid #cbd5e1",
+                    background: isMultiSelectMode ? "#10b981" : "#f8fafc",
+                    color: isMultiSelectMode ? "#ffffff" : "#475569",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  {isMultiSelectMode ? "✓ ໂຫມດເລືອກຫຼາຍກິດຈະກຳ (Multi-Select ON)" : "+ ເລືອກຫຼາຍກິດຈະກຳ (Multi-Select)"}
+                </button>
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px" }}>
-                {Array.from(new Map((db.services || []).filter(s => s && s.status === "active" && s.id !== "SRV-007").map(s => [s.id, s])).values()).map(srv => {
-                  const isSelected = selectedServiceIds.includes(srv.id);
-                  let emoji = "🎟️";
-                  if (srv.name.toLowerCase().includes("boat") || srv.name.includes("ເຮືອ")) emoji = "🚤";
-                  else if (srv.name.toLowerCase().includes("rap") || srv.name.includes("🧗")) emoji = "🧗";
-                  else if (srv.name.toLowerCase().includes("hik") || srv.name.includes("ເດີນ") || srv.name.includes("🥾")) emoji = "🥾";
-                  else if (srv.name.toLowerCase().includes("zip") || srv.name.includes("ສະລິງ")) emoji = "🧗";
-                  
-                  let p1 = srv.priceTier1 || srv.price || 0;
-                  let p3 = srv.priceTier3 || srv.price || 0;
-                  let p1Type = srv.priceTier1Type || "pax";
-                  let p3Type = srv.priceTier3Type || "pax";
 
-                  if (srv.id === "SRV-004") {
-                    p1 = 1580; p1Type = "pax";
-                    p3 = 1120; p3Type = "pax";
-                  } else if (srv.id === "SRV-005") {
-                    p1 = 1900; p1Type = "flat";
-                    p3 = 780; p3Type = "pax";
-                  } else if (srv.id === "SRV-006") {
-                    p1 = 500; p1Type = "pax";
-                    p3 = 500; p3Type = "pax";
-                  }
-
-                  const unit1 = p1Type === "flat" ? (lang === "en" ? "round" : "ຮອບ") : (lang === "en" ? "pax" : "ທ່ານ");
-                  const unit3 = p3Type === "flat" ? (lang === "en" ? "round" : "ຮອບ") : (lang === "en" ? "pax" : "ທ່ານ");
-                  
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: "10px" }}>
+                {[
+                  { label: "ໂຣຍຕົວ (ກຸ່ມ)", price: 1120, srvId: "SRV-004", icon: "🧗" },
+                  { label: "ລ່ອງເຮືອ (ກຸ່ມ)", price: 780, srvId: "SRV-005", icon: "🚤" },
+                  { label: "ໂຣຍຕົວ (ປົກກະຕິ)", price: 1580, srvId: "SRV-004", icon: "🧗" },
+                  { label: "ລ່ອງເຮືອ (ເໝົາລຳ)", price: 1900, srvId: "SRV-005", icon: "🚤" },
+                  { label: "ເດີນປ່າ", price: 500, srvId: "SRV-006", icon: "🥾" }
+                ].map((preset, idx) => {
+                  const isSelected = selectedServiceIds.includes(preset.srvId) && (customPricePerPax === preset.price.toString() || (!customPricePerPax && selectedServiceIds[0] === preset.srvId));
                   return (
-                    <div 
-                      key={srv.id}
-                      style={{
-                        position: "relative",
-                        border: isSelected ? "2.5px solid #10b981" : "1.5px solid #cbd5e1",
-                        borderRadius: "12px",
-                        padding: "12px",
-                        background: isSelected ? "#e6fbf1" : "#ffffff",
-                        boxShadow: isSelected ? "0 4px 14px rgba(16, 185, 129, 0.22)" : "0 2px 4px rgba(0,0,0,0.02)",
-                        transition: "all 0.2s ease",
-                        cursor: isLocked ? "not-allowed" : "pointer"
-                      }}
+                    <button
+                      key={idx}
+                      type="button"
                       onClick={() => {
                         if (!isLocked) {
                           if (isMultiSelectMode) {
-                            if (selectedServiceIds.includes(srv.id)) {
+                            if (selectedServiceIds.includes(preset.srvId)) {
                               if (selectedServiceIds.length > 1) {
-                                setSelectedServiceIds(selectedServiceIds.filter(id => id !== srv.id));
+                                setSelectedServiceIds(selectedServiceIds.filter(id => id !== preset.srvId));
                               }
                             } else {
-                              setSelectedServiceIds([...selectedServiceIds, srv.id]);
+                              setSelectedServiceIds([...selectedServiceIds, preset.srvId]);
                             }
                           } else {
-                            // Normal single activity selection
-                            setSelectedServiceIds([srv.id]);
+                            setSelectedServiceIds([preset.srvId]);
                           }
-                          setSelectedTier(paxCount >= 3 ? "tier3" : "tier1");
-                          setCustomPricePerPax("");
+                          setCustomPricePerPax(preset.price.toString());
                         }
                       }}
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: "12px",
+                        fontSize: "0.88rem",
+                        fontWeight: "800",
+                        border: isSelected ? "2.5px solid #10b981" : "1.5px solid #cbd5e1",
+                        background: isSelected ? "#e6fbf1" : "#ffffff",
+                        color: isSelected ? "#065f46" : "#334155",
+                        cursor: isLocked ? "not-allowed" : "pointer",
+                        boxShadow: isSelected ? "0 4px 12px rgba(16, 185, 129, 0.22)" : "0 2px 4px rgba(0,0,0,0.02)",
+                        transition: "all 0.15s ease",
+                        textAlign: "left",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                        gap: "6px"
+                      }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", fontWeight: "800", color: isSelected ? "#065f46" : "#0f766e", fontSize: "0.95rem" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <span style={{ fontSize: "1.1rem" }}>{emoji}</span>
-                          <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{srv.name}</span>
-                        </div>
-                        {isSelected && (
-                          <span style={{ background: "#10b981", color: "#ffffff", borderRadius: "50%", minWidth: "22px", height: "22px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", marginLeft: "4px" }}>
-                            ✓
-                          </span>
-                        )}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>{preset.icon} {preset.label}</span>
+                        {isSelected && <span style={{ color: "#10b981", fontWeight: "900" }}>✓</span>}
                       </div>
-                    </div>
+                      <div style={{ fontSize: "1.1rem", fontWeight: "900", color: isSelected ? "#047857" : "#0f766e" }}>
+                        ฿{preset.price.toLocaleString()}
+                      </div>
+                    </button>
                   );
                 })}
               </div>
@@ -2510,48 +2466,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
 
 
-            {/* Quick Preset Price Buttons */}
-            <div style={{ marginTop: "10px", marginBottom: "10px" }}>
-              <label style={{ ...fieldLabelStyle, marginBottom: "6px", display: "block" }}>
-                ⚡ ປຸ່ມລັດເລືອກລາຄາສຳເລັດຮູບ / Quick Price Presets
-              </label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {[
-                  { label: "ໂຣຍຕົວ (ກຸ່ມ)", price: 1120, currency: "THB" },
-                  { label: "ລ່ອງເຮືອ (ກຸ່ມ)", price: 780, currency: "THB" },
-                  { label: "ໂຣຍຕົວ (ປົກກະຕິ)", price: 1580, currency: "THB" },
-                  { label: "ລ່ອງເຮືອ (ເໝົາລຳ)", price: 1900, currency: "THB" },
-                  { label: "ເດີນປ່າ", price: 500, currency: "THB" }
-                ].map((preset, idx) => {
-                  const active = customPricePerPax === preset.price.toString();
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        if (!isLocked) {
-                          setCustomPricePerPax(preset.price.toString());
-                        }
-                      }}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "20px",
-                        fontSize: "0.78rem",
-                        fontWeight: "800",
-                        border: active ? "2px solid #10b981" : "1.5px solid #cbd5e1",
-                        background: active ? "#10b981" : "#ffffff",
-                        color: active ? "#ffffff" : "#334155",
-                        cursor: isLocked ? "not-allowed" : "pointer",
-                        boxShadow: active ? "0 2px 8px rgba(16, 185, 129, 0.3)" : "none",
-                        transition: "all 0.15s ease"
-                      }}
-                    >
-                      ⚡ {preset.label}: ฿{preset.price.toLocaleString()}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+
 
             {/* Total Display */}
             <div style={{ marginTop: "10px", padding: "12px", background: "rgba(16, 185, 129, 0.08)", borderRadius: "10px", border: "1.5px solid #10b981", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
