@@ -82,8 +82,12 @@
             message: errorMsg,
             stack: stack
           })
-        }).catch(err => {});
-      });
+      // Safety watchdog: if React hasn't mounted in 7 seconds, trigger fallback UI automatically
+      setTimeout(function() {
+        if (!window.__REACT_MOUNTED__) {
+          showHTMLFallback("Application initialization timeout (network/cache delay)", "WatchdogTimer", 0, 0, null);
+        }
+      }, 7000);
     </script>
   </head>
   <body>
