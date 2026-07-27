@@ -1272,6 +1272,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
               if (guideIdsToUse && Array.isArray(guideIdsToUse)) {
                 guideIdsToUse.forEach(gid => {
                   const emp = db.employees.find(e => e.id === gid);
+                  if (emp) {
                     let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
                     if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
                       baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : (emp.tripRate || 65000);
