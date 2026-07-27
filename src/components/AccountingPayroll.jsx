@@ -342,21 +342,15 @@ export default function AccountingPayroll({ currentUser }) {
     });
     const totalCustom = approvedCustom.reduce((sum, exp) => sum + exp.amount, 0);
 
-    // Categories mapping for manual custom expenses
+    // Categories mapping for manual custom expenses (supporting both cashier and admin category naming)
     const categoryCustomTotals = {
-      fuel: approvedCustom.filter(e => e.category === "Fuel").reduce((sum, e) => sum + e.amount, 0),
-      staffMeals: approvedCustom.filter(e => e.category === "Staff Meals").reduce((sum, e) => sum + e.amount, 0),
-      electricity: approvedCustom.filter(e => e.category === "Electricity").reduce((sum, e) => sum + e.amount, 0),
-      water: approvedCustom.filter(e => e.category === "Water").reduce((sum, e) => sum + e.amount, 0),
-      phoneInternet: approvedCustom.filter(e => e.category === "Phone/Internet").reduce((sum, e) => sum + e.amount, 0),
-      vehicleRepair: approvedCustom.filter(e => e.category === "Vehicle Repair").reduce((sum, e) => sum + e.amount, 0),
-      boatRepair: approvedCustom.filter(e => e.category === "Boat Repair").reduce((sum, e) => sum + e.amount, 0),
-      equipmentRepair: approvedCustom.filter(e => e.category === "Equipment Repair").reduce((sum, e) => sum + e.amount, 0),
-      marketing: approvedCustom.filter(e => e.category === "Marketing").reduce((sum, e) => sum + e.amount, 0),
-      taxes: approvedCustom.filter(e => e.category === "Taxes").reduce((sum, e) => sum + e.amount, 0),
-      duties: approvedCustom.filter(e => e.category === "Duties").reduce((sum, e) => sum + e.amount, 0),
-      rent: approvedCustom.filter(e => e.category === "Rent").reduce((sum, e) => sum + e.amount, 0),
-      misc: approvedCustom.filter(e => e.category === "Miscellaneous").reduce((sum, e) => sum + e.amount, 0),
+      fuel: approvedCustom.filter(e => ["Fuel", "Extra Fuel", "Car Fuel"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
+      maint: approvedCustom.filter(e => ["Repairs", "Boat Repair", "Equipment Purchase", "Equipment Repair", "Vehicle Repair", "Boat Repair", "Equipment Repair"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
+      crewFood: approvedCustom.filter(e => ["Boat Driver Food", "Food & Drinks", "Staff Meals"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
+      utilities: approvedCustom.filter(e => ["Utilities", "Electricity", "Water", "Phone/Internet"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
+      rent: approvedCustom.filter(e => ["Rent", "Office Rent"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
+      salary: approvedCustom.filter(e => ["Salary", "Staff Salaries"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
+      others: approvedCustom.filter(e => !["Fuel", "Extra Fuel", "Car Fuel", "Repairs", "Boat Repair", "Equipment Purchase", "Equipment Repair", "Vehicle Repair", "Boat Repair", "Equipment Repair", "Boat Driver Food", "Food & Drinks", "Staff Meals", "Utilities", "Electricity", "Water", "Phone/Internet", "Rent", "Office Rent", "Salary", "Staff Salaries"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
     };
 
     // 2. Filtered Trips for fuel, maintenance, and crew allowances
@@ -1454,17 +1448,17 @@ export default function AccountingPayroll({ currentUser }) {
                 <tr>
                   <td><strong>{t("fuel_expenses_label", "ຄ່ານ້ຳມັນເຊື້ອໄຟ / Fuel Expenses")}</strong></td>
                   <td>{t("fuel_expenses_desc", "ຄ່ານ້ຳມັນລົດ/ເຮືອ ຕາມຈຳນວນຮອບ")}</td>
-                  <td style={{ textAlign: "right", fontWeight: "bold" }}>-{formatLAK(expenseDetails.totalFuelCost)}</td>
+                  <td style={{ textAlign: "right", fontWeight: "bold" }}>-{formatLAK(expenseDetails.totalFuelCost + (expenseDetails.categoryCustomTotals?.fuel || 0))}</td>
                 </tr>
                 <tr>
                   <td>{t("maint_expenses_label", "ຄ່າບຳລຸງຮັກສາ / Wear & Tear Expenses")}</td>
                   <td>{t("maint_expenses_desc", "ຄ່າຊ່ອມແຊມ/ບຳລຸງຮັກສາລົດ-ເຮືອ")}</td>
-                  <td style={{ textAlign: "right" }}>-{formatLAK(expenseDetails.totalMaintCost)}</td>
+                  <td style={{ textAlign: "right" }}>-{formatLAK(expenseDetails.totalMaintCost + (expenseDetails.categoryCustomTotals?.maint || 0))}</td>
                 </tr>
                 <tr>
                   <td>{t("rent_expenses_label", "ຄ່າເຊົ່າຫ້ອງການ / Office Rent")}</td>
                   <td>{t("rent_expenses_desc", "ຄ່າເຊົ່າຫ້ອງการປະຈຳເດືອນ")}</td>
-                  <td style={{ textAlign: "right" }}>-{formatLAK(expenseDetails.officeRent)}</td>
+                  <td style={{ textAlign: "right" }}>-{formatLAK(expenseDetails.officeRent + (expenseDetails.categoryCustomTotals?.rent || 0))}</td>
                 </tr>
                 <tr>
                   <td>{t("commissions_expenses_label", "ຄ່າຄອມມິດຊັນເອເຈນ / Agent Commissions")}</td>
@@ -1474,7 +1468,7 @@ export default function AccountingPayroll({ currentUser }) {
                 <tr>
                   <td><strong>{t("general_expenses_label", "ຄ່າໃຊ້ຈ່າຍທົ່ວໄປ / General Approved Expenses")}</strong></td>
                   <td>{t("general_expenses_desc", "ຄ່ານ້ຳ, ຄ່າໄຟ ແລະ ຄ່າໃຊ້ຈ່າຍອື່ນໆ")}</td>
-                  <td style={{ textAlign: "right", fontWeight: "bold" }}>-{formatLAK(expenseDetails.totalCustom)}</td>
+                  <td style={{ textAlign: "right", fontWeight: "bold" }}>-{formatLAK((expenseDetails.categoryCustomTotals?.utilities || 0) + (expenseDetails.categoryCustomTotals?.others || 0))}</td>
                 </tr>
                 <tr style={{ background: "var(--bg-tertiary)", fontWeight: "bold", fontSize: "1.05rem" }}>
                   <td>{t("total_operating_expenses", "ລວມລາຍຈ່າຍທັງໝົດ / Total Approved Expenses")}</td>
@@ -1601,31 +1595,31 @@ export default function AccountingPayroll({ currentUser }) {
                   <td>{t("salaries_label", "ເງິນເດືອນພະນັກງານ / Staff Salaries")}</td>
                   <td>{t("salaries_desc", "ພະນັກງານປະຈຳຫ້ອງການ ແລະ ສ່ວນກາງ / Permanent office staff")}</td>
                   <td style={{ textAlign: "right" }}>0</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.totalBaseSalaries)}</td>
+                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.totalBaseSalaries + (plExpenseDetails.categoryCustomTotals?.salary || 0))}</td>
                 </tr>
                 <tr>
                   <td>{t("fuel_maint_label", "ຄ່ານ້ຳມັນ & ຄ່າບຳລຸງເຮືອ / Fuel & Maint")}</td>
                   <td>{t("fuel_maint_desc", "ຄ່ານ້ຳມັນເຊື້ອໄຟ ແລະ ຄ່າເສື່ອມສະພາບຈາກຈຳນວນຮອບເຮືອແລ່ນ / Boat fuel & wear per trip")}</td>
                   <td style={{ textAlign: "right" }}>0</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.totalFuelCost + plExpenseDetails.totalMaintCost)}</td>
+                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.totalFuelCost + plExpenseDetails.totalMaintCost + (plExpenseDetails.categoryCustomTotals?.fuel || 0) + (plExpenseDetails.categoryCustomTotals?.maint || 0))}</td>
                 </tr>
                 <tr>
-                  <td>{t("crew_wages_label", "ຄ່າ allowance ຄົນຂັບ ແລະ ໄກ້ດ / Crew Trip Allowances")}</td>
-                  <td>{t("crew_wages_desc", "ຄ່າທ່ຽວຂອງໄກ້ດ, ກັບຕັນ ແລະ ຄົນຂັບລົດປະຈຳຮອບ / Trip wages for crew")}</td>
+                  <td>{t("crew_wages_label", "ຄ່າ Allowance & ອາຫານພະນັກງານ / Crew Allowances & Food")}</td>
+                  <td>{t("crew_wages_desc", "ຄ່າທ່ຽວ ແລະ ຄ່າອາຫານຄົນງານ / Crew trip allowances & meals")}</td>
                   <td style={{ textAlign: "right" }}>0</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.totalCrewTripWages)}</td>
+                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.totalCrewTripWages + (plExpenseDetails.categoryCustomTotals?.crewFood || 0))}</td>
                 </tr>
                 <tr>
                   <td>{t("rent_commissions_label", "ຄ່າเชົ່າ & ຄ່າຄອມມິດຊັນເອເຈນ / Rent & Commissions")}</td>
                   <td>{t("rent_commissions_desc", "ຄ່າເຊົ່າຫ້ອງການປະຈຳເດືອນ ແລະ ສ່ວນແບ່ງເອເຈນ / Rent and agent commissions")}</td>
                   <td style={{ textAlign: "right" }}>0</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.officeRent + plExpenseDetails.totalCommissions)}</td>
+                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.officeRent + plExpenseDetails.totalCommissions + (plExpenseDetails.categoryCustomTotals?.rent || 0))}</td>
                 </tr>
                 <tr>
                   <td>{t("general_expenses_label", "ຄ່າໃຊ້ຈ່າຍທົ່ວໄປອື່ນໆ / General Custom Expenses")}</td>
                   <td>{t("general_expenses_desc", "ຄ່ານ້ຳ, ຄ່າໄຟ, ອຸປະກອນເບັດເຕັລດ (ສະເພາະທີ່ອະນຸມັດແລ້ວ) / Utilities & office supplies")}</td>
                   <td style={{ textAlign: "right" }}>0</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.totalCustom)}</td>
+                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK((plExpenseDetails.categoryCustomTotals?.utilities || 0) + (plExpenseDetails.categoryCustomTotals?.others || 0))}</td>
                 </tr>
                 <tr style={{ background: "var(--bg-tertiary)", fontWeight: "bold", fontSize: "1.05rem" }}>
                   <td>{t("summary_totals_label", "ຍອດລວມສຸດທິ / Summary Totals")}</td>
@@ -1938,19 +1932,24 @@ export default function AccountingPayroll({ currentUser }) {
                 <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.driverWages)}</td>
               </tr>
               <tr>
+                <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າອາຫານຄົນງານ & ຄົນຂັບເຮືອ (Crew Food & Drinks)</td>
+                <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າອາຫານ ແລະ ເຄື່ອງດື່ມຂອງພະນັກງານ/ຄົນຂັບ</td>
+                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.categoryCustomTotals?.crewFood || 0)}</td>
+              </tr>
+              <tr>
                 <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>ຄ່ານ້ຳມັນເຊື້ອໄຟເຮືອ (Boat Fuel Expenses)</td>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່ານ້ຳມັນເຊື້ອໄຟຕາມຈຳນວນທ່ຽວເຮືອແລ່ນ</td>
-                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>-{formatLAK(expenseDetails.totalFuelCost)}</td>
+                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>-{formatLAK(expenseDetails.totalFuelCost + (expenseDetails.categoryCustomTotals?.fuel || 0))}</td>
               </tr>
               <tr>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າຊ່ອມບຳລຸງ ແລະ ສຶກຫຼໍເຮືອ (Boat Wear & Tear)</td>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າບຳລຸງຮັກສາເຮືອຕາມຈຳນວນທ່ຽວ</td>
-                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.totalMaintCost)}</td>
+                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.totalMaintCost + (expenseDetails.categoryCustomTotals?.maint || 0))}</td>
               </tr>
               <tr>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າເຊົ່າຫ້ອງການຄົງທີ່ (Office Rent)</td>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າເຊົ່າຫ້ອງການປະຈຳເດືອນຄົງທີ່</td>
-                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.officeRent)}</td>
+                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.officeRent + (expenseDetails.categoryCustomTotals?.rent || 0))}</td>
               </tr>
               <tr>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າຄອມມິດຊັນເອເຈນສະສົມ (Agent Commissions)</td>
@@ -1960,7 +1959,7 @@ export default function AccountingPayroll({ currentUser }) {
               <tr>
                 <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>ລາຍຈ່າຍອື່ນໆຄີມືເພີ່ມເຕີມ (Manual Approved Expenses)</td>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່ານ້ຳ, ຄ່າໄຟ, ອຸປະກອນ, ແລະ ລາຍຈ່າຍອື່ນໆ</td>
-                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>-{formatLAK(expenseDetails.totalCustom)}</td>
+                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>-{formatLAK((expenseDetails.categoryCustomTotals?.utilities || 0) + (expenseDetails.categoryCustomTotals?.others || 0))}</td>
               </tr>
               <tr style={{ background: "#cbd5e1", fontWeight: "bold" }}>
                 <td style={{ border: "1px solid #000", padding: "6px" }} colSpan="2">ລວມລາຍຈ່າຍທັງໝົດ / TOTAL APPROVED OPERATING EXPENSES</td>
