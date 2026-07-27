@@ -239,6 +239,43 @@ export default function PayrollManager() {
     }
   };
 
+  const handleAddManualTrip = (empId) => {
+    const defaultDate = new Date().toISOString().split("T")[0];
+    const dateInput = window.prompt("ກະລຸນາລະບຸວັນທີ (Format: YYYY-MM-DD) / Enter Date:", defaultDate);
+    if (!dateInput || !dateInput.trim()) return;
+
+    const emp = db.employees.find(e => e.id === empId);
+    if (!emp) return;
+
+    const defaultRate = emp.tripRate || 65000;
+    const rateInput = window.prompt(`ກະລຸນາລະບຸຄ່າທ່ຽວ (ກີບ) / Enter Trip Rate:`, defaultRate);
+    if (rateInput === null) return;
+    const finalRate = parseInt(rateInput) || 0;
+
+    const newTrip = {
+      id: `TRIP-MANUAL-${Date.now()}`,
+      bookingId: `BK-MANUAL-${Date.now()}`,
+      date: dateInput.trim(),
+      time: "Manual",
+      guideIds: emp.role === "guide" ? [empId] : [],
+      captainIds: emp.role === "captain" ? [empId] : [],
+      captainId: emp.role === "captain" ? empId : null,
+      driverIds: emp.role === "driver" ? [empId] : [],
+      boatIds: [],
+      status: "completed",
+      pricePaidLAK: 0,
+      createdAt: new Date().toISOString(),
+      isManual: true,
+      manualRate: finalRate
+    };
+
+    const currentDb = getDb();
+    currentDb.trips = [...(currentDb.trips || []), newTrip];
+    saveDb(currentDb);
+    window.dispatchEvent(new Event("db-update"));
+    alert("ເພີ່ມທ່ຽວສຳເລັດ! / Manual trip added successfully!");
+  };
+
   const calculatePayout = (emp) => {
     let tripCount = 0;
     const tripsDetail = [];
@@ -265,7 +302,9 @@ export default function PayrollManager() {
           });
 
           let payout = emp.tripRate || 65000;
-          if (emp.role === "guide") {
+          if (trip.isManual) {
+            payout = trip.manualRate !== undefined ? trip.manualRate : (emp.tripRate || 65000);
+          } else if (emp.role === "guide") {
             let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
             if (trip.bookingId) {
               const bk = db.bookings.find(b => b.id === trip.bookingId);
@@ -282,7 +321,7 @@ export default function PayrollManager() {
             id: trip.id,
             date: trip.date,
             time: trip.time,
-            boatName: boatNames.join(", ") || "N/A",
+            boatName: boatNames.join(", ") || (trip.isManual ? "Manual" : "N/A"),
             role: roleInTrip,
             payout
           });
@@ -1466,9 +1505,18 @@ export default function PayrollManager() {
                   </div>
                 </div>
 
-                <h4 style={{ fontSize: "1.05rem", marginBottom: "10px", color: "var(--text-primary)" }}>
-                  ປະຫວັດການອອກທ່ຽວ / Trip Logs
-                </h4>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <h4 style={{ fontSize: "1.05rem", margin: 0, color: "var(--text-primary)" }}>
+                    ປະຫວັດການອອກທ່ຽວ / Trip Logs
+                  </h4>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ padding: "4px 10px", fontSize: "0.8rem", height: "auto" }}
+                    onClick={() => handleAddManualTrip(emp.id)}
+                  >
+                    ➕ ເພີ່ມທ່ຽວ / Add Trip
+                  </button>
+                </div>
 
                 <div style={{ maxHeight: "300px", overflowY: "auto", border: "1px solid var(--border-color)", borderRadius: "8px", marginBottom: "20px" }}>
                   <table style={{ margin: 0 }}>

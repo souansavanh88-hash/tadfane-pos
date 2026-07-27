@@ -190,7 +190,9 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
           const emp = database.employees.find(e => e.id === gid);
           if (emp) {
             let payout = emp.tripRate || 65000;
-            if (emp.role === "guide") {
+            if (trip.isManual) {
+              payout = trip.manualRate !== undefined ? trip.manualRate : (emp.tripRate || 65000);
+            } else if (emp.role === "guide") {
               let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
               if (trip.bookingId) {
                 const bk = database.bookings.find(b => b.id === trip.bookingId);
@@ -229,7 +231,9 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
           const emp = database.employees.find(e => e.id === gid);
           if (emp) {
             let payout = emp.tripRate || 65000;
-            if (emp.role === "guide") {
+            if (trip.isManual) {
+              payout = trip.manualRate !== undefined ? trip.manualRate : (emp.tripRate || 65000);
+            } else if (emp.role === "guide") {
               let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
               if (trip.bookingId) {
                 const bk = database.bookings.find(b => b.id === trip.bookingId);

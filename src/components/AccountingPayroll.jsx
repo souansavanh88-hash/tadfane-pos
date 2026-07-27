@@ -330,7 +330,9 @@ export default function AccountingPayroll({ currentUser }) {
           const emp = db.employees.find(e => e.id === gid);
           if (emp) {
             let payout = emp.tripRate || 65000;
-            if (emp.role === "guide") {
+            if (trip.isManual) {
+              payout = trip.manualRate !== undefined ? trip.manualRate : (emp.tripRate || 65000);
+            } else if (emp.role === "guide") {
               let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
               if (trip.bookingId) {
                 const bk = db.bookings.find(b => b.id === trip.bookingId);
@@ -536,7 +538,9 @@ export default function AccountingPayroll({ currentUser }) {
         const isDriver = trip.driverIds && trip.driverIds.includes(emp.id);
 
         let payout = emp.tripRate || 65000;
-        if (emp.role === "guide") {
+        if (trip.isManual) {
+          payout = trip.manualRate !== undefined ? trip.manualRate : (emp.tripRate || 65000);
+        } else if (emp.role === "guide") {
           let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
           if (trip.bookingId) {
             const bk = db.bookings.find(b => b.id === trip.bookingId);
