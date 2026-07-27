@@ -1111,8 +1111,10 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                                 ${formatLAK(valLAK)} LAK
                               </span>
                             </div>
-                          `;
                         }).join('');
+
+                        return `
+                          ${itemsHtml}
                           ${discLAK > 0 ? `
                             <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px; color: #000;">
                               <span>${rt.discount || 'ສ່ວນຫຼຸດ / Discount'} ${pctStr}</span>
