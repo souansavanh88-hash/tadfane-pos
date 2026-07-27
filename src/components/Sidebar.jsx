@@ -169,7 +169,43 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
       </nav>
 
       <div className="sidebar-footer" style={{ padding: "15px 1.5rem 15px", borderTop: "1px solid rgba(255,255,255,0.08)", marginTop: "auto" }}>
-        <div className="sidebar-footer-version" style={{ fontSize: "0.7rem", color: "#64748b" }}>Version 3.0.12 - THB Total Price (July 27, 2026)</div>
+        <div className="sidebar-footer-version" style={{ fontSize: "0.7rem", color: "#64748b" }}>Version 3.0.13 - Force Update Added (July 27, 2026)</div>
+        
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm("ອັບເດດລະບົບ ແລະ ໂຫຼດຂໍ້ມູນໃໝ່? / Update & Refresh App?")) {
+              if ('caches' in window) {
+                caches.keys().then(names => {
+                  names.forEach(name => caches.delete(name));
+                });
+              }
+              localStorage.removeItem("pos_main_db_v2");
+              window.location.reload(true);
+            }
+          }}
+          style={{
+            width: "100%",
+            marginTop: "8px",
+            marginBottom: "8px",
+            padding: "7px 10px",
+            background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.75rem",
+            fontWeight: "800",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "5px",
+            boxShadow: "0 2px 6px rgba(16, 185, 129, 0.3)",
+            transition: "all 0.2s"
+          }}
+        >
+          🔄 ອັບເດດລະບົບ / Update App
+        </button>
         <div className="sidebar-footer-lang" style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px" }}>
           <button 
             type="button"

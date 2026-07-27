@@ -2330,29 +2330,58 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             <div style={{ marginBottom: "15px" }}>
               <label style={{ ...fieldLabelStyle, marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
                 <span>ປະເພດການບໍລິການ / Activity Service</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextMode = !isMultiSelectMode;
-                    setIsMultiSelectMode(nextMode);
-                    if (!nextMode && selectedServiceIds.length > 1) {
-                      setSelectedServiceIds([selectedServiceIds[0]]);
-                    }
-                  }}
-                  style={{
-                    padding: "3px 10px",
-                    borderRadius: "6px",
-                    fontSize: "0.75rem",
-                    fontWeight: "800",
-                    border: isMultiSelectMode ? "1.5px solid #10b981" : "1.5px solid #cbd5e1",
-                    background: isMultiSelectMode ? "#10b981" : "#f8fafc",
-                    color: isMultiSelectMode ? "#ffffff" : "#475569",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease"
-                  }}
-                >
-                  {isMultiSelectMode ? "✓ ໂຫມດເລືອກຫຼາຍກິດຈະກຳ (Multi-Select ON)" : "+ ເລືອກຫຼາຍກິດຈະກຳ (Multi-Select)"}
-                </button>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm("ອັບເດດລະບົບ ແລະ ໂຫຼດຂໍ້ມູນໃໝ່? / Update & Refresh App?")) {
+                        if ('caches' in window) {
+                          caches.keys().then(names => {
+                            names.forEach(name => caches.delete(name));
+                          });
+                        }
+                        localStorage.removeItem("pos_main_db_v2");
+                        window.location.reload(true);
+                      }
+                    }}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: "800",
+                      border: "1.5px solid #3b82f6",
+                      background: "#eff6ff",
+                      color: "#1d4ed8",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    🔄 ອັບເດດລະບົບ (Update App)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextMode = !isMultiSelectMode;
+                      setIsMultiSelectMode(nextMode);
+                      if (!nextMode && selectedServiceIds.length > 1) {
+                        setSelectedServiceIds([selectedServiceIds[0]]);
+                      }
+                    }}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: "800",
+                      border: isMultiSelectMode ? "1.5px solid #10b981" : "1.5px solid #cbd5e1",
+                      background: isMultiSelectMode ? "#10b981" : "#f8fafc",
+                      color: isMultiSelectMode ? "#ffffff" : "#475569",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    {isMultiSelectMode ? "✓ ໂຫມດເລືອກຫຼາຍກິດຈະກຳ (Multi-Select ON)" : "+ ເລືອກຫຼາຍກິດຈະກຳ (Multi-Select)"}
+                  </button>
+                </div>
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px" }}>
                 {Array.from(new Map((db.services || []).filter(s => s && s.status === "active" && s.id !== "SRV-007").map(s => [s.id, s])).values()).map(srv => {
