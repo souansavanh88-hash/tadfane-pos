@@ -147,46 +147,42 @@ const safeSetItem = (key, val) => {
 };
 
 export const migrateDb = (parsed) => {
+  if (!parsed || typeof parsed !== "object") return false;
   let migrated = false;
 
-  // Automatically migrate legacy Naree (Cashier) to Min (Cashier)
-  if (parsed.users && Array.isArray(parsed.users)) {
-    parsed.users = parsed.users.map(u => {
-      if (u.id === "USR-002" && (u.email === "cashier@tadfane.com" || u.name === "Naree (Cashier)")) {
-        u.email = "min";
-        u.name = "Min";
-        u.password = "m1122";
-        migrated = true;
-      }
-      // Fix old min1122 password to current m1122
-      if (u.id === "USR-002" && u.email === "min" && u.password === "min1122") {
-        u.password = "m1122";
-        migrated = true;
-      }
-      return u;
-    });
-  }
+  try {
+    if (!parsed.settings) {
+      parsed.settings = { ...SEED_DATA.settings };
+      migrated = true;
+    }
 
-  // === ONE-TIME FORCED RESET (v2): Disabled to prevent wiping production employees/partners ===
-  /*
-  const resetFlag = safeGetItem("v2_emp_reset_done");
-  if (!resetFlag) {
-    parsed.employees = [];
-    parsed.partners = [
-      { id: "PTN-000", name: "Walk In (ລູກຄ້າທົ່ວໄປ)", type: "agent", commissionRate: 0, contact: "", bankAccount: "" }
-    ];
-    safeSetItem("v2_emp_reset_done", "1");
-    migrated = true;
-  }
-  */
+    // Automatically migrate legacy Naree (Cashier) to Min (Cashier)
+    if (parsed.users && Array.isArray(parsed.users)) {
+      parsed.users = parsed.users.map(u => {
+        if (!u) return u;
+        if (u.id === "USR-002" && (u.email === "cashier@tadfane.com" || u.name === "Naree (Cashier)")) {
+          u.email = "min";
+          u.name = "Min";
+          u.password = "m1122";
+          migrated = true;
+        }
+        // Fix old min1122 password to current m1122
+        if (u.id === "USR-002" && u.email === "min" && u.password === "min1122") {
+          u.password = "m1122";
+          migrated = true;
+        }
+        return u;
+      });
+    }
 
-  // Note: We do NOT auto-merge seed employees anymore.
-  // Employees deleted by the user should stay deleted.
-  if (parsed.employees && Array.isArray(parsed.employees)) {
+    // Note: We do NOT auto-merge seed employees anymore.
+    // Employees deleted by the user should stay deleted.
+    if (parsed.employees && Array.isArray(parsed.employees)) {
 
-    // Populate missing fields for all employees
-    parsed.employees = parsed.employees.map(e => {
-      let updated = false;
+      // Populate missing fields for all employees
+      parsed.employees = parsed.employees.map(e => {
+        if (!e) return e;
+        let updated = false;
       if (e.role === "guide") {
         if (!e.tourRate || e.tourRate === 0) {
           e.tourRate = 100000;
@@ -464,6 +460,10 @@ export const migrateDb = (parsed) => {
   if (!parsed.settings.shopTel) parsed.settings.shopTel = "+856 20 555-9000";
   if (parsed.settings.shopTaxId === undefined) parsed.settings.shopTaxId = "";
   if (parsed.settings.shopExtra === undefined) parsed.settings.shopExtra = "";
+
+  } catch (err) {
+    console.error("Migration error safely caught:", err);
+  }
 
   return migrated;
 };
