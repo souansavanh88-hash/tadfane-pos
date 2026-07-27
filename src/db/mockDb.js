@@ -110,7 +110,8 @@ const SEED_DATA = {
       responsibilities: { accounting: false, tickets: false, crew_dispatch: true }
     }
   ],
-  customExpenses: []
+  customExpenses: [],
+  customIncomes: []
 };
 
 const DB_KEY = "pos_tadfane_db";
