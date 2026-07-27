@@ -2443,26 +2443,16 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                         }
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", fontWeight: "800", color: "#0f766e", fontSize: "0.9rem", marginBottom: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", fontWeight: "800", color: isSelected ? "#065f46" : "#0f766e", fontSize: "0.95rem" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <span>{emoji}</span>
+                          <span style={{ fontSize: "1.1rem" }}>{emoji}</span>
                           <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{srv.name}</span>
                         </div>
                         {isSelected && (
-                          <span style={{ background: "#10b981", color: "#ffffff", borderRadius: "50%", minWidth: "20px", height: "20px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "bold", marginLeft: "4px", padding: "2px" }}>
+                          <span style={{ background: "#10b981", color: "#ffffff", borderRadius: "50%", minWidth: "22px", height: "22px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", marginLeft: "4px" }}>
                             ✓
                           </span>
                         )}
-                      </div>
-                      
-                      {/* Price Options */}
-                      <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                        <div style={{ marginBottom: "3px" }}>
-                          <strong>1-2 {lang === "en" ? "Pax:" : "ທ່ານ:"}</strong> {p1.toLocaleString()} {srv.currency}/{unit1}
-                        </div>
-                        <div style={{ color: p3 < p1 ? "#0f766e" : "#64748b", fontWeight: p3 < p1 ? "700" : "400" }}>
-                          <strong>3+ {lang === "en" ? "Pax (Group):" : "ທ່ານ (ກຸ່ມ/ສ່ວນຫຼຸດ):"}</strong> {p3.toLocaleString()} {srv.currency}/{unit3}
-                        </div>
                       </div>
                     </div>
                   );
@@ -2518,67 +2508,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
               </div>
             </div>
 
-            {/* Price Tier Rate Selection */}
-            <div style={{ marginTop: "10px" }}>
-              <label style={{ ...fieldLabelStyle, marginBottom: "6px", display: "block" }}>
-                ເລືອກເລດລາຄາ / Select Rate Option
-              </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isLocked) {
-                      setSelectedTier("tier1");
-                      setCustomPricePerPax("");
-                    }
-                  }}
-                  style={{
-                    padding: "8px 10px",
-                    borderRadius: "8px",
-                    fontSize: "0.8rem",
-                    fontWeight: "800",
-                    border: selectedTier === "tier1" && !customPricePerPax ? "2.5px solid #10b981" : "1.5px solid #cbd5e1",
-                    background: selectedTier === "tier1" && !customPricePerPax ? "#e6fbf1" : "#ffffff",
-                    color: selectedTier === "tier1" && !customPricePerPax ? "#065f46" : "#475569",
-                    cursor: isLocked ? "not-allowed" : "pointer",
-                    transition: "all 0.2s ease",
-                    textAlign: "center"
-                  }}
-                >
-                  🏷️ ລາຄາ 1-2 ທ່ານ / ເໝົາ
-                  <div style={{ fontSize: "0.72rem", fontWeight: "400", opacity: 0.85, marginTop: "2px" }}>
-                    (Tier 1 Standard Rate)
-                  </div>
-                </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isLocked) {
-                      setSelectedTier("tier3");
-                      setCustomPricePerPax("");
-                    }
-                  }}
-                  style={{
-                    padding: "8px 10px",
-                    borderRadius: "8px",
-                    fontSize: "0.8rem",
-                    fontWeight: "800",
-                    border: selectedTier === "tier3" && !customPricePerPax ? "2.5px solid #10b981" : "1.5px solid #cbd5e1",
-                    background: selectedTier === "tier3" && !customPricePerPax ? "#e6fbf1" : "#ffffff",
-                    color: selectedTier === "tier3" && !customPricePerPax ? "#065f46" : "#475569",
-                    cursor: isLocked ? "not-allowed" : "pointer",
-                    transition: "all 0.2s ease",
-                    textAlign: "center"
-                  }}
-                >
-                  🏷️ ລາຄາກຸ່ມ / ສ່ວນຫຼຸດ (3+)
-                  <div style={{ fontSize: "0.72rem", fontWeight: "400", opacity: 0.85, marginTop: "2px" }}>
-                    (Tier 3 Group Rate)
-                  </div>
-                </button>
-              </div>
-            </div>
 
             {/* Quick Preset Price Buttons */}
             <div style={{ marginTop: "10px", marginBottom: "10px" }}>
