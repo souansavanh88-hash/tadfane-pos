@@ -1936,21 +1936,27 @@ export default function AccountingPayroll({ currentUser }) {
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າອາຫານ ແລະ ເຄື່ອງດື່ມຂອງພະນັກງານ/ຄົນຂັບ</td>
                 <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.categoryCustomTotals?.crewFood || 0)}</td>
               </tr>
-              <tr>
-                <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>ຄ່ານ້ຳມັນເຊື້ອໄຟເຮືອ (Boat Fuel Expenses)</td>
-                <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່ານ້ຳມັນເຊື້ອໄຟຕາມຈຳນວນທ່ຽວເຮືອແລ່ນ</td>
-                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>-{formatLAK(expenseDetails.totalFuelCost + (expenseDetails.categoryCustomTotals?.fuel || 0))}</td>
-              </tr>
-              <tr>
-                <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າຊ່ອມບຳລຸງ ແລະ ສຶກຫຼໍເຮືອ (Boat Wear & Tear)</td>
-                <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າບຳລຸງຮັກສາເຮືອຕາມຈຳນວນທ່ຽວ</td>
-                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.totalMaintCost + (expenseDetails.categoryCustomTotals?.maint || 0))}</td>
-              </tr>
-              <tr>
-                <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າເຊົ່າຫ້ອງການຄົງທີ່ (Office Rent)</td>
-                <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າເຊົ່າຫ້ອງການປະຈຳເດືອນຄົງທີ່</td>
-                <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.officeRent + (expenseDetails.categoryCustomTotals?.rent || 0))}</td>
-              </tr>
+              {(expenseDetails.totalFuelCost + (expenseDetails.categoryCustomTotals?.fuel || 0)) > 0 && (
+                <tr>
+                  <td style={{ border: "1px solid #000", padding: "6px", fontWeight: "bold" }}>ຄ່ານ້ຳມັນເຊື້ອໄຟເຮືອ (Boat Fuel Expenses)</td>
+                  <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່ານ້ຳມັນເຊື້ອໄຟຕາມຈຳນວນທ່ຽວເຮືອແລ່ນ</td>
+                  <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right", fontWeight: "bold" }}>-{formatLAK(expenseDetails.totalFuelCost + (expenseDetails.categoryCustomTotals?.fuel || 0))}</td>
+                </tr>
+              )}
+              {(expenseDetails.totalMaintCost + (expenseDetails.categoryCustomTotals?.maint || 0)) > 0 && (
+                <tr>
+                  <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າຊ່ອມບຳລຸງ ແລະ ສຶກຫຼໍເຮືອ (Boat Wear & Tear)</td>
+                  <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າບຳລຸງຮັກສາເຮືອຕາມຈຳນວນທ່ຽວ</td>
+                  <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.totalMaintCost + (expenseDetails.categoryCustomTotals?.maint || 0))}</td>
+                </tr>
+              )}
+              {(expenseDetails.officeRent + (expenseDetails.categoryCustomTotals?.rent || 0)) > 0 && (
+                <tr>
+                  <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າເຊົ່າຫ້ອງການຄົງທີ່ (Office Rent)</td>
+                  <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າເຊົ່າຫ້ອງການປະຈຳເດືອນຄົງທີ່</td>
+                  <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.officeRent + (expenseDetails.categoryCustomTotals?.rent || 0))}</td>
+                </tr>
+              )}
               <tr>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າຄອມມິດຊັນເອເຈນສະສົມ (Agent Commissions)</td>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ສ່ວນແບ່ງ ແລະ ຄ່າຄອມມິດຊັນ referrals ຂອງເອເຈນ</td>

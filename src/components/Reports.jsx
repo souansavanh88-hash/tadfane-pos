@@ -528,34 +528,48 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td><strong>{t("ticket_revenues", "ລາຍຮັບຈາກການຂາຍປີ້ / Ticket Revenues")}</strong></td>
-                  <td style={{ textAlign: "right", color: "var(--success)", fontWeight: "600" }}>{formatLAK(pl.grossRevenue)}</td>
-                </tr>
-                <tr>
-                  <td>{t("commissions_expense", "ຄ່າຄອມມິດຊັນເອເຈນສະສົມ / Commissions Expense")}</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalCommissions)}</td>
-                </tr>
-                <tr>
-                  <td>{t("employee_payroll_allowances", "ລາຍຈ່າຍຄ່າແຮງ ແລະ ເງິນເດືອນພະນັກງານ / Payroll & Allowances")}</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalEmployeePayroll)}</td>
-                </tr>
-                <tr>
-                  <td>{t("boat_fuel_cost", "ຄ່ານ້ຳມັນເຊື້ອໄຟເຮືອ / Boat Fuel Cost")}</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalFuelCost)}</td>
-                </tr>
-                <tr>
-                  <td>{t("boat_wear_tear", "ຄ່າຊ້ອມບຳລຸງເຮືອ / Wear & Tear")}</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalMaintCost)}</td>
-                </tr>
-                <tr>
-                  <td>{t("fixed_office_costs", "ຄ່າເຊົ່າຫ້ອງການ ແລະ ຄ່າໃຊ້ຈ່າຍຄົງທີ່ / Fixed Costs")}</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.fixedCosts)}</td>
-                </tr>
-                <tr>
-                  <td>{t("other_custom_expenses", "ລາຍຈ່າຍທົ່ວໄປ/ອື່ນໆ / Other Custom Expenses")}</td>
-                  <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalCustomExpenses)}</td>
-                </tr>
+                {pl.grossRevenue > 0 && (
+                  <tr>
+                    <td><strong>{t("ticket_revenues", "ລາຍຮັບຈາກการຂາຍປີ້ / Ticket Revenues")}</strong></td>
+                    <td style={{ textAlign: "right", color: "var(--success)", fontWeight: "600" }}>{formatLAK(pl.grossRevenue)}</td>
+                  </tr>
+                )}
+                {pl.totalCommissions > 0 && (
+                  <tr>
+                    <td>{t("commissions_expense", "ຄ່າຄອມມິດຊັນເອເຈນສະສົມ / Commissions Expense")}</td>
+                    <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalCommissions)}</td>
+                  </tr>
+                )}
+                {pl.totalEmployeePayroll > 0 && (
+                  <tr>
+                    <td>{t("employee_payroll_allowances", "ລາຍຈ່າຍຄ່າແຮງ ແລະ ເງິນເດືອນພະນັກງານ / Payroll & Allowances")}</td>
+                    <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalEmployeePayroll)}</td>
+                  </tr>
+                )}
+                {pl.totalFuelCost > 0 && (
+                  <tr>
+                    <td>{t("boat_fuel_cost", "ຄ່ານ້ຳມັນເຊື້ອໄຟເຮືອ / Boat Fuel Cost")}</td>
+                    <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalFuelCost)}</td>
+                  </tr>
+                )}
+                {pl.totalMaintCost > 0 && (
+                  <tr>
+                    <td>{t("boat_wear_tear", "ຄ່າຊ້ອມບຳລຸງເຮືອ / Wear & Tear")}</td>
+                    <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalMaintCost)}</td>
+                  </tr>
+                )}
+                {pl.fixedCosts > 0 && (
+                  <tr>
+                    <td>{t("fixed_office_costs", "ຄ່າເຊົ່າຫ້ອງການ ແລະ ຄ່າໃຊ້ຈ່າຍຄົງທີ່ / Fixed Costs")}</td>
+                    <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.fixedCosts)}</td>
+                  </tr>
+                )}
+                {pl.totalCustomExpenses > 0 && (
+                  <tr>
+                    <td>{t("other_custom_expenses", "ລາຍຈ່າຍທົ່ວໄປ/ອື່ນໆ / Other Custom Expenses")}</td>
+                    <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalCustomExpenses)}</td>
+                  </tr>
+                )}
                 <tr style={{ borderTop: "2px solid var(--border-color)", background: "var(--bg-tertiary)" }}>
                   <td><strong>{t("net_income", "ກຳໄລສຸດທິ / Net Income")}</strong></td>
                   <td style={{ textAlign: "right", color: pl.netProfit >= 0 ? "var(--success)" : "var(--danger)", fontWeight: "bold", fontSize: "1.1rem" }}>
@@ -1003,34 +1017,48 @@ export default function Reports() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td style={{ border: "1px solid #000", padding: "8px", fontWeight: "bold" }}>ລາຍຮັບຈາກການຂາຍປີ້ (Ticket Revenues)</td>
-                <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "green", fontWeight: "bold" }}>{formatLAK(pl.grossRevenue)}</td>
-              </tr>
-              <tr>
-                <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່າຄອມມິດຊັນເອເຈນສະສົມ (Agent Commissions Expense)</td>
-                <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalCommissions)}</td>
-              </tr>
-              <tr>
-                <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່າຈ່າຍແລະເງິນເດືອນພະນັກງານ (Employee Payroll Expenses)</td>
-                <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalEmployeePayroll)}</td>
-              </tr>
-              <tr>
-                <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່ານ້ຳມັນເຊື້ອໄຟເຮືອ (Boat Fuel Expenses)</td>
-                <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalFuelCost)}</td>
-              </tr>
-              <tr>
-                <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່າຊ່ອມບຳລຸງເຮືອ (Wear & Tear Expenses)</td>
-                <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalMaintCost)}</td>
-              </tr>
-              <tr>
-                <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່າເຊົ່າຫ້ອງການ ແລະ ຄ່າໃຊ້ຈ່າຍຄົງທີ່ (Fixed Costs)</td>
-                <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.fixedCosts)}</td>
-              </tr>
-              <tr>
-                <td style={{ border: "1px solid #000", padding: "8px" }}>ລາຍຈ່າຍທົ່ວໄປ/ອື່ນໆ (Other Custom Expenses)</td>
-                <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalCustomExpenses)}</td>
-              </tr>
+                {pl.grossRevenue > 0 && (
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "8px", fontWeight: "bold" }}>ລາຍຮັບຈາກການຂາຍປີ້ (Ticket Revenues)</td>
+                    <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "green", fontWeight: "bold" }}>{formatLAK(pl.grossRevenue)}</td>
+                  </tr>
+                )}
+                {pl.totalCommissions > 0 && (
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່າຄອມມິດຊັນເອເຈນສະສົມ (Agent Commissions Expense)</td>
+                    <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalCommissions)}</td>
+                  </tr>
+                )}
+                {pl.totalEmployeePayroll > 0 && (
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່າຈ່າຍແລະເງິນເດືອນພະນັກງານ (Employee Payroll Expenses)</td>
+                    <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalEmployeePayroll)}</td>
+                  </tr>
+                )}
+                {pl.totalFuelCost > 0 && (
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່ານ້ຳມັນເຊື້ອໄຟເຮືອ (Boat Fuel Expenses)</td>
+                    <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalFuelCost)}</td>
+                  </tr>
+                )}
+                {pl.totalMaintCost > 0 && (
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່າຊ່ອມບຳລຸງເຮືອ (Wear & Tear Expenses)</td>
+                    <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalMaintCost)}</td>
+                  </tr>
+                )}
+                {pl.fixedCosts > 0 && (
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່າເຊົ່າຫ້ອງການ ແລະ ຄ່າໃຊ້ຈ່າຍຄົງທີ່ (Fixed Costs)</td>
+                    <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.fixedCosts)}</td>
+                  </tr>
+                )}
+                {pl.totalCustomExpenses > 0 && (
+                  <tr>
+                    <td style={{ border: "1px solid #000", padding: "8px" }}>ລາຍຈ່າຍທົ່ວໄປ/ອື່ນໆ (Other Custom Expenses)</td>
+                    <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalCustomExpenses)}</td>
+                  </tr>
+                )}
               <tr style={{ background: "#cbd5e1", fontWeight: "bold" }}>
                 <td style={{ border: "1px solid #000", padding: "8px" }}>ກຳໄລສຸດທິ / Net Income</td>
                 <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: pl.netProfit >= 0 ? "green" : "red", fontSize: "12px" }}>
