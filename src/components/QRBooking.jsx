@@ -285,6 +285,19 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
   const [selectedServiceIds, setSelectedServiceIds] = useState(["SRV-004"]);
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [showActivityCards, setShowActivityCards] = useState(() => {
+    const saved = localStorage.getItem("pos_show_activity_cards");
+    return saved !== null ? saved === "true" : false;
+  });
+
+  const toggleShowActivityCards = () => {
+    setShowActivityCards(prev => {
+      const next = !prev;
+      localStorage.setItem("pos_show_activity_cards", next.toString());
+      return next;
+    });
+  };
+
   const selectedServiceId = selectedServiceIds[0] || "SRV-004";
   const setSelectedServiceId = (id) => setSelectedServiceIds(Array.isArray(id) ? id : [id]);
   const [selectedTier, setSelectedTier] = useState("tier1"); // "tier1" or "tier3"
@@ -2331,7 +2344,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             <div style={{ marginBottom: "15px" }}>
               <label style={{ ...fieldLabelStyle, marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
                 <span>🏷️ ເລືອກກິດຈະກຳ & ເລດລາຄາ / Select Activity & Price</span>
-                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -2359,6 +2372,23 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   </button>
                   <button
                     type="button"
+                    onClick={toggleShowActivityCards}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: "800",
+                      border: showActivityCards ? "1.5px solid #0f766e" : "1.5px solid #cbd5e1",
+                      background: showActivityCards ? "#e6fbf1" : "#ffffff",
+                      color: showActivityCards ? "#0f766e" : "#475569",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    {showActivityCards ? "👁️ ປິດການ໌ດກິດຈະກຳ (Hide Cards)" : "👁️ ເປີດການ໌ດກິດຈະກຳ (Show Cards)"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       const nextMode = !isMultiSelectMode;
                       setIsMultiSelectMode(nextMode);
@@ -2382,6 +2412,63 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   </button>
                 </div>
               </label>
+
+              {/* Optional Visual Activity Cards (Togglable) */}
+              {showActivityCards && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "10px", marginBottom: "12px" }}>
+                  {Array.from(new Map((db.services || []).filter(s => s && s.status === "active" && s.id !== "SRV-007").map(s => [s.id, s])).values()).map(srv => {
+                    const isSelected = selectedServiceIds.includes(srv.id);
+                    let emoji = "🎟️";
+                    if (srv.name.toLowerCase().includes("boat") || srv.name.includes("ເຮືອ")) emoji = "🚤";
+                    else if (srv.name.toLowerCase().includes("rap") || srv.name.includes("🧗")) emoji = "🧗";
+                    else if (srv.name.toLowerCase().includes("hik") || srv.name.includes("ເດີນ") || srv.name.includes("🥾")) emoji = "🥾";
+                    else if (srv.name.toLowerCase().includes("zip") || srv.name.includes("ສະລິງ")) emoji = "🧗";
+                    
+                    return (
+                      <div 
+                        key={srv.id}
+                        style={{
+                          position: "relative",
+                          border: isSelected ? "2.5px solid #10b981" : "1.5px solid #cbd5e1",
+                          borderRadius: "12px",
+                          padding: "10px 12px",
+                          background: isSelected ? "#e6fbf1" : "#ffffff",
+                          boxShadow: isSelected ? "0 4px 14px rgba(16, 185, 129, 0.22)" : "0 2px 4px rgba(0,0,0,0.02)",
+                          transition: "all 0.2s ease",
+                          cursor: isLocked ? "not-allowed" : "pointer"
+                        }}
+                        onClick={() => {
+                          if (!isLocked) {
+                            if (isMultiSelectMode) {
+                              if (selectedServiceIds.includes(srv.id)) {
+                                if (selectedServiceIds.length > 1) {
+                                  setSelectedServiceIds(selectedServiceIds.filter(id => id !== srv.id));
+                                }
+                              } else {
+                                setSelectedServiceIds([...selectedServiceIds, srv.id]);
+                              }
+                            } else {
+                              setSelectedServiceIds([srv.id]);
+                            }
+                          }
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", fontWeight: "800", color: isSelected ? "#065f46" : "#0f766e", fontSize: "0.9rem" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span style={{ fontSize: "1.1rem" }}>{emoji}</span>
+                            <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{srv.name}</span>
+                          </div>
+                          {isSelected && (
+                            <span style={{ background: "#10b981", color: "#ffffff", borderRadius: "50%", minWidth: "20px", height: "20px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "bold", marginLeft: "4px" }}>
+                              ✓
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: "10px" }}>
                 {[
