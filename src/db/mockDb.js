@@ -502,7 +502,9 @@ const syncTripsWithBookings = (db) => {
   // We remove any customer that has a bookingId (they will be recreated from bookings below)
   db.customers = db.customers.filter(c => !c.bookingId && !c.groupId);
 
-  db.trips = db.bookings
+  const manualTrips = (db.trips || []).filter(t => t.isManual);
+
+  const bookingTrips = db.bookings
     .filter(b => b.status !== "ยกเลิก" && b.status !== "cancelled" && (
       b.status === "ชำระเงินแล้ว / ออกบิลแล้ว" || 
       b.status === "ชำระแล้ว" || 
@@ -590,6 +592,8 @@ const syncTripsWithBookings = (db) => {
         };
       });
     });
+
+  db.trips = [...bookingTrips, ...manualTrips];
 };
 
 export const saveDbLocally = (db) => {
