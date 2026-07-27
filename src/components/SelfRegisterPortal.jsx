@@ -562,11 +562,14 @@ export default function SelfRegisterPortal() {
   const [lang, setLang] = useState("la"); // default to Lao
   const [db, setDb] = useState(getDb());
   
-  // URL parameter parsing
-  const params = new URLSearchParams(window.location.search);
-  const initialGroupId = params.get("groupId") || "";
-  const urlPaxCount = parseInt(params.get("pax")) || 0;
-  const urlBookingId = params.get("bookingId") || params.get("bid") || "";
+  // URL parameter parsing (support both search query and hash routing params!)
+  const searchParams = new URLSearchParams(window.location.search);
+  const hashStr = window.location.hash || "";
+  const hashParams = new URLSearchParams(hashStr.includes("?") ? hashStr.split("?")[1] : "");
+
+  const initialGroupId = searchParams.get("groupId") || hashParams.get("groupId") || "";
+  const urlPaxCount = parseInt(searchParams.get("pax") || hashParams.get("pax")) || 0;
+  const urlBookingId = searchParams.get("bookingId") || searchParams.get("bid") || hashParams.get("bookingId") || hashParams.get("bid") || "";
 
   // State controls
   const [groupIdInput, setGroupIdInput] = useState(initialGroupId);

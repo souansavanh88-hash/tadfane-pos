@@ -58,12 +58,30 @@ export default function App() {
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   const [warningTimeLeft, setWarningTimeLeft] = useState(60);
 
-  // Check if we are in customer self-registration portal mode
-  const params = new URLSearchParams(window.location.search);
-  const isSelfRegister = window.location.pathname === "/register" || params.get("mode") === "self-register";
-  const isSelfRegisterEmployee = window.location.pathname === "/register-employee" || params.get("mode") === "register-employee";
-  const partnerIdParam = params.get("partnerId") || "";
-  const printParam = params.get("print") || "";
+  // Comprehensive check for customer self-registration portal mode
+  const searchParams = new URLSearchParams(window.location.search);
+  const hashString = window.location.hash || "";
+  const hashParams = new URLSearchParams(hashString.includes("?") ? hashString.split("?")[1] : "");
+
+  const isSelfRegister = 
+    window.location.pathname.startsWith("/register") || 
+    hashString.includes("/register") || 
+    hashString.includes("#register") || 
+    searchParams.get("mode") === "self-register" ||
+    hashParams.get("mode") === "self-register" ||
+    searchParams.has("groupId") ||
+    hashParams.has("groupId") ||
+    searchParams.has("bookingId") ||
+    hashParams.has("bookingId");
+
+  const isSelfRegisterEmployee = 
+    window.location.pathname.startsWith("/register-employee") || 
+    hashString.includes("/register-employee") || 
+    searchParams.get("mode") === "register-employee" ||
+    hashParams.get("mode") === "register-employee";
+
+  const partnerIdParam = searchParams.get("partnerId") || hashParams.get("partnerId") || "";
+  const printParam = searchParams.get("print") || hashParams.get("print") || "";
 
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);

@@ -30,10 +30,13 @@ export default function OnlineRegisterQR({ setActiveTab, setPreloadedBookingId }
   }, []);
 
   const getBaseUrl = () => {
-    if (customHostUrl) {
+    if (customHostUrl && !customHostUrl.includes("localhost") && !customHostUrl.includes("127.0.0.1") && !customHostUrl.includes("192.168.")) {
       return customHostUrl.replace(/\/$/, ""); // Remove trailing slash if any
     }
-    return window.location.origin;
+    if (window.location.hostname.includes("web.app") || window.location.hostname.includes("firebaseapp.com")) {
+      return window.location.origin;
+    }
+    return "https://tadfane-pos.web.app";
   };
 
   const getSelfRegUrl = () => {
