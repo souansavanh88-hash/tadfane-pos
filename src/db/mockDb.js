@@ -607,6 +607,21 @@ export const saveDbLocally = (db) => {
   safeSetItem(DB_KEY, JSON.stringify(db));
   safeSetItem("pos_local_db_backup", JSON.stringify(db));
 
+  // Sync to local server file system if running locally
+  const isProductionWeb = typeof window !== "undefined" && 
+    window.location.hostname !== "localhost" && 
+    window.location.hostname !== "127.0.0.1" && 
+    !window.location.hostname.startsWith("192.168.") && 
+    !window.location.hostname.endsWith(".trycloudflare.com");
+
+  if (!isProductionWeb) {
+    fetch("/api/db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(db)
+    }).catch(err => console.warn("Local server sync failed:", err));
+  }
+
   try {
     window.dispatchEvent(new Event("db-update"));
   } catch (e) {}
@@ -628,6 +643,21 @@ export const saveDb = (db) => {
   
   // Push to Firebase Realtime Cloud DB
   pushToFirebase(db).catch(err => console.error("Firebase push error:", err));
+
+  // Sync to local server file system if running locally
+  const isProductionWeb = typeof window !== "undefined" && 
+    window.location.hostname !== "localhost" && 
+    window.location.hostname !== "127.0.0.1" && 
+    !window.location.hostname.startsWith("192.168.") && 
+    !window.location.hostname.endsWith(".trycloudflare.com");
+
+  if (!isProductionWeb) {
+    fetch("/api/db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(db)
+    }).catch(err => console.warn("Local server sync failed:", err));
+  }
 
   if (db.isWiped) {
     db.isWiped = false;
