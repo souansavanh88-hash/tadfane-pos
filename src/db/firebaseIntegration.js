@@ -38,21 +38,15 @@ export const startFirebaseSync = (onDataReceived) => {
 
 export const pushToFirebase = async (dbState) => {
   if (!fireDb) return false;
-  if (isPushing) return false;
-  
-  isPushing = true;
   try {
     const docRef = doc(fireDb, POS_DATA_DOC);
     await setDoc(docRef, {
       dbState: dbState,
       updatedAt: serverTimestamp()
     });
-    
-    isPushing = false;
     return true;
   } catch (err) {
     console.error("[Firebase Sync] Failed to push data:", err);
-    isPushing = false;
     return false;
   }
 };
