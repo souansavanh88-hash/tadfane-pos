@@ -1545,7 +1545,7 @@ export default function AccountingPayroll({ currentUser }) {
                   <td style={{ textAlign: "right" }}>0</td>
                 </tr>
                 <tr>
-                  <td>{t("salaries_label", "ເງินເດືອນພະນັກງານ / Staff Salaries")}</td>
+                  <td>{t("salaries_label", "ເງິນເດືອນພະນັກງານ / Staff Salaries")}</td>
                   <td>{t("salaries_desc", "ພະນັກງານປະຈຳຫ້ອງການ ແລະ ສ່ວນກາງ / Permanent office staff")}</td>
                   <td style={{ textAlign: "right" }}>0</td>
                   <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.totalBaseSalaries)}</td>
@@ -1569,14 +1569,14 @@ export default function AccountingPayroll({ currentUser }) {
                   <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.officeRent + plExpenseDetails.totalCommissions)}</td>
                 </tr>
                 <tr>
-                  <td>{t("general_expenses_label", "ຄ່າໃຊ້ຈ่ายທົ່ວໄປອື່ນໆ / General Custom Expenses")}</td>
+                  <td>{t("general_expenses_label", "ຄ່າໃຊ້ຈ່າຍທົ່ວໄປອື່ນໆ / General Custom Expenses")}</td>
                   <td>{t("general_expenses_desc", "ຄ່ານ້ຳ, ຄ່າໄຟ, ອຸປະກອນເບັດເຕັລດ (ສະເພາະທີ່ອະນຸມັດແລ້ວ) / Utilities & office supplies")}</td>
                   <td style={{ textAlign: "right" }}>0</td>
                   <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.totalCustom)}</td>
                 </tr>
                 <tr style={{ background: "var(--bg-tertiary)", fontWeight: "bold", fontSize: "1.05rem" }}>
                   <td>{t("summary_totals_label", "ຍອດລວມສຸດທິ / Summary Totals")}</td>
-                  <td>{t("summary_totals_desc", "ກຳໄລສຸດທິຄິດຈາກ (ລາຍຮັບລວມ - ລາຍຈ່າຍທີ່ອະນຸມັດແล້ວ) / Net profit statement")}</td>
+                  <td>{t("summary_totals_desc", "ກຳໄລສຸດທິຄິດຈາກ (ລາຍຮັບລວມ - ລາຍຈ່າຍທີ່ອະນຸມັດແລ້ວ) / Net profit statement")}</td>
                   <td style={{ textAlign: "right", color: "var(--primary)" }}>+{formatLAK(plIncomeDetails.total)}</td>
                   <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(plExpenseDetails.total)}</td>
                 </tr>
@@ -1596,6 +1596,20 @@ export default function AccountingPayroll({ currentUser }) {
       {activeTab === "reports" && (
         <div className="fade-in">
           <Reports />
+        </div>
+      )}
+
+      {/* --- TAB 6: STAFF PAYROLL MANAGER --- */}
+      {activeTab === "payroll_manager" && (
+        <div className="fade-in no-print">
+          <PayrollManager />
+        </div>
+      )}
+
+      {/* --- TAB 7: COMMISSION TRACKER --- */}
+      {activeTab === "commission_manager" && (
+        <div className="fade-in no-print">
+          <CommissionTracker />
         </div>
       )}
 
@@ -1642,6 +1656,38 @@ export default function AccountingPayroll({ currentUser }) {
                 <Printer size={16} /> {t("print_monthly_summary", "ພິມສະຫຼຸບປະຈຳເດືອນ / Print")}
               </button>
             </div>
+
+            {/* Monthly Revenue by Currency Breakdown */}
+            {(() => {
+              const monthInc = getIncomeDataForPeriod("month", summaryMonth);
+              return (
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <h3 style={{ fontSize: "1rem", fontWeight: "700", color: "var(--text-primary)", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "6px" }}>
+                    💵 {t("monthly_revenue_by_currency", "ລາຍຮັບປະຈຳເດືອນແຍກຕາມສະກຸນເງິນ / Monthly Revenue by Currency")}
+                  </h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px" }}>
+                    <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #10b981" }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "700" }}>LAK (ເງິນກີບ)</span>
+                      <strong style={{ fontSize: "1.3rem", color: "#10b981", display: "block", marginTop: "4px" }}>
+                        {formatLAK(monthInc.totalLAK || 0)} LAK
+                      </strong>
+                    </div>
+                    <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #3b82f6" }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "700" }}>THB (ເງິນບາດ)</span>
+                      <strong style={{ fontSize: "1.3rem", color: "#3b82f6", display: "block", marginTop: "4px" }}>
+                        {formatTHB(monthInc.totalTHB || 0)}
+                      </strong>
+                    </div>
+                    <div className="card" style={{ padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #eab308" }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "700" }}>USD (ເງິນດອນລ່າ)</span>
+                      <strong style={{ fontSize: "1.3rem", color: "#eab308", display: "block", marginTop: "4px" }}>
+                        {formatUSD(monthInc.totalUSD || 0)}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Metrics cards */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "15px", marginBottom: "1.5rem" }}>
