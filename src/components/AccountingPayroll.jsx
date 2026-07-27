@@ -348,7 +348,7 @@ export default function AccountingPayroll({ currentUser }) {
       maint: approvedCustom.filter(e => ["Repairs", "Boat Repair", "Equipment Purchase", "Equipment Repair", "Vehicle Repair", "Boat Repair", "Equipment Repair"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
       crewFood: approvedCustom.filter(e => ["Boat Driver Food", "Food & Drinks", "Staff Meals"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
       utilities: approvedCustom.filter(e => ["Utilities", "Electricity", "Water", "Phone/Internet"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
-      rent: approvedCustom.filter(e => ["Rent", "Office Rent"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
+      rent: 0,
       salary: approvedCustom.filter(e => ["Salary", "Staff Salaries"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
       others: approvedCustom.filter(e => !["Fuel", "Extra Fuel", "Car Fuel", "Repairs", "Boat Repair", "Equipment Purchase", "Equipment Repair", "Vehicle Repair", "Boat Repair", "Equipment Repair", "Boat Driver Food", "Food & Drinks", "Staff Meals", "Utilities", "Electricity", "Water", "Phone/Internet", "Rent", "Office Rent", "Salary", "Staff Salaries"].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
     };
@@ -1950,13 +1950,7 @@ export default function AccountingPayroll({ currentUser }) {
                   <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.totalMaintCost + (expenseDetails.categoryCustomTotals?.maint || 0))}</td>
                 </tr>
               )}
-              {(expenseDetails.officeRent + (expenseDetails.categoryCustomTotals?.rent || 0)) > 0 && (
-                <tr>
-                  <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າເຊົ່າຫ້ອງການຄົງທີ່ (Office Rent)</td>
-                  <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າເຊົ່າຫ້ອງການປະຈຳເດືອນຄົງທີ່</td>
-                  <td style={{ border: "1px solid #000", padding: "6px", textAlign: "right" }}>-{formatLAK(expenseDetails.officeRent + (expenseDetails.categoryCustomTotals?.rent || 0))}</td>
-                </tr>
-              )}
+
               <tr>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ຄ່າຄອມມິດຊັນເອເຈນສະສົມ (Agent Commissions)</td>
                 <td style={{ border: "1px solid #000", padding: "6px" }}>ສ່ວນແບ່ງ ແລະ ຄ່າຄອມມິດຊັນ referrals ຂອງເອເຈນ</td>

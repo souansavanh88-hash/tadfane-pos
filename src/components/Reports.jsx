@@ -558,12 +558,7 @@ export default function Reports() {
                     <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.totalMaintCost)}</td>
                   </tr>
                 )}
-                {pl.fixedCosts > 0 && (
-                  <tr>
-                    <td>{t("fixed_office_costs", "ຄ່າເຊົ່າຫ້ອງການ ແລະ ຄ່າໃຊ້ຈ່າຍຄົງທີ່ / Fixed Costs")}</td>
-                    <td style={{ textAlign: "right", color: "var(--danger)" }}>-{formatLAK(pl.fixedCosts)}</td>
-                  </tr>
-                )}
+
                 {pl.totalCustomExpenses > 0 && (
                   <tr>
                     <td>{t("other_custom_expenses", "ລາຍຈ່າຍທົ່ວໄປ/ອື່ນໆ / Other Custom Expenses")}</td>
@@ -1047,12 +1042,7 @@ export default function Reports() {
                     <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.totalMaintCost)}</td>
                   </tr>
                 )}
-                {pl.fixedCosts > 0 && (
-                  <tr>
-                    <td style={{ border: "1px solid #000", padding: "8px" }}>ຄ່າເຊົ່າຫ້ອງການ ແລະ ຄ່າໃຊ້ຈ່າຍຄົງທີ່ (Fixed Costs)</td>
-                    <td style={{ border: "1px solid #000", padding: "8px", textAlign: "right", color: "red" }}>-{formatLAK(pl.fixedCosts)}</td>
-                  </tr>
-                )}
+
                 {pl.totalCustomExpenses > 0 && (
                   <tr>
                     <td style={{ border: "1px solid #000", padding: "8px" }}>ລາຍຈ່າຍທົ່ວໄປ/ອື່ນໆ (Other Custom Expenses)</td>
