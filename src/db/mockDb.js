@@ -587,7 +587,7 @@ const syncTripsWithBookings = (db) => {
           boatIds: parsedBoatId ? [parsedBoatId] : [],
           captainId: assignedCaptainId,
           captainIds: assignedCaptainId ? [assignedCaptainId] : [],
-          guideIds: boatInfo.guideId ? [boatInfo.guideId] : (b.guideIds || []),
+          guideIds: (b.guideIds && b.guideIds.length > 0) ? b.guideIds : (boatInfo.guideId ? [boatInfo.guideId] : []),
           driverIds: b.driverIds && b.driverIds.length > 0 ? b.driverIds : (b.driverId ? [b.driverId] : []),
           customerIds: customerIds,
           bookingId: b.id,

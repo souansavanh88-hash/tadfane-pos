@@ -1256,24 +1256,57 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
             </tr>
           );
           const payLogs = [];
-          db.trips.forEach(trip => {
+          const processedTripIds = new Set();
+
+          // 1. Process trips
+          (db.trips || []).forEach(trip => {
             if (trip.date && trip.date.startsWith(modalMonth) && (trip.status === "completed" || trip.status === "dispatched")) {
-              if (trip.guideIds) {
-                trip.guideIds.forEach(gid => {
+              processedTripIds.add(trip.bookingId || trip.id);
+              const bk = (db.bookings || []).find(b => b.id === trip.bookingId);
+              
+              // Get all guide IDs from trip or associated booking
+              const guideIdsToUse = (bk && bk.guideIds && bk.guideIds.length > 0)
+                ? bk.guideIds
+                : (trip.guideIds || []);
+
+              if (guideIdsToUse && Array.isArray(guideIdsToUse)) {
+                guideIdsToUse.forEach(gid => {
                   const emp = db.employees.find(e => e.id === gid);
                   if (emp) {
-                    let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 100000);
-                    if (trip.bookingId) {
-                      const bk = db.bookings.find(b => b.id === trip.bookingId);
-                      if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
-                        baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
-                      }
+                    let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate && emp.tripRate !== 65000 ? emp.tripRate : 100000);
+                    if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
+                      baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
                     }
                     const rate = baseRate + (emp.specialRate || 0);
                     payLogs.push({
                       tripId: trip.id,
                       date: trip.date,
                       time: trip.time,
+                      guideName: emp.name,
+                      rate: rate
+                    });
+                  }
+                });
+              }
+            }
+          });
+
+          // 2. Also process bookings directly in case trips are not yet generated
+          (db.bookings || []).forEach(bk => {
+            if (!processedTripIds.has(bk.id) && bk.date && bk.date.startsWith(modalMonth) && bk.guideIds && bk.guideIds.length > 0) {
+              if (bk.status !== "ยกเลิก" && bk.status !== "cancelled") {
+                bk.guideIds.forEach(gid => {
+                  const emp = db.employees.find(e => e.id === gid);
+                  if (emp) {
+                    let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate && emp.tripRate !== 65000 ? emp.tripRate : 100000);
+                    if (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005") {
+                      baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
+                    }
+                    const rate = baseRate + (emp.specialRate || 0);
+                    payLogs.push({
+                      tripId: bk.id,
+                      date: bk.date,
+                      time: bk.time,
                       guideName: emp.name,
                       rate: rate
                     });
