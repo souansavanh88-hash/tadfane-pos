@@ -34,6 +34,7 @@ export default function AccountingPayroll({ currentUser }) {
   const [expCategory, setExpCategory] = useState("Fuel");
   const [expDescription, setExpDescription] = useState("");
   const [expAmount, setExpAmount] = useState("");
+  const [expCurrency, setExpCurrency] = useState("THB");
 
   // Sync DB on real-time storage events
   useEffect(() => {
@@ -70,12 +71,15 @@ export default function AccountingPayroll({ currentUser }) {
     const isOwner = currentUser.role === "owner" || currentUser.role === "admin";
     // Owners auto-approve their entries. Others submit as pending.
     const initialStatus = isOwner ? "Approved" : "Pending Approval";
+    const amountLAK = expCurrency === "THB" ? amountVal * rateTHB : (expCurrency === "USD" ? amountVal * rateUSD : amountVal);
 
     addCustomExpense({
       date: expDate,
       category: expCategory,
       description: expDescription.trim(),
       amount: amountVal,
+      amountLAK: amountLAK,
+      currency: expCurrency,
       status: initialStatus,
       addedBy: currentUser.name,
       approvedBy: isOwner ? currentUser.name : null,
@@ -143,42 +147,61 @@ export default function AccountingPayroll({ currentUser }) {
       bookings = (db.bookings || []).filter(b => b.date && b.date.startsWith(dateVal) && b.status !== "ຍົກເລີກ");
     }
 
-    let boatIncome = 0;
-    let rappellingIncome = 0;
-    let otherIncome = 0;
-    let totalLAK = 0;
-    let totalTHB = 0;
-    let totalUSD = 0;
+    let boatIncomeLAK = 0, boatIncomeTHB = 0, boatIncomeUSD = 0;
+    let rappellingIncomeLAK = 0, rappellingIncomeTHB = 0, rappellingIncomeUSD = 0;
+    let otherIncomeLAK = 0, otherIncomeTHB = 0, otherIncomeUSD = 0;
+    let totalLAK = 0, totalTHB = 0, totalUSD = 0;
 
     const rateTHB = (db.settings && db.settings.rateTHB) || 620;
     const rateUSD = (db.settings && db.settings.rateUSD) || 21500;
 
     bookings.forEach(b => {
       const currency = b.paymentCurrency || "LAK";
-      const lakAmt = (currency === "LAK" || !b.paymentCurrency) ? (b.pricePaidLAK || 0) : 0;
+      const lakAmt = b.pricePaidLAK || 0;
+      const thbAmt = currency === "THB" ? Math.round(lakAmt / rateTHB) : 0;
+      const usdAmt = currency === "USD" ? (lakAmt / rateUSD) : 0;
 
       if (b.serviceId === "SRV-001" || b.serviceId === "SRV-002" || b.serviceId === "SRV-003" || b.serviceId === "SRV-005") {
-        boatIncome += lakAmt;
+        if (currency === "THB") boatIncomeTHB += thbAmt;
+        else if (currency === "USD") boatIncomeUSD += usdAmt;
+        else boatIncomeLAK += lakAmt;
       } else if (b.serviceId === "SRV-004") {
-        rappellingIncome += lakAmt;
+        if (currency === "THB") rappellingIncomeTHB += thbAmt;
+        else if (currency === "USD") rappellingIncomeUSD += usdAmt;
+        else rappellingIncomeLAK += lakAmt;
       } else {
-        otherIncome += lakAmt;
+        if (currency === "THB") otherIncomeTHB += thbAmt;
+        else if (currency === "USD") otherIncomeUSD += usdAmt;
+        else otherIncomeLAK += lakAmt;
       }
 
       if (currency === "THB") {
-        totalTHB += Math.round((b.pricePaidLAK || 0) / rateTHB);
+        totalTHB += thbAmt;
       } else if (currency === "USD") {
-        totalUSD += (b.pricePaidLAK || 0) / rateUSD;
+        totalUSD += usdAmt;
       } else {
-        totalLAK += (b.pricePaidLAK || 0);
+        totalLAK += lakAmt;
       }
     });
+
+    const boatIncome = boatIncomeLAK + (boatIncomeTHB * rateTHB) + (boatIncomeUSD * rateUSD);
+    const rappellingIncome = rappellingIncomeLAK + (rappellingIncomeTHB * rateTHB) + (rappellingIncomeUSD * rateUSD);
+    const otherIncome = otherIncomeLAK + (otherIncomeTHB * rateTHB) + (otherIncomeUSD * rateUSD);
 
     return { 
       bookings, 
       boatIncome, 
       rappellingIncome, 
       otherIncome, 
+      boatIncomeTHB,
+      boatIncomeLAK,
+      boatIncomeUSD,
+      rappellingIncomeTHB,
+      rappellingIncomeLAK,
+      rappellingIncomeUSD,
+      otherIncomeTHB,
+      otherIncomeLAK,
+      otherIncomeUSD,
       total: boatIncome + rappellingIncome + otherIncome,
       totalLAK,
       totalTHB,
@@ -732,25 +755,53 @@ export default function AccountingPayroll({ currentUser }) {
             <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #0284c7" }}>
               <div>
                 <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>{t("boat_income", "ລາຍຮັບລ່ອງເຮືອ / Boat Income")}</div>
-                <strong style={{ fontSize: "1.2rem", color: "#0284c7", display: "block", marginTop: "4px" }}>{formatLAK(incomeDetails.boatIncome)} LAK</strong>
+                <strong style={{ fontSize: "1.2rem", color: "#0284c7", display: "block", marginTop: "4px" }}>
+                  {incomeDetails.boatIncomeTHB > 0 ? formatTHB(incomeDetails.boatIncomeTHB) : formatLAK(incomeDetails.boatIncomeLAK)}
+                </strong>
+                {incomeDetails.boatIncomeTHB > 0 && (
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>
+                    ({formatLAK(incomeDetails.boatIncome)})
+                  </span>
+                )}
               </div>
             </div>
             <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #6366f1" }}>
               <div>
                 <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>{t("rappelling_income", "ລາຍຮັບໂລ້ຍຕົວນ້ຳຕົກ / Waterfall Rappelling")}</div>
-                <strong style={{ fontSize: "1.2rem", color: "#6366f1", display: "block", marginTop: "4px" }}>{formatLAK(incomeDetails.rappellingIncome)} LAK</strong>
+                <strong style={{ fontSize: "1.2rem", color: "#6366f1", display: "block", marginTop: "4px" }}>
+                  {incomeDetails.rappellingIncomeTHB > 0 ? formatTHB(incomeDetails.rappellingIncomeTHB) : formatLAK(incomeDetails.rappellingIncomeLAK)}
+                </strong>
+                {incomeDetails.rappellingIncomeTHB > 0 && (
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>
+                    ({formatLAK(incomeDetails.rappellingIncome)})
+                  </span>
+                )}
               </div>
             </div>
             <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #f59e0b" }}>
               <div>
                 <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>{t("other_income_card", "ລາຍຮັບກິດຈະກຳອື່ນ / Adventure Boat & Extras")}</div>
-                <strong style={{ fontSize: "1.2rem", color: "#f59e0b", display: "block", marginTop: "4px" }}>{formatLAK(incomeDetails.otherIncome)} LAK</strong>
+                <strong style={{ fontSize: "1.2rem", color: "#f59e0b", display: "block", marginTop: "4px" }}>
+                  {incomeDetails.otherIncomeTHB > 0 ? formatTHB(incomeDetails.otherIncomeTHB) : formatLAK(incomeDetails.otherIncomeLAK)}
+                </strong>
+                {incomeDetails.otherIncomeTHB > 0 && (
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>
+                    ({formatLAK(incomeDetails.otherIncome)})
+                  </span>
+                )}
               </div>
             </div>
             <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", background: "var(--bg-secondary)", borderLeft: "4px solid #10b981" }}>
               <div>
                 <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "var(--text-secondary)" }}>ລາຍຮັບລວມທັງໝົດ / Total Period Revenue</div>
-                <strong style={{ fontSize: "1.3rem", color: "#10b981", display: "block", marginTop: "4px" }}>{formatLAK(incomeDetails.total)} LAK</strong>
+                <strong style={{ fontSize: "1.3rem", color: "#10b981", display: "block", marginTop: "4px" }}>
+                  {incomeDetails.totalTHB > 0 ? formatTHB(incomeDetails.totalTHB) : formatLAK(incomeDetails.totalLAK)}
+                </strong>
+                {incomeDetails.totalTHB > 0 && (
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>
+                    ({formatLAK(incomeDetails.total)})
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -954,10 +1005,49 @@ export default function AccountingPayroll({ currentUser }) {
                       </select>
                     </div>
                   </div>
+                  {/* Currency Selector Buttons */}
+                  <div>
+                    <label style={labelStyle}>ສະກຸນເງິນລາຍຈ່າຍ / Currency</label>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      {[
+                        { code: "THB", label: "฿ THB (บาท)", color: "#3b82f6" },
+                        { code: "LAK", label: "₭ LAK (กีบ)", color: "#10b981" },
+                        { code: "USD", label: "$ USD (ดอลลาร์)", color: "#f59e0b" }
+                      ].map(cur => (
+                        <button
+                          key={cur.code}
+                          type="button"
+                          onClick={() => setExpCurrency(cur.code)}
+                          style={{
+                            flex: 1,
+                            padding: "6px 8px",
+                            borderRadius: "6px",
+                            fontSize: "0.78rem",
+                            fontWeight: "bold",
+                            border: expCurrency === cur.code ? `2px solid ${cur.color}` : "1px solid var(--border-color)",
+                            background: expCurrency === cur.code ? `${cur.color}15` : "var(--bg-primary)",
+                            color: expCurrency === cur.code ? cur.color : "var(--text-secondary)",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease"
+                          }}
+                        >
+                          {cur.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "10px" }}>
                     <div>
-                      <label style={labelStyle}>ຍອດເງິນ / Amount (LAK)</label>
-                      <input type="number" placeholder="250,000 LAK" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} style={inputStyle} required />
+                      <label style={labelStyle}>ຍອດເງິນລາຍຈ່າຍ / Amount ({expCurrency})</label>
+                      <input 
+                        type="number" 
+                        placeholder={expCurrency === "THB" ? "1,500 THB" : expCurrency === "USD" ? "50 USD" : "500,000 LAK"} 
+                        value={expAmount} 
+                        onChange={(e) => setExpAmount(e.target.value)} 
+                        style={inputStyle} 
+                        required 
+                      />
                     </div>
                     <div>
                       <label style={labelStyle}>ຄຳອະທິບາຍ / Description</label>
@@ -1005,7 +1095,7 @@ export default function AccountingPayroll({ currentUser }) {
                           <td><span className="badge badge-warning">{exp.category}</span></td>
                           <td>{exp.description}</td>
                           <td style={{ textAlign: "right", fontWeight: "bold", color: "var(--danger)" }}>
-                            -{formatLAK(exp.amount)}
+                            -{exp.currency === "THB" ? formatTHB(exp.amount) : exp.currency === "USD" ? formatUSD(exp.amount) : formatLAK(exp.amount)}
                           </td>
                           <td style={{ textAlign: "center" }}>
                             <button 
