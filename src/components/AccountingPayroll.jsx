@@ -29,6 +29,59 @@ export default function AccountingPayroll({ currentUser }) {
   const [incomeFilterType, setIncomeFilterType] = useState("month"); // day, month, year
   const [plFilterType, setPlFilterType] = useState("month"); // day, month, year
 
+  const handleIncrementTrip = (empId) => {
+    const emp = db.employees.find(e => e.id === empId);
+    if (!emp) return;
+
+    const today = new Date().toISOString().split("T")[0];
+    const tripDate = today.startsWith(summaryMonth) ? today : `${summaryMonth}-01`;
+
+    const newTrip = {
+      id: `TRIP-MANUAL-${Date.now()}`,
+      bookingId: `BK-MANUAL-${Date.now()}`,
+      date: tripDate,
+      time: "Manual",
+      guideIds: emp.role === "guide" ? [empId] : [],
+      captainIds: emp.role === "captain" ? [empId] : [],
+      captainId: emp.role === "captain" ? empId : null,
+      driverIds: emp.role === "driver" ? [empId] : [],
+      boatIds: [],
+      status: "completed",
+      pricePaidLAK: 0,
+      createdAt: new Date().toISOString(),
+      isManual: true,
+      manualRate: emp.tripRate || 65000
+    };
+
+    const currentDb = getDb();
+    currentDb.trips = [...(currentDb.trips || []), newTrip];
+    saveDb(currentDb);
+    setDb(currentDb);
+    window.dispatchEvent(new Event("db-update"));
+  };
+
+  const handleDecrementTrip = (empId) => {
+    const currentDb = getDb();
+    const manualTrips = (currentDb.trips || []).filter(trip => {
+      if (!trip.isManual || !trip.date || !trip.date.startsWith(summaryMonth)) return false;
+      const isGuide = trip.guideIds && trip.guideIds.includes(empId);
+      const isCaptain = (trip.captainIds && trip.captainIds.includes(empId)) || (trip.captainId === empId);
+      const isDriver = trip.driverIds && trip.driverIds.includes(empId);
+      return isGuide || isCaptain || isDriver;
+    });
+
+    if (manualTrips.length === 0) {
+      alert(lang === "en" ? "No manual trips to remove for this month!" : "ບໍ່ມີທ່ຽວທີ່ເພີ່ມເອງໃນເດືອນນີ້ເພື່ອລົບ!");
+      return;
+    }
+
+    const latestManualTrip = manualTrips[manualTrips.length - 1];
+    currentDb.trips = currentDb.trips.filter(t => t.id !== latestManualTrip.id);
+    saveDb(currentDb);
+    setDb(currentDb);
+    window.dispatchEvent(new Event("db-update"));
+  };
+
   // Expense Logger form states
   const [expDate, setExpDate] = useState(getLocalDateStr());
   const [expCategory, setExpCategory] = useState("Fuel");
@@ -1758,7 +1811,25 @@ export default function AccountingPayroll({ currentUser }) {
                           <td style={{ textAlign: "right" }}>{formatLAK(emp.baseSalary)}</td>
                           <td style={{ textAlign: "center" }}>{emp.daysWorked || 0}</td>
                           <td style={{ textAlign: "right" }}>{formatLAK(emp.dailyWagePay)}</td>
-                          <td style={{ textAlign: "center", fontWeight: "700" }}>{emp.tripCount}</td>
+                          <td style={{ textAlign: "center", fontWeight: "700" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: "0px 6px", fontSize: "0.8rem", height: "24px", minWidth: "24px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px" }}
+                                onClick={() => handleDecrementTrip(emp.id)}
+                              >
+                                -
+                              </button>
+                              <span style={{ minWidth: "20px", display: "inline-block", textAlign: "center" }}>{emp.tripCount}</span>
+                              <button 
+                                className="btn btn-primary" 
+                                style={{ padding: "0px 6px", fontSize: "0.8rem", height: "24px", minWidth: "24px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px" }}
+                                onClick={() => handleIncrementTrip(emp.id)}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
                           <td style={{ textAlign: "right" }}>{formatLAK(emp.tripPay)}</td>
                           <td style={{ textAlign: "right" }}>{formatLAK(emp.otherPay)}</td>
                           <td style={{ textAlign: "right", fontWeight: "800", color: "var(--primary)" }}>
