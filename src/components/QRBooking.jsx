@@ -1111,6 +1111,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                                 ${formatLAK(valLAK)} LAK
                               </span>
                             </div>
+                          `;
                         }).join('');
 
                         return `
