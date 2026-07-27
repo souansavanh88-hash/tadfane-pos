@@ -189,13 +189,13 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
         trip.guideIds.forEach(gid => {
           const emp = database.employees.find(e => e.id === gid);
           if (emp) {
-            let payout = emp.tripRate || 50000;
+            let payout = emp.tripRate || 65000;
             if (emp.role === "guide") {
-              let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : 100000;
+              let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
               if (trip.bookingId) {
                 const bk = database.bookings.find(b => b.id === trip.bookingId);
                 if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
-                  baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
+                  baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : (emp.tripRate || 65000);
                 }
               }
               payout = baseRate + (emp.specialRate || 0);
@@ -208,13 +208,13 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
       const tripCaptainIds = trip.captainIds || (trip.captainId ? [trip.captainId] : []);
       tripCaptainIds.forEach(cid => {
         const emp = database.employees.find(e => e.id === cid);
-        if (emp) todayCrewWages += emp.tripRate;
+        if (emp) todayCrewWages += (emp.tripRate || 65000);
       });
       if (trip.driverIds) {
         trip.driverIds.forEach(did => {
           const emp = database.employees.find(e => e.id === did);
           if (emp) {
-            const payout = (emp.tripRate !== undefined && emp.tripRate > 0) ? emp.tripRate : 100000;
+            const payout = emp.tripRate || 65000;
             todayCrewWages += payout;
             driverPayDue += payout;
           }
@@ -228,13 +228,13 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
         trip.guideIds.forEach(gid => {
           const emp = database.employees.find(e => e.id === gid);
           if (emp) {
-            let payout = emp.tripRate || 50000;
+            let payout = emp.tripRate || 65000;
             if (emp.role === "guide") {
-              let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : 100000;
+              let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
               if (trip.bookingId) {
                 const bk = database.bookings.find(b => b.id === trip.bookingId);
                 if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
-                  baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
+                  baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : (emp.tripRate || 65000);
                 }
               }
               payout = baseRate + (emp.specialRate || 0);
@@ -247,13 +247,13 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
       const tripCaptainIds = trip.captainIds || (trip.captainId ? [trip.captainId] : []);
       tripCaptainIds.forEach(cid => {
         const emp = database.employees.find(e => e.id === cid);
-        if (emp) monthCrewWages += emp.tripRate;
+        if (emp) monthCrewWages += (emp.tripRate || 65000);
       });
       if (trip.driverIds) {
         trip.driverIds.forEach(did => {
           const emp = database.employees.find(e => e.id === did);
           if (emp) {
-            const payout = (emp.tripRate !== undefined && emp.tripRate > 0) ? emp.tripRate : 100000;
+            const payout = emp.tripRate || 65000;
             monthCrewWages += payout;
             driverWagesMonth += payout;
           }
@@ -1272,10 +1272,9 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
               if (guideIdsToUse && Array.isArray(guideIdsToUse)) {
                 guideIdsToUse.forEach(gid => {
                   const emp = db.employees.find(e => e.id === gid);
-                  if (emp) {
-                    let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate && emp.tripRate !== 65000 ? emp.tripRate : 100000);
+                    let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
                     if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
-                      baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
+                      baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : (emp.tripRate || 65000);
                     }
                     const rate = baseRate + (emp.specialRate || 0);
                     payLogs.push({
@@ -1298,9 +1297,9 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
                 bk.guideIds.forEach(gid => {
                   const emp = db.employees.find(e => e.id === gid);
                   if (emp) {
-                    let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate && emp.tripRate !== 65000 ? emp.tripRate : 100000);
+                    let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
                     if (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005") {
-                      baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
+                      baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : (emp.tripRate || 65000);
                     }
                     const rate = baseRate + (emp.specialRate || 0);
                     payLogs.push({

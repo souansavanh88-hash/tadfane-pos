@@ -1630,7 +1630,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
       type: "freelance",
       status: "active",
       salary: 0,
-      tripRate: 50000,
+      tripRate: 65000,
       bonus: 0
     };
 

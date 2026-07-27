@@ -329,13 +329,13 @@ export default function AccountingPayroll({ currentUser }) {
         trip.guideIds.forEach(gid => {
           const emp = db.employees.find(e => e.id === gid);
           if (emp) {
-            let payout = emp.tripRate || 50000;
+            let payout = emp.tripRate || 65000;
             if (emp.role === "guide") {
-              let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : 100000;
+              let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
               if (trip.bookingId) {
                 const bk = db.bookings.find(b => b.id === trip.bookingId);
                 if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
-                  baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
+                  baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : (emp.tripRate || 65000);
                 }
               }
               payout = baseRate + (emp.specialRate || 0);
@@ -349,15 +349,15 @@ export default function AccountingPayroll({ currentUser }) {
       tripCaptainIds.forEach(cid => {
         const emp = db.employees.find(e => e.id === cid);
         if (emp) {
-          totalCrewTripWages += emp.tripRate;
-          captainWages += emp.tripRate;
+          totalCrewTripWages += (emp.tripRate || 65000);
+          captainWages += (emp.tripRate || 65000);
         }
       });
       if (trip.driverIds) {
         trip.driverIds.forEach(did => {
           const emp = db.employees.find(e => e.id === did);
           if (emp) {
-            const payout = (emp.tripRate !== undefined && emp.tripRate > 0) ? emp.tripRate : 100000;
+            const payout = emp.tripRate || 65000;
             totalCrewTripWages += payout;
             driverWages += payout;
           }
@@ -535,18 +535,18 @@ export default function AccountingPayroll({ currentUser }) {
         const isCaptain = (trip.captainIds && trip.captainIds.includes(emp.id)) || (trip.captainId === emp.id);
         const isDriver = trip.driverIds && trip.driverIds.includes(emp.id);
 
-        let payout = emp.tripRate || 50000;
+        let payout = emp.tripRate || 65000;
         if (emp.role === "guide") {
-          let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : 100000;
+          let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 65000);
           if (trip.bookingId) {
             const bk = db.bookings.find(b => b.id === trip.bookingId);
             if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
-              baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
+              baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : (emp.tripRate || 65000);
             }
           }
           payout = baseRate + (emp.specialRate || 0);
         } else if (emp.role === "driver") {
-          payout = (emp.tripRate !== undefined && emp.tripRate > 0) ? emp.tripRate : 100000;
+          payout = emp.tripRate || 65000;
         }
         tripPay += payout;
       });
