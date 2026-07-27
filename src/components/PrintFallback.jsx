@@ -366,22 +366,40 @@ export default function PrintFallback() {
               const pctStr = pct > 0 ? `(${pct}%)` : '';
 
               if (curr === 'THB') {
-                const isFlat = loadedBooking.isFlatRate || (loadedBooking.serviceId === 'SRV-005' && (loadedBooking.pricePerPax === 1900 || loadedBooking.selectedTier === 'tier1' || loadedBooking.tier === 'tier1'));
+                const servicesList = (loadedBooking.selectedServices && loadedBooking.selectedServices.length > 0)
+                  ? loadedBooking.selectedServices
+                  : [{
+                      serviceId: loadedBooking.serviceId,
+                      name: loadedBooking.serviceName,
+                      rawPrice: loadedBooking.pricePerPax,
+                      rawTotal: Math.round(grossLAK / rTHB),
+                      currency: 'THB',
+                      isFlat: loadedBooking.isFlatRate || (loadedBooking.serviceId === 'SRV-005' && (loadedBooking.pricePerPax === 1900 || loadedBooking.selectedTier === 'tier1' || loadedBooking.tier === 'tier1'))
+                    }];
+
                 const grossTHB = Math.round(grossLAK / rTHB);
                 const discTHB = Math.round(discLAK / rTHB);
                 const netTHB = grossTHB - discTHB;
-                const itemQtyLabel = isFlat ? `(เหมาลำ / ${loadedBooking.paxCount} ${rt.paxUnit})` : `x${loadedBooking.paxCount}`;
 
                 return (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
-                      <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
-                        {loadedBooking.serviceName} {itemQtyLabel}:
-                      </span>
-                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                        {formatTHB(grossTHB)}
-                      </span>
-                    </div>
+                    {servicesList.map((s, idx) => {
+                      const isFlat = s.isFlat || (s.serviceId === 'SRV-005' && (s.rawPrice === 1900 || s.rawTotal === 1900));
+                      const itemQtyLabel = isFlat ? `(เหมาลำ / ${loadedBooking.paxCount} ${rt.paxUnit})` : `x${loadedBooking.paxCount}`;
+                      const valTHB = s.currency === 'THB' ? s.rawTotal : Math.round((s.itemLAK || (s.rawTotal * rTHB)) / rTHB);
+
+                      return (
+                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700", marginBottom: "3px" }}>
+                          <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
+                            • {s.name} {itemQtyLabel}:
+                          </span>
+                          <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                            {formatTHB(valTHB)}
+                          </span>
+                        </div>
+                      );
+                    })}
+
                     {discTHB > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px" }}>
                         <span>{rt.discount || "ສ່ວນຫຼຸດ / Discount"} {pctStr}</span>
@@ -405,22 +423,40 @@ export default function PrintFallback() {
                   </>
                 );
               } else if (curr === 'USD') {
-                const isFlat = loadedBooking.isFlatRate || (loadedBooking.serviceId === 'SRV-005' && (loadedBooking.pricePerPax === 1900 || loadedBooking.selectedTier === 'tier1' || loadedBooking.tier === 'tier1'));
+                const servicesList = (loadedBooking.selectedServices && loadedBooking.selectedServices.length > 0)
+                  ? loadedBooking.selectedServices
+                  : [{
+                      serviceId: loadedBooking.serviceId,
+                      name: loadedBooking.serviceName,
+                      rawPrice: loadedBooking.pricePerPax,
+                      rawTotal: grossLAK / rUSD,
+                      currency: 'USD',
+                      isFlat: loadedBooking.isFlatRate || (loadedBooking.serviceId === 'SRV-005' && (loadedBooking.pricePerPax === 1900 || loadedBooking.selectedTier === 'tier1' || loadedBooking.tier === 'tier1'))
+                    }];
+
                 const grossUSD = grossLAK / rUSD;
                 const discUSD = discLAK / rUSD;
                 const netUSD = grossUSD - discUSD;
-                const itemQtyLabel = isFlat ? `(เหมาลำ / ${loadedBooking.paxCount} ${rt.paxUnit})` : `x${loadedBooking.paxCount}`;
 
                 return (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
-                      <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
-                        {loadedBooking.serviceName} {itemQtyLabel}:
-                      </span>
-                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                        {formatUSD(grossUSD)}
-                      </span>
-                    </div>
+                    {servicesList.map((s, idx) => {
+                      const isFlat = s.isFlat || (s.serviceId === 'SRV-005' && (s.rawPrice === 1900 || s.rawTotal === 1900));
+                      const itemQtyLabel = isFlat ? `(เหมาลำ / ${loadedBooking.paxCount} ${rt.paxUnit})` : `x${loadedBooking.paxCount}`;
+                      const valUSD = s.currency === 'USD' ? s.rawTotal : ((s.itemLAK || (s.rawTotal * rUSD)) / rUSD);
+
+                      return (
+                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700", marginBottom: "3px" }}>
+                          <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
+                            • {s.name} {itemQtyLabel}:
+                          </span>
+                          <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                            {formatUSD(valUSD)}
+                          </span>
+                        </div>
+                      );
+                    })}
+
                     {discUSD > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px" }}>
                         <span>{rt.discount || "ສ່ວນຫຼຸດ / Discount"} {pctStr}</span>
@@ -444,19 +480,35 @@ export default function PrintFallback() {
                   </>
                 );
               } else {
-                const isFlat = loadedBooking.isFlatRate || (loadedBooking.serviceId === 'SRV-005' && (loadedBooking.pricePerPax === 1900 || loadedBooking.selectedTier === 'tier1' || loadedBooking.tier === 'tier1'));
-                const itemQtyLabel = isFlat ? `(เหมาลำ / ${loadedBooking.paxCount} ${rt.paxUnit})` : `x${loadedBooking.paxCount}`;
+                const servicesList = (loadedBooking.selectedServices && loadedBooking.selectedServices.length > 0)
+                  ? loadedBooking.selectedServices
+                  : [{
+                      serviceId: loadedBooking.serviceId,
+                      name: loadedBooking.serviceName,
+                      rawPrice: loadedBooking.pricePerPax,
+                      rawTotal: grossLAK,
+                      currency: 'LAK',
+                      isFlat: loadedBooking.isFlatRate || (loadedBooking.serviceId === 'SRV-005' && (loadedBooking.pricePerPax === 1900 || loadedBooking.selectedTier === 'tier1' || loadedBooking.tier === 'tier1'))
+                    }];
 
                 return (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700" }}>
-                      <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
-                        {loadedBooking.serviceName} {itemQtyLabel}:
-                      </span>
-                      <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                        {formatLAK(grossLAK)} LAK
-                      </span>
-                    </div>
+                    {servicesList.map((s, idx) => {
+                      const isFlat = s.isFlat || (s.serviceId === 'SRV-005' && (s.rawPrice === 1900 || s.rawTotal === 1900));
+                      const itemQtyLabel = isFlat ? `(เหมาลำ / ${loadedBooking.paxCount} ${rt.paxUnit})` : `x${loadedBooking.paxCount}`;
+                      const valLAK = s.itemLAK || (s.currency === 'THB' ? s.rawTotal * rTHB : s.rawTotal);
+
+                      return (
+                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", fontWeight: "700", marginBottom: "3px" }}>
+                          <span style={{ flex: 1, wordBreak: "break-word", whiteSpace: "normal", textAlign: "left" }}>
+                            • {s.name} {itemQtyLabel}:
+                          </span>
+                          <span style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                            {formatLAK(valLAK)} LAK
+                          </span>
+                        </div>
+                      );
+                    })}
                     {discLAK > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "14px", marginTop: "4px" }}>
                         <span>{rt.discount || "ສ່ວນຫຼຸດ / Discount"} {pctStr}</span>

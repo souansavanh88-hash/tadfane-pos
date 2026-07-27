@@ -283,7 +283,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     return () => clearInterval(interval);
   }, [loadedBooking, isDateManual, isTimeManual]);
 
-  const [selectedServiceId, setSelectedServiceId] = useState("SRV-004");
+  const [selectedServiceIds, setSelectedServiceIds] = useState(["SRV-004"]);
+  const selectedServiceId = selectedServiceIds[0] || "SRV-004";
+  const setSelectedServiceId = (id) => setSelectedServiceIds(Array.isArray(id) ? id : [id]);
   const [selectedTier, setSelectedTier] = useState("tier1"); // "tier1" or "tier3"
   const [customPricePerPax, setCustomPricePerPax] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -720,12 +722,46 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     }
   };
 
-  // Get current selected service
+  const getMultiServicePricingDetails = (serviceIds, tier, count, customPrice = "") => {
+    const rateTHB = db.settings.rateTHB || 700;
+    const ids = Array.isArray(serviceIds) && serviceIds.length > 0 ? serviceIds : ["SRV-004"];
+    
+    let totalLAK = 0;
+    const items = [];
+
+    ids.forEach((sId) => {
+      const details = getSelectedPricingDetails(sId, tier, count, ids.length === 1 ? customPrice : "");
+      const srvObj = db.services.find(s => s.id === sId);
+      totalLAK += details.totalLAK;
+      items.push({
+        serviceId: sId,
+        name: srvObj ? srvObj.name : sId,
+        rawPrice: details.rawPrice,
+        rawTotal: details.rawTotal,
+        currency: details.currency,
+        isFlat: details.isFlat,
+        itemLAK: details.totalLAK
+      });
+    });
+
+    const isBoatIncluded = ids.some(id => id === "SRV-001" || id === "SRV-005");
+
+    return {
+      totalLAK,
+      items,
+      isBoatIncluded,
+      primaryCurrency: items[0]?.currency || "THB",
+      combinedName: items.map(i => i.name).join(" + ")
+    };
+  };
+
+  const multiPricingDetails = getMultiServicePricingDetails(selectedServiceIds, selectedTier, paxCount, customPricePerPax);
+  const totalPriceLAK = multiPricingDetails.totalLAK;
+
+  // Get current selected service (primary)
   const currentService = db.services.find(s => s.id === selectedServiceId) || db.services[0];
-  const isBoatTrip = selectedServiceId === "SRV-001" || selectedServiceId === "SRV-005" || 
-                     (currentService && (currentService.name.toLowerCase().includes("boat") || currentService.name.includes("เรืອ") || currentService.name.includes("ເຮືອ")));
+  const isBoatTrip = multiPricingDetails.isBoatIncluded;
   const pricingDetails = getSelectedPricingDetails(selectedServiceId, selectedTier, paxCount, customPricePerPax);
-  const totalPriceLAK = pricingDetails.totalLAK;
   const defaultPrice = pricingDetails.rawPrice;
   const activePricePerPax = customPricePerPax !== "" ? parseFloat(customPricePerPax) : defaultPrice;
 
@@ -941,21 +977,39 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       const pctStr = discPercent > 0 ? `(${discPercent}%)` : '';
 
                       if (curr === 'THB') {
-                        const isFlat = currentBooking.isFlatRate || (currentBooking.serviceId === 'SRV-005' && (currentBooking.pricePerPax === 1900 || currentBooking.selectedTier === 'tier1' || currentBooking.tier === 'tier1'));
+                        const servicesList = (currentBooking.selectedServices && currentBooking.selectedServices.length > 0)
+                          ? currentBooking.selectedServices
+                          : [{
+                              serviceId: currentBooking.serviceId,
+                              name: currentBooking.serviceName,
+                              rawPrice: currentBooking.pricePerPax,
+                              rawTotal: Math.round(grossLAK / rTHB),
+                              currency: 'THB',
+                              isFlat: currentBooking.isFlatRate || (currentBooking.serviceId === 'SRV-005' && (currentBooking.pricePerPax === 1900 || currentBooking.selectedTier === 'tier1' || currentBooking.tier === 'tier1'))
+                            }];
+
                         const grossTHB = Math.round(grossLAK / rTHB);
                         const discTHB = Math.round(discLAK / rTHB);
                         const netTHB = grossTHB - discTHB;
-                        const itemQtyLabel = isFlat ? `(เหมาลำ / ${currentBooking.paxCount} ${rt.paxUnit})` : `x${currentBooking.paxCount}`;
+
+                        const itemsHtml = servicesList.map(s => {
+                          const isFlat = s.isFlat || (s.serviceId === 'SRV-005' && (s.rawPrice === 1900 || s.rawTotal === 1900));
+                          const qtyLabel = isFlat ? `(เหมาลำ / ${currentBooking.paxCount} ${rt.paxUnit})` : `x${currentBooking.paxCount}`;
+                          const valTHB = s.currency === 'THB' ? s.rawTotal : Math.round((s.itemLAK || (s.rawTotal * rTHB)) / rTHB);
+                          return `
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700; margin-bottom: 3px;">
+                              <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
+                                • ${s.name} ${qtyLabel}:
+                              </span>
+                              <span style="white-space: nowrap; text-align: right;">
+                                ${formatTHB(valTHB)}
+                              </span>
+                            </div>
+                          `;
+                        }).join('');
 
                         return `
-                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
-                            <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
-                              ${currentBooking.serviceName} ${itemQtyLabel}:
-                            </span>
-                            <span style="white-space: nowrap; text-align: right;">
-                              ${formatTHB(grossTHB)}
-                            </span>
-                          </div>
+                          ${itemsHtml}
                           ${discTHB > 0 ? `
                             <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px; color: #000;">
                               <span>${rt.discount || 'ສ່ວນຫຼຸດ / Discount'} ${pctStr}</span>
@@ -978,21 +1032,39 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                           </div>
                         `;
                       } else if (curr === 'USD') {
-                        const isFlat = currentBooking.isFlatRate || (currentBooking.serviceId === 'SRV-005' && (currentBooking.pricePerPax === 1900 || currentBooking.selectedTier === 'tier1' || currentBooking.tier === 'tier1'));
+                        const servicesList = (currentBooking.selectedServices && currentBooking.selectedServices.length > 0)
+                          ? currentBooking.selectedServices
+                          : [{
+                              serviceId: currentBooking.serviceId,
+                              name: currentBooking.serviceName,
+                              rawPrice: currentBooking.pricePerPax,
+                              rawTotal: grossLAK / rUSD,
+                              currency: 'USD',
+                              isFlat: currentBooking.isFlatRate || (currentBooking.serviceId === 'SRV-005' && (currentBooking.pricePerPax === 1900 || currentBooking.selectedTier === 'tier1' || currentBooking.tier === 'tier1'))
+                            }];
+
                         const grossUSD = grossLAK / rUSD;
                         const discUSD = discLAK / rUSD;
                         const netUSD = grossUSD - discUSD;
-                        const itemQtyLabel = isFlat ? `(เหมาลำ / ${currentBooking.paxCount} ${rt.paxUnit})` : `x${currentBooking.paxCount}`;
+
+                        const itemsHtml = servicesList.map(s => {
+                          const isFlat = s.isFlat || (s.serviceId === 'SRV-005' && (s.rawPrice === 1900 || s.rawTotal === 1900));
+                          const qtyLabel = isFlat ? `(เหมาลำ / ${currentBooking.paxCount} ${rt.paxUnit})` : `x${currentBooking.paxCount}`;
+                          const valUSD = s.currency === 'USD' ? s.rawTotal : ((s.itemLAK || (s.rawTotal * rUSD)) / rUSD);
+                          return `
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700; margin-bottom: 3px;">
+                              <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
+                                • ${s.name} ${qtyLabel}:
+                              </span>
+                              <span style="white-space: nowrap; text-align: right;">
+                                ${formatUSD(valUSD)}
+                              </span>
+                            </div>
+                          `;
+                        }).join('');
 
                         return `
-                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
-                            <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
-                              ${currentBooking.serviceName} ${itemQtyLabel}:
-                            </span>
-                            <span style="white-space: nowrap; text-align: right;">
-                              ${formatUSD(grossUSD)}
-                            </span>
-                          </div>
+                          ${itemsHtml}
                           ${(discUSD > 0 || discLAK > 0) ? `
                             <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px; color: #000;">
                               <span>${rt.discount || 'ສ່ວນຫຼຸດ / Discount'} ${pctStr}</span>
@@ -1015,18 +1087,32 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                           </div>
                         `;
                       } else {
-                        const isFlat = currentBooking.isFlatRate || (currentBooking.serviceId === 'SRV-005' && (currentBooking.pricePerPax === 1900 || currentBooking.selectedTier === 'tier1' || currentBooking.tier === 'tier1'));
-                        const itemQtyLabel = isFlat ? `(เหมาลำ / ${currentBooking.paxCount} ${rt.paxUnit})` : `x${currentBooking.paxCount}`;
+                        const servicesList = (currentBooking.selectedServices && currentBooking.selectedServices.length > 0)
+                          ? currentBooking.selectedServices
+                          : [{
+                              serviceId: currentBooking.serviceId,
+                              name: currentBooking.serviceName,
+                              rawPrice: currentBooking.pricePerPax,
+                              rawTotal: grossLAK,
+                              currency: 'LAK',
+                              isFlat: currentBooking.isFlatRate || (currentBooking.serviceId === 'SRV-005' && (currentBooking.pricePerPax === 1900 || currentBooking.selectedTier === 'tier1' || currentBooking.tier === 'tier1'))
+                            }];
 
-                        return `
-                          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700;">
-                            <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
-                              ${currentBooking.serviceName} ${itemQtyLabel}:
-                            </span>
-                            <span style="white-space: nowrap; text-align: right;">
-                              ${formatLAK(grossLAK)} LAK
-                            </span>
-                          </div>
+                        const itemsHtml = servicesList.map(s => {
+                          const isFlat = s.isFlat || (s.serviceId === 'SRV-005' && (s.rawPrice === 1900 || s.rawTotal === 1900));
+                          const qtyLabel = isFlat ? `(เหมาลำ / ${currentBooking.paxCount} ${rt.paxUnit})` : `x${currentBooking.paxCount}`;
+                          const valLAK = s.itemLAK || (s.currency === 'THB' ? s.rawTotal * rTHB : s.rawTotal);
+                          return `
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-weight: 700; margin-bottom: 3px;">
+                              <span style="flex: 1; word-break: break-word; white-space: normal; text-align: left;">
+                                • ${s.name} ${qtyLabel}:
+                              </span>
+                              <span style="white-space: nowrap; text-align: right;">
+                                ${formatLAK(valLAK)} LAK
+                              </span>
+                            </div>
+                          `;
+                        }).join('');
                           ${discLAK > 0 ? `
                             <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; margin-top: 4px; color: #000;">
                               <span>${rt.discount || 'ສ່ວນຫຼຸດ / Discount'} ${pctStr}</span>
@@ -1318,7 +1404,9 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
         date,
         time,
         serviceId: selectedServiceId,
-        serviceName: currentService.name,
+        selectedServiceIds: selectedServiceIds,
+        selectedServices: multiPricingDetails.items,
+        serviceName: multiPricingDetails.combinedName,
         pricePerPax: activePricePerPax,
         pricePaidLAK: totalPriceLAK,
         discountLAK: isAdvanceBooking ? advanceDiscount : computedDiscountLAK,
@@ -1383,8 +1471,13 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     setPaxCount(bk.paxCount);
     setDate(bk.date);
     setTime(bk.time);
+    if (bk.selectedServiceIds && bk.selectedServiceIds.length > 0) {
+      setSelectedServiceIds(bk.selectedServiceIds);
+    } else {
+      const srvId = bk.serviceId || "SRV-004";
+      setSelectedServiceIds([srvId]);
+    }
     const srvId = bk.serviceId || "SRV-004";
-    setSelectedServiceId(srvId);
 
     // Determine if custom price or standard price
     const stdPrice = getStandardPrice(srvId, bk.paxCount);
@@ -2231,10 +2324,15 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
             {/* Service selection blocks */}
             <div style={{ marginBottom: "15px" }}>
-              <label style={{ ...fieldLabelStyle, marginBottom: "8px", display: "block" }}>ປະເພດການບໍລິການ / Activity Service</label>
+              <label style={{ ...fieldLabelStyle, marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>ປະເພດການບໍລິການ / Activity Service</span>
+                <span style={{ fontSize: "0.75rem", color: "#10b981", fontWeight: "700" }}>
+                  (ກົດເລືອກໄດ້ຫຼາຍກິດຈະກຳ / Multi-Select Enabled)
+                </span>
+              </label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px" }}>
                 {(db.services || []).filter(s => s.status === "active").map(srv => {
-                  const isSelected = selectedServiceId === srv.id;
+                  const isSelected = selectedServiceIds.includes(srv.id);
                   let emoji = "🎟️";
                   if (srv.name.toLowerCase().includes("boat") || srv.name.includes("ເຮືອ")) emoji = "🚤";
                   else if (srv.name.toLowerCase().includes("rap") || srv.name.includes("🧗")) emoji = "🧗";
@@ -2250,25 +2348,39 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                     <div 
                       key={srv.id}
                       style={{
-                        border: isSelected ? "2px solid #10b981" : "1.5px solid #cbd5e1",
+                        position: "relative",
+                        border: isSelected ? "2.5px solid #10b981" : "1.5px solid #cbd5e1",
                         borderRadius: "12px",
                         padding: "12px",
                         background: isSelected ? "#e6fbf1" : "#ffffff",
-                        boxShadow: isSelected ? "0 4px 12px rgba(16, 185, 129, 0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
+                        boxShadow: isSelected ? "0 4px 14px rgba(16, 185, 129, 0.22)" : "0 2px 4px rgba(0,0,0,0.02)",
                         transition: "all 0.2s ease",
                         cursor: isLocked ? "not-allowed" : "pointer"
                       }}
                       onClick={() => {
                         if (!isLocked) {
-                          setSelectedServiceId(srv.id);
+                          if (selectedServiceIds.includes(srv.id)) {
+                            if (selectedServiceIds.length > 1) {
+                              setSelectedServiceIds(selectedServiceIds.filter(id => id !== srv.id));
+                            }
+                          } else {
+                            setSelectedServiceIds([...selectedServiceIds, srv.id]);
+                          }
                           setSelectedTier(paxCount >= 3 ? "tier3" : "tier1");
                           setCustomPricePerPax("");
                         }
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "800", color: "#0f766e", fontSize: "0.9rem", marginBottom: "10px" }}>
-                        <span>{emoji}</span>
-                        <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{srv.name}</span>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", fontWeight: "800", color: "#0f766e", fontSize: "0.9rem", marginBottom: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span>{emoji}</span>
+                          <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{srv.name}</span>
+                        </div>
+                        {isSelected && (
+                          <span style={{ background: "#10b981", color: "#ffffff", borderRadius: "50%", minWidth: "20px", height: "20px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "bold", marginLeft: "4px", padding: "2px" }}>
+                            ✓
+                          </span>
+                        )}
                       </div>
                       
                       {/* Price Options */}
