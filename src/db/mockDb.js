@@ -282,6 +282,18 @@ export const migrateDb = (parsed) => {
       }
       return s;
     });
+
+    // Deduplicate services by ID
+    const uniqueMap = new Map();
+    parsed.services.forEach(s => {
+      if (s && s.id && !uniqueMap.has(s.id)) {
+        uniqueMap.set(s.id, s);
+      }
+    });
+    if (uniqueMap.size !== parsed.services.length) {
+      parsed.services = Array.from(uniqueMap.values());
+      migrated = true;
+    }
   }
 
   // Automatically reset partners list if it contains old company-based partners

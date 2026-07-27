@@ -284,6 +284,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   }, [loadedBooking, isDateManual, isTimeManual]);
 
   const [selectedServiceIds, setSelectedServiceIds] = useState(["SRV-004"]);
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const selectedServiceId = selectedServiceIds[0] || "SRV-004";
   const setSelectedServiceId = (id) => setSelectedServiceIds(Array.isArray(id) ? id : [id]);
   const [selectedTier, setSelectedTier] = useState("tier1"); // "tier1" or "tier3"
@@ -2327,14 +2328,34 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
 
             {/* Service selection blocks */}
             <div style={{ marginBottom: "15px" }}>
-              <label style={{ ...fieldLabelStyle, marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label style={{ ...fieldLabelStyle, marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
                 <span>ປະເພດການບໍລິການ / Activity Service</span>
-                <span style={{ fontSize: "0.75rem", color: "#10b981", fontWeight: "700" }}>
-                  (ກົດເລືອກໄດ້ຫຼາຍກິດຈະກຳ / Multi-Select Enabled)
-                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextMode = !isMultiSelectMode;
+                    setIsMultiSelectMode(nextMode);
+                    if (!nextMode && selectedServiceIds.length > 1) {
+                      setSelectedServiceIds([selectedServiceIds[0]]);
+                    }
+                  }}
+                  style={{
+                    padding: "3px 10px",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: "800",
+                    border: isMultiSelectMode ? "1.5px solid #10b981" : "1.5px solid #cbd5e1",
+                    background: isMultiSelectMode ? "#10b981" : "#f8fafc",
+                    color: isMultiSelectMode ? "#ffffff" : "#475569",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  {isMultiSelectMode ? "✓ ໂຫມດເລືອກຫຼາຍກິດຈະກຳ (Multi-Select ON)" : "+ ເລືອກຫຼາຍກິດຈະກຳ (Multi-Select)"}
+                </button>
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px" }}>
-                {(db.services || []).filter(s => s.status === "active").map(srv => {
+                {Array.from(new Map((db.services || []).filter(s => s && s.status === "active").map(s => [s.id, s])).values()).map(srv => {
                   const isSelected = selectedServiceIds.includes(srv.id);
                   let emoji = "🎟️";
                   if (srv.name.toLowerCase().includes("boat") || srv.name.includes("ເຮືອ")) emoji = "🚤";
@@ -2362,12 +2383,17 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       }}
                       onClick={() => {
                         if (!isLocked) {
-                          if (selectedServiceIds.includes(srv.id)) {
-                            if (selectedServiceIds.length > 1) {
-                              setSelectedServiceIds(selectedServiceIds.filter(id => id !== srv.id));
+                          if (isMultiSelectMode) {
+                            if (selectedServiceIds.includes(srv.id)) {
+                              if (selectedServiceIds.length > 1) {
+                                setSelectedServiceIds(selectedServiceIds.filter(id => id !== srv.id));
+                              }
+                            } else {
+                              setSelectedServiceIds([...selectedServiceIds, srv.id]);
                             }
                           } else {
-                            setSelectedServiceIds([...selectedServiceIds, srv.id]);
+                            // Normal single activity selection
+                            setSelectedServiceIds([srv.id]);
                           }
                           setSelectedTier(paxCount >= 3 ? "tier3" : "tier1");
                           setCustomPricePerPax("");
