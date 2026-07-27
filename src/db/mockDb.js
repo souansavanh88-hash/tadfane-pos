@@ -20,8 +20,7 @@ const SEED_DATA = {
     { id: "SRV-001", name: "ລ່ອງເຮືອ / Adult Boat Ride", price: 250000, priceTier1: 250000, priceTier1Type: "pax", priceTier2: 230000, priceTier2Type: "pax", priceTier3: 200000, priceTier3Type: "pax", currency: "LAK", status: "active" },
     { id: "SRV-004", name: "🧗 Waterfall Rappelling (ໂຣຍຕົວນ້ຳຕົກ)", price: 1580, priceTier1: 1580, priceTier1Type: "pax", priceTier2: 1580, priceTier2Type: "pax", priceTier3: 1120, priceTier3Type: "pax", currency: "THB", status: "active" },
     { id: "SRV-005", name: "🚤 Adventure Boat (ລ່ອງເຮືອຜະຈົນໄພ)", price: 1900, priceTier1: 1900, priceTier1Type: "flat", priceTier2: 1900, priceTier2Type: "flat", priceTier3: 780, priceTier3Type: "pax", currency: "THB", status: "active" },
-    { id: "SRV-006", name: "🚶 ເດີນປ່າ / Hiking (ກິດຈະກຳເດີນປ່າ)", price: 500, priceTier1: 500, priceTier1Type: "pax", priceTier2: 500, priceTier2Type: "pax", priceTier3: 500, priceTier3Type: "pax", currency: "THB", status: "active" },
-    { id: "SRV-007", name: "🚤🧗 Combo 2 กิจกรรม: ล่องเรือ + โหนสลิงน้ำตก (Rafting + Rappelling)", price: 2500, priceTier1: 2500, priceTier1Type: "pax", priceTier2: 2500, priceTier2Type: "pax", priceTier3: 2500, priceTier3Type: "pax", currency: "THB", status: "active" }
+    { id: "SRV-006", name: "🚶 ເດີນປ່າ / Hiking (ກິດຈະກຳເດີນປ່າ)", price: 500, priceTier1: 500, priceTier1Type: "pax", priceTier2: 500, priceTier2Type: "pax", priceTier3: 500, priceTier3Type: "pax", currency: "THB", status: "active" }
   ],
   boats: [
     { id: 1, name: "ເຮືອ 1 / Boat 1", capacity: 6, status: "available" },
@@ -244,20 +243,8 @@ export const migrateDb = (parsed) => {
   }
 
   if (parsed.services && Array.isArray(parsed.services)) {
-    if (!parsed.services.some(ps => ps.id === "SRV-007")) {
-      parsed.services.push({
-        id: "SRV-007",
-        name: "🚤🧗 Combo 2 กิจกรรม: ล่องเรือ + โหนสลิงน้ำตก (Rafting + Rappelling)",
-        price: 2500,
-        priceTier1: 2500,
-        priceTier1Type: "pax",
-        priceTier2: 2500,
-        priceTier2Type: "pax",
-        priceTier3: 2500,
-        priceTier3Type: "pax",
-        currency: "THB",
-        status: "active"
-      });
+    if (parsed.services.some(ps => ps.id === "SRV-007")) {
+      parsed.services = parsed.services.filter(ps => ps.id !== "SRV-007");
       migrated = true;
     }
   }

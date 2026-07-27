@@ -2355,7 +2355,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                 </button>
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px" }}>
-                {Array.from(new Map((db.services || []).filter(s => s && s.status === "active").map(s => [s.id, s])).values()).map(srv => {
+                {Array.from(new Map((db.services || []).filter(s => s && s.status === "active" && s.id !== "SRV-007").map(s => [s.id, s])).values()).map(srv => {
                   const isSelected = selectedServiceIds.includes(srv.id);
                   let emoji = "🎟️";
                   if (srv.name.toLowerCase().includes("boat") || srv.name.includes("ເຮືອ")) emoji = "🚤";
