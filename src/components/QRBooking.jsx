@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import { useLanguage } from "../utils/LanguageContext";
-import { getDb, addBooking, saveDb, saveDbLocally, purgeTestData } from "../db/mockDb";
+import { getDb, addBooking, saveDb, saveDbLocally, purgeTestData, addCustomExpense } from "../db/mockDb";
 import { fireDb } from "../db/firebaseConfig";
 import { isFirebaseConfigured, getBookingFromFirebase, listenToAllBookings, addBookingToFirebase, updateBookingInFirebase, clearAllBookingsFromFirebase } from "../db/firebaseSync";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
@@ -347,6 +347,51 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [manualScanCode, setManualScanCode] = useState("");
   const scannerRef = useRef(null);
+
+  // Expense Logger form states for cashier terminal
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expDate, setExpDate] = useState(new Date().toISOString().split("T")[0]);
+  const [expCategory, setExpCategory] = useState("Fuel");
+  const [expDescription, setExpDescription] = useState("");
+  const [expAmount, setExpAmount] = useState("");
+  const [expCurrency, setExpCurrency] = useState("LAK");
+
+  const handleSaveExpense = (e) => {
+    e.preventDefault();
+    if (!expAmount || isNaN(expAmount) || parseFloat(expAmount) <= 0) {
+      alert(lang === "en" ? "Please enter a valid amount" : "ກະລຸນາກອກຈຳນວນເງິນທີ່ຖືກຕ້ອງ");
+      return;
+    }
+    if (!expDescription.trim()) {
+      alert(lang === "en" ? "Please enter a description" : "ກະລຸນາກອກລາຍລະອຽດ");
+      return;
+    }
+
+    const rateTHB = (db.settings && db.settings.rateTHB) || 620;
+    const rateUSD = (db.settings && db.settings.rateUSD) || 21500;
+
+    const amountVal = parseFloat(expAmount);
+    const amountLAK = expCurrency === "THB" ? amountVal * rateTHB : (expCurrency === "USD" ? amountVal * rateUSD : amountVal);
+
+    const newExpense = {
+      date: expDate,
+      category: expCategory,
+      description: expDescription.trim(),
+      amount: amountLAK,
+      originalAmount: amountVal,
+      originalCurrency: expCurrency,
+      status: "Approved",
+      loggedBy: currentUser?.name || "Cashier",
+      createdAt: new Date().toISOString()
+    };
+
+    addCustomExpense(newExpense);
+    window.dispatchEvent(new Event("db-update"));
+    setShowExpenseModal(false);
+    setExpDescription("");
+    setExpAmount("");
+    alert(lang === "en" ? "Expense recorded successfully!" : "ບັນທຶກລາຍຈ່າຍສຳເລັດແລ້ວ!");
+  };
 
   // Time clock
   const [currentTimeStr, setCurrentTimeStr] = useState("");
@@ -1998,6 +2043,20 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
           </span>
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            onClick={() => {
+              setExpDate(new Date().toISOString().split("T")[0]);
+              setExpCategory("Fuel");
+              setExpDescription("");
+              setExpAmount("");
+              setExpCurrency("LAK");
+              setShowExpenseModal(true);
+            }}
+            style={{ padding: "12px 20px", borderRadius: "10px", background: "#ea580c", border: "none", color: "#ffffff", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "0.95rem", boxShadow: "0 4px 12px rgba(234, 88, 12, 0.25)", transition: "all 0.2s ease" }}
+          >
+            💸 <span>{lang === "en" ? "Add Expense" : "ຂຽນລາຍຈ່າຍ / Add Expense"}</span>
+          </button>
+
           {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
             <button
               onClick={handlePurgeData}
@@ -4131,6 +4190,127 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- CASHIER DAILY EXPENSE WRITER MODAL ---------------- */}
+      {showExpenseModal && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 23, 42, 0.75)",
+          backdropFilter: "blur(5px)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "15px"
+        }}>
+          <div className="card" style={{
+            background: "var(--bg-primary)",
+            width: "100%",
+            maxWidth: "440px",
+            borderRadius: "16px",
+            padding: "24px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px"
+          }}>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: "800", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+              💸 {lang === "en" ? "Record Cashier Expense" : "ບັນທຶກລາຍຈ່າຍປະຈຳວັນ / Daily Expense"}
+            </h3>
+
+            <form onSubmit={handleSaveExpense} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div className="form-group">
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "0.85rem", fontWeight: "700" }}>
+                  📅 {lang === "en" ? "Date" : "ວັນທີ / Date"}
+                </label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={expDate}
+                  onChange={(e) => setExpDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "0.85rem", fontWeight: "700" }}>
+                  📁 {lang === "en" ? "Category" : "ໝວດໝູ່ / Category"}
+                </label>
+                <select
+                  className="form-control"
+                  value={expCategory}
+                  onChange={(e) => setExpCategory(e.target.value)}
+                  style={{ width: "100%", height: "42px" }}
+                >
+                  <option value="Fuel">⛽ Fuel (ນ້ຳມັນ)</option>
+                  <option value="Boat Driver Food">🍲 Boat Driver Food (ອາຫານຄົນຂັບເຮືອ)</option>
+                  <option value="Repairs">🛠 Repairs (ສ້ອມແປງ)</option>
+                  <option value="Utilities">💡 Utilities (ຄ່ານ້ຳ-ຄ່າໄຟ)</option>
+                  <option value="Others">📦 Others (ອື່ນໆ)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "0.85rem", fontWeight: "700" }}>
+                  📝 {lang === "en" ? "Description" : "ຄຳອະທິບາຍ / Description"}
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder={lang === "en" ? "e.g., Gas for Driver A" : "ຕົວຢ່າງ: ຄ່ານ້ຳມັນໃຫ້ລົດຈັກ A"}
+                  value={expDescription}
+                  onChange={(e) => setExpDescription(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "10px" }}>
+                <div className="form-group">
+                  <label style={{ display: "block", marginBottom: "4px", fontSize: "0.85rem", fontWeight: "700" }}>
+                    💵 {lang === "en" ? "Currency" : "ສະກຸນເງິນ"}
+                  </label>
+                  <select
+                    className="form-control"
+                    value={expCurrency}
+                    onChange={(e) => setExpCurrency(e.target.value)}
+                    style={{ width: "100%", height: "42px" }}
+                  >
+                    <option value="LAK">LAK (₭)</option>
+                    <option value="THB">THB (฿)</option>
+                    <option value="USD">USD ($)</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: "block", marginBottom: "4px", fontSize: "0.85rem", fontWeight: "700" }}>
+                    💰 {lang === "en" ? "Amount" : "ຈຳນວນເງິນ / Amount"}
+                  </label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    placeholder="0"
+                    value={expAmount}
+                    onChange={(e) => setExpAmount(e.target.value)}
+                    min="0.01"
+                    step="any"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: "12px" }}>
+                  {lang === "en" ? "Save Expense" : "ບັນທຶກ / Save"}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowExpenseModal(false)} style={{ flex: 1, padding: "12px" }}>
+                  {lang === "en" ? "Cancel" : "ຍົກເລີກ / Cancel"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
