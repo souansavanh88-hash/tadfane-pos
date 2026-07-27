@@ -862,6 +862,27 @@ export default function PayrollManager() {
 
                   {/* Actions Header Group */}
                   <div style={{ display: "flex", gap: "4px", alignSelf: "flex-start" }}>
+                    {/* Add Trip Shortcut */}
+                    <button 
+                      className="btn" 
+                      style={{
+                        padding: "6px",
+                        background: "#0f766e",
+                        border: "none",
+                        borderRadius: "6px",
+                        color: "white",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: "auto"
+                      }}
+                      onClick={() => handleAddManualTrip(emp.id)}
+                      title="➕ ບັນທຶກທ່ຽວ / Add Trip"
+                    >
+                      <Plus size={14} />
+                    </button>
+
                     {/* Print Payslip */}
                     <button 
                       className="btn" 
