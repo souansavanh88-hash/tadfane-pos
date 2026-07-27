@@ -4,7 +4,7 @@ import { flushSync } from "react-dom";
 import PayrollManager from "./PayrollManager";
 import Reports from "./Reports";
 import CommissionTracker from "./CommissionTracker";
-import { getDb, saveDb, addCustomExpense, deleteCustomExpense, approveExpense, rejectExpense } from "../db/mockDb";
+import { getDb, saveDb, addCustomExpense, deleteCustomExpense, approveExpense, rejectExpense, addCustomIncome, deleteCustomIncome } from "../db/mockDb";
 import { formatLAK, formatTHB, formatUSD, getLocalDateStr } from "../utils/helpers";
 import { useLanguage } from "../utils/LanguageContext";
 import { 
@@ -35,6 +35,52 @@ export default function AccountingPayroll({ currentUser }) {
   const [expDescription, setExpDescription] = useState("");
   const [expAmount, setExpAmount] = useState("");
   const [expCurrency, setExpCurrency] = useState("THB");
+
+  // Extra Income Logger form states
+  const [incDate, setIncDate] = useState(getLocalDateStr());
+  const [incCategory, setIncCategory] = useState("Souvenirs");
+  const [incDescription, setIncDescription] = useState("");
+  const [incAmount, setIncAmount] = useState("");
+  const [incCurrency, setIncCurrency] = useState("THB");
+  const [incPaymentMethod, setIncPaymentMethod] = useState("cash");
+
+  const handleSaveIncome = (e) => {
+    e.preventDefault();
+    if (!incAmount || isNaN(incAmount) || parseFloat(incAmount) <= 0) {
+      alert(lang === "en" ? "Please enter a valid amount" : "ກະລຸນາກອກຈຳນວນເງິນທີ່ຖືກຕ້ອງ");
+      return;
+    }
+    if (!incDescription.trim()) {
+      alert(lang === "en" ? "Please enter a description" : "ກະລຸນາກອກລາຍລະອຽດ");
+      return;
+    }
+
+    const amountVal = parseFloat(incAmount);
+    const amountLAK = incCurrency === "THB" ? amountVal * rateTHB : (incCurrency === "USD" ? amountVal * rateUSD : amountVal);
+
+    addCustomIncome({
+      date: incDate,
+      category: incCategory,
+      description: incDescription.trim(),
+      amount: amountVal,
+      amountLAK: amountLAK,
+      currency: incCurrency,
+      paymentMethod: incPaymentMethod,
+      addedBy: currentUser.name
+    });
+
+    setIncDescription("");
+    setIncAmount("");
+    alert(lang === "en" ? "Extra income recorded successfully!" : "ບັນທຶກລາຍຮັບອື່ນໆຮຽບຮ້ອຍແລ້ວ!");
+    window.dispatchEvent(new Event("db-update"));
+  };
+
+  const handleDeleteIncome = (id) => {
+    if (confirm(lang === "en" ? "Delete this income entry?" : "ທ່ານຕ້ອງການລຶບລາຍຮັບນີ້ແມ່ນບໍ່?")) {
+      deleteCustomIncome(id);
+      window.dispatchEvent(new Event("db-update"));
+    }
+  };
 
   // Sync DB on real-time storage events
   useEffect(() => {
@@ -184,12 +230,36 @@ export default function AccountingPayroll({ currentUser }) {
       }
     });
 
+    // Aggregate manual custom extra incomes (Souvenirs, Coffee, Photos, Rental, Tips, etc.)
+    const customIncomes = (db.customIncomes || []).filter(inc => {
+      if (!inc.date) return false;
+      if (filterType === "day") return inc.date === dateVal;
+      return inc.date.startsWith(dateVal);
+    });
+
+    customIncomes.forEach(inc => {
+      const cur = inc.currency || "THB";
+      const amt = parseFloat(inc.amount) || 0;
+      if (cur === "THB") {
+        otherIncomeTHB += amt;
+        totalTHB += amt;
+      } else if (cur === "USD") {
+        otherIncomeUSD += amt;
+        totalUSD += amt;
+      } else {
+        const lakAmt = inc.amountLAK || amt;
+        otherIncomeLAK += lakAmt;
+        totalLAK += lakAmt;
+      }
+    });
+
     const boatIncome = boatIncomeLAK + (boatIncomeTHB * rateTHB) + (boatIncomeUSD * rateUSD);
     const rappellingIncome = rappellingIncomeLAK + (rappellingIncomeTHB * rateTHB) + (rappellingIncomeUSD * rateUSD);
     const otherIncome = otherIncomeLAK + (otherIncomeTHB * rateTHB) + (otherIncomeUSD * rateUSD);
 
     return { 
       bookings, 
+      customIncomes,
       boatIncome, 
       rappellingIncome, 
       otherIncome, 
@@ -875,6 +945,153 @@ export default function AccountingPayroll({ currentUser }) {
                           ) : (
                             <span>{formatLAK(b.pricePaidLAK)}</span>
                           )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Record Extra Income Section */}
+          <div className="card" style={{ marginTop: "1.5rem" }}>
+            <h2 style={{ fontSize: "1.1rem", color: "var(--text-primary)", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "6px" }}>
+              <Plus size={18} color="#10b981" />
+              ➕ ບັນທຶກລາຍຮັບອື່ນໆ / Record Extra Income (ขายของที่ระลึก, กาแฟ, ถ่ายรูป, อื่นๆ)
+            </h2>
+            <form onSubmit={handleSaveIncome} style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "1.5rem", background: "rgba(16, 185, 129, 0.03)", padding: "16px", borderRadius: "10px", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "10px" }}>
+                <div>
+                  <label style={labelStyle}>{t("date", "ວັນທີ / Date")}</label>
+                  <input type="date" value={incDate} onChange={(e) => setIncDate(e.target.value)} style={inputStyle} required />
+                </div>
+                <div>
+                  <label style={labelStyle}>{t("category", "ໝວດໝູ່ / Category")}</label>
+                  <select value={incCategory} onChange={(e) => setIncCategory(e.target.value)} style={inputStyle}>
+                    <option value="Souvenirs">Souvenirs & Apparel (ขายของที่ระลึก/เสื้อผ้า)</option>
+                    <option value="Food & Coffee">Food & Beverages / Coffee (อาหาร/เครื่องดื่ม/กาแฟ)</option>
+                    <option value="Photos & Video">Photos & Drone Video (ค่าถ่ายภาพ/วีดีโอ)</option>
+                    <option value="Equipment Rental">Equipment Rental (ค่าเช่าอุปกรณ์)</option>
+                    <option value="Tips & Gratuity">Tips & Gratuities (ทิป/เงินพิเศษ)</option>
+                    <option value="Miscellaneous">Other Income (รายรับอื่น ๆ)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>ວິທີຊຳລະ / Method</label>
+                  <select value={incPaymentMethod} onChange={(e) => setIncPaymentMethod(e.target.value)} style={inputStyle}>
+                    <option value="cash">💵 ເງິນສົດ / Cash</option>
+                    <option value="bank">🏦 ໂອນເງິນ / Bank Transfer</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Currency Selector */}
+              <div>
+                <label style={labelStyle}>ສະກຸນເງິນລາຍຮັບ / Income Currency</label>
+                <div style={{ display: "flex", gap: "8px", maxWidth: "400px" }}>
+                  {[
+                    { code: "THB", label: "฿ THB (บาท)", color: "#3b82f6" },
+                    { code: "LAK", label: "₭ LAK (กีบ)", color: "#10b981" },
+                    { code: "USD", label: "$ USD (ดอลลาร์)", color: "#f59e0b" }
+                  ].map(cur => (
+                    <button
+                      key={cur.code}
+                      type="button"
+                      onClick={() => setIncCurrency(cur.code)}
+                      style={{
+                        flex: 1,
+                        padding: "6px 8px",
+                        borderRadius: "6px",
+                        fontSize: "0.78rem",
+                        fontWeight: "bold",
+                        border: incCurrency === cur.code ? `2px solid ${cur.color}` : "1px solid var(--border-color)",
+                        background: incCurrency === cur.code ? `${cur.color}15` : "var(--bg-primary)",
+                        color: incCurrency === cur.code ? cur.color : "var(--text-secondary)",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      {cur.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "10px" }}>
+                <div>
+                  <label style={labelStyle}>ຍອດເງິນລາຍຮັບ / Amount ({incCurrency})</label>
+                  <input 
+                    type="number" 
+                    placeholder={incCurrency === "THB" ? "500 THB" : incCurrency === "USD" ? "20 USD" : "150,000 LAK"} 
+                    value={incAmount} 
+                    onChange={(e) => setIncAmount(e.target.value)} 
+                    style={inputStyle} 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>ຄຳອະທິບາຍ / Details & Description</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. ขายเสื้อ T-Shirt 2 ตัว / กาแฟสด" 
+                    value={incDescription} 
+                    onChange={(e) => setIncDescription(e.target.value)} 
+                    style={inputStyle} 
+                    required 
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className="btn btn-success" style={{ padding: "10px 24px", alignSelf: "flex-start" }}>
+                💾 ບັນທຶກລາຍຮັບ / Save Extra Income
+              </button>
+            </form>
+
+            {/* List of Extra Incomes */}
+            <h3 style={{ fontSize: "0.95rem", fontWeight: "700", marginBottom: "8px" }}>
+              📋 ລາຍການລາຍຮັບອື່ນໆທີ່ບັນທຶກແລ້ວ / Recorded Extra Incomes ({incomeDetails.customIncomes?.length || 0})
+            </h3>
+            <div style={{ maxHeight: "250px", overflowY: "auto" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ວັນທີ / Date</th>
+                    <th>ໝວດໝູ່ / Category</th>
+                    <th>ຄຳອະທິບາຍ / Description</th>
+                    <th>ວິທີຊຳລະ / Method</th>
+                    <th>ຜູ້ບັນທຶກ / Added By</th>
+                    <th style={{ textAlign: "right" }}>ຍອດເງິນ / Amount</th>
+                    <th style={{ textAlign: "center" }}>ລຶບ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!incomeDetails.customIncomes || incomeDetails.customIncomes.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: "center", padding: "1rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                        ບໍ່ມີລາຍການລາຍຮັບອື່ນໆ / No extra incomes recorded.
+                      </td>
+                    </tr>
+                  ) : (
+                    incomeDetails.customIncomes.map(inc => (
+                      <tr key={inc.id}>
+                        <td>{inc.date}</td>
+                        <td><span className="badge badge-success">{inc.category}</span></td>
+                        <td>{inc.description}</td>
+                        <td>{inc.paymentMethod === "bank" ? "🏦 ໂອນ" : "💵 ເງິນສົດ"}</td>
+                        <td>{inc.addedBy || "Staff"}</td>
+                        <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>
+                          +{inc.currency === "THB" ? formatTHB(inc.amount) : inc.currency === "USD" ? formatUSD(inc.amount) : formatLAK(inc.amount)}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <button 
+                            type="button"
+                            className="btn btn-secondary" 
+                            style={{ padding: "4px 8px", color: "var(--danger)" }}
+                            onClick={() => handleDeleteIncome(inc.id)}
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         </td>
                       </tr>
                     ))

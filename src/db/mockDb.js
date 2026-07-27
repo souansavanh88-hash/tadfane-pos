@@ -831,7 +831,28 @@ export const cancelTrip = (tripId) => {
   return trip;
 };
 
-// Add Custom Expense
+// Add Custom Extra Income
+export const addCustomIncome = (income) => {
+  const db = getDb();
+  const newInc = {
+    ...income,
+    id: `INC-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    createdAt: new Date().toISOString()
+  };
+  db.customIncomes = db.customIncomes || [];
+  db.customIncomes.push(newInc);
+  saveDb(db);
+  return newInc;
+};
+
+// Delete Custom Extra Income
+export const deleteCustomIncome = (id) => {
+  const db = getDb();
+  db.customIncomes = db.customIncomes || [];
+  db.customIncomes = db.customIncomes.filter(i => i.id !== id);
+  saveDb(db);
+};
+
 export const addCustomExpense = (expense) => {
   const db = getDb();
   const newExp = {
