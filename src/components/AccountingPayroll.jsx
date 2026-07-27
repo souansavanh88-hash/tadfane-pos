@@ -366,8 +366,8 @@ export default function AccountingPayroll({ currentUser }) {
       return t.date.startsWith(dateVal);
     });
     
-    const FUEL_RATE = 150000;
-    const MAINT_RATE = 30000;
+    const FUEL_RATE = 0;
+    const MAINT_RATE = 0;
     const totalFuelCost = periodTrips.length * FUEL_RATE;
     const totalMaintCost = periodTrips.length * MAINT_RATE;
 
@@ -432,7 +432,7 @@ export default function AccountingPayroll({ currentUser }) {
     }
 
     // 5. Office Rent (Prorated for Daily, Full for Monthly, Yearly = Monthly * 12)
-    const OFFICE_RENT_MONTHLY = 1200000;
+    const OFFICE_RENT_MONTHLY = 0;
     let officeRent = 0;
     if (filterType === "day") {
       officeRent = OFFICE_RENT_MONTHLY / 30;
