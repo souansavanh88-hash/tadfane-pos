@@ -183,15 +183,16 @@ export const migrateDb = (parsed) => {
       parsed.employees = parsed.employees.map(e => {
         if (!e) return e;
         let updated = false;
-      if (e.tripRate === undefined || !e.tripRate) {
+      // Force set all trip rates to 65000 for this version
+      if (e.tripRate !== 65000) {
         e.tripRate = 65000;
         updated = true;
       }
-      if (e.tourRate === undefined) {
+      if (e.tourRate === undefined || e.tourRate !== 0) {
         e.tourRate = 0;
         updated = true;
       }
-      if (e.raftingRate === undefined) {
+      if (e.raftingRate === undefined || e.raftingRate !== 0) {
         e.raftingRate = 0;
         updated = true;
       }
