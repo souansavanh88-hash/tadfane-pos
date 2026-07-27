@@ -82,6 +82,9 @@
             message: errorMsg,
             stack: stack
           })
+        }).catch(function(err) {});
+      });
+
       // Safety watchdog: if React hasn't mounted in 7 seconds, trigger fallback UI automatically
       setTimeout(function() {
         if (!window.__REACT_MOUNTED__) {
