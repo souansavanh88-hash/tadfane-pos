@@ -243,17 +243,24 @@ export const migrateDb = (parsed) => {
     });
   }
 
-  // Automatically merge missing seed services into parsed list (Disabled so user-deleted services stay deleted)
-  /*
   if (parsed.services && Array.isArray(parsed.services)) {
-    SEED_DATA.services.forEach(ss => {
-      if (!parsed.services.some(ps => ps.id === ss.id)) {
-        parsed.services.push(ss);
-        migrated = true;
-      }
-    });
+    if (!parsed.services.some(ps => ps.id === "SRV-007")) {
+      parsed.services.push({
+        id: "SRV-007",
+        name: "🚤🧗 Combo 2 กิจกรรม: ล่องเรือ + โหนสลิงน้ำตก (Rafting + Rappelling)",
+        price: 2500,
+        priceTier1: 2500,
+        priceTier1Type: "pax",
+        priceTier2: 2500,
+        priceTier2Type: "pax",
+        priceTier3: 2500,
+        priceTier3Type: "pax",
+        currency: "THB",
+        status: "active"
+      });
+      migrated = true;
+    }
   }
-  */
 
   // Automatically migrate services to support tiered pricing and flat/pax type flags
   if (parsed.services && Array.isArray(parsed.services)) {
