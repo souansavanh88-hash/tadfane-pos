@@ -2595,9 +2595,16 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
             </div>
 
             {/* Total Display */}
-            <div style={{ marginTop: "10px", padding: "12px", background: "var(--bg-secondary)", borderRadius: "8px", border: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-muted)" }}>ລວມທັງໝົດ / Total Price</span>
-              <strong style={{ fontSize: "1.3rem", color: "var(--primary)" }}>{formatLAK(totalPriceLAK)} LAK</strong>
+            <div style={{ marginTop: "10px", padding: "12px", background: "rgba(16, 185, 129, 0.08)", borderRadius: "10px", border: "1.5px solid #10b981", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "0.9rem", fontWeight: "800", color: "#065f46" }}>ລວມທັງໝົດ / Total Price</span>
+              <div style={{ textAlign: "right" }}>
+                <strong style={{ fontSize: "1.45rem", color: "#047857", display: "block", lineHeight: "1.2" }}>
+                  ฿{Math.round(totalPriceLAK / (rateTHB || 700)).toLocaleString()} THB
+                </strong>
+                <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "#64748b" }}>
+                  ({formatLAK(totalPriceLAK)} LAK)
+                </span>
+              </div>
             </div>
 
             {/* Group code display (pre-creation) */}
