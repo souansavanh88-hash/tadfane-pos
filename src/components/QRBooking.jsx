@@ -2537,6 +2537,49 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
               </div>
             </div>
 
+            {/* Quick Preset Price Buttons */}
+            <div style={{ marginTop: "10px", marginBottom: "10px" }}>
+              <label style={{ ...fieldLabelStyle, marginBottom: "6px", display: "block" }}>
+                ⚡ ປຸ່ມລັດເລືອກລາຄາສຳເລັດຮູບ / Quick Price Presets
+              </label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                {[
+                  { label: "ໂຣຍຕົວ (ກຸ່ມ)", price: 1120, currency: "THB" },
+                  { label: "ລ່ອງເຮືອ (ກຸ່ມ)", price: 780, currency: "THB" },
+                  { label: "ໂຣຍຕົວ (ປົກກະຕິ)", price: 1580, currency: "THB" },
+                  { label: "ລ່ອງເຮືອ (ເໝົາລຳ)", price: 1900, currency: "THB" },
+                  { label: "ເດີນປ່າ", price: 500, currency: "THB" }
+                ].map((preset, idx) => {
+                  const active = customPricePerPax === preset.price.toString();
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        if (!isLocked) {
+                          setCustomPricePerPax(preset.price.toString());
+                        }
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "20px",
+                        fontSize: "0.78rem",
+                        fontWeight: "800",
+                        border: active ? "2px solid #10b981" : "1.5px solid #cbd5e1",
+                        background: active ? "#10b981" : "#ffffff",
+                        color: active ? "#ffffff" : "#334155",
+                        cursor: isLocked ? "not-allowed" : "pointer",
+                        boxShadow: active ? "0 2px 8px rgba(16, 185, 129, 0.3)" : "none",
+                        transition: "all 0.15s ease"
+                      }}
+                    >
+                      ⚡ {preset.label}: ฿{preset.price.toLocaleString()}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Total Display */}
             <div style={{ marginTop: "10px", padding: "12px", background: "var(--bg-secondary)", borderRadius: "8px", border: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-muted)" }}>ລວມທັງໝົດ / Total Price</span>
