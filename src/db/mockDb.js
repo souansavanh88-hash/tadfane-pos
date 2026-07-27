@@ -35,15 +35,15 @@ const SEED_DATA = {
     { id: 10, name: "ເຮືອ 10 / Boat 10", capacity: 6, status: "available" },
   ],
   employees: [
-    { id: "EMP-001", name: "ທ ກູດ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
-    { id: "EMP-002", name: "ທ ໂມ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
-    { id: "EMP-003", name: "ທ ໂນລິນ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
-    { id: "EMP-004", name: "ທ ພຸດ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
-    { id: "EMP-005", name: "ທ ດາວ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
-    { id: "EMP-006", name: "ທ ຫຼີ", role: "guide", type: "permanent", status: "active", salary: 4000000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
-    { id: "EMP-007", name: "ທ ຍືນ", role: "guide", type: "permanent", status: "active", salary: 4000000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
-    { id: "EMP-008", name: "ທ ມິນ", role: "guide", type: "permanent", status: "active", salary: 4000000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
-    { id: "EMP-009", name: "ທ ຊຽງ", role: "guide", type: "permanent", status: "active", salary: 3400000, tripRate: 65000, bonus: 0, tourRate: 0, raftingRate: 0, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" }
+    { id: "EMP-001", name: "ທ ກູດ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 100000, bonus: 0, tourRate: 100000, raftingRate: 150000, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-002", name: "ທ ໂມ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 100000, bonus: 0, tourRate: 100000, raftingRate: 150000, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-003", name: "ທ ໂນລິນ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 100000, bonus: 0, tourRate: 100000, raftingRate: 150000, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-004", name: "ທ ພຸດ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 100000, bonus: 0, tourRate: 100000, raftingRate: 150000, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-005", name: "ທ ດາວ", role: "guide", type: "permanent", status: "active", salary: 2800000, tripRate: 100000, bonus: 0, tourRate: 100000, raftingRate: 150000, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-006", name: "ທ ຫຼີ", role: "guide", type: "permanent", status: "active", salary: 4000000, tripRate: 100000, bonus: 0, tourRate: 100000, raftingRate: 150000, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-007", name: "ທ ຍືນ", role: "guide", type: "permanent", status: "active", salary: 4000000, tripRate: 100000, bonus: 0, tourRate: 100000, raftingRate: 150000, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-008", name: "ທ ມິນ", role: "guide", type: "permanent", status: "active", salary: 4000000, tripRate: 100000, bonus: 0, tourRate: 100000, raftingRate: 150000, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" },
+    { id: "EMP-009", name: "ທ ຊຽງ", role: "guide", type: "permanent", status: "active", salary: 3400000, tripRate: 100000, bonus: 0, tourRate: 100000, raftingRate: 150000, specialRate: 0, phone: "", hireDate: "2025-01-01", dailyWage: 0, commission: 0, ot: 0, daysWorked: 26, bankAccount: "" }
   ],
   partners: [
     { id: "PTN-000", name: "Walk In (ລູກຄ້າທົ່ວໄປ)", type: "agent", commissionRate: 0, contact: "", bankAccount: "" }
@@ -187,8 +187,22 @@ export const migrateDb = (parsed) => {
     // Populate missing fields for all employees
     parsed.employees = parsed.employees.map(e => {
       let updated = false;
+      if (e.role === "guide") {
+        if (!e.tourRate || e.tourRate === 0) {
+          e.tourRate = 100000;
+          updated = true;
+        }
+        if (!e.raftingRate || e.raftingRate === 0) {
+          e.raftingRate = 150000;
+          updated = true;
+        }
+        if (e.tripRate === 65000 || !e.tripRate) {
+          e.tripRate = 100000;
+          updated = true;
+        }
+      }
       if (e.tourRate === undefined) {
-        e.tourRate = e.role === "guide" ? (e.tripRate || 100000) : 0;
+        e.tourRate = e.role === "guide" ? 100000 : 0;
         updated = true;
       }
       if (e.raftingRate === undefined) {
@@ -196,7 +210,7 @@ export const migrateDb = (parsed) => {
         updated = true;
       }
       if (e.specialRate === undefined) {
-        e.specialRate = e.role === "guide" ? 50000 : 0;
+        e.specialRate = 0;
         updated = true;
       }
       if (e.phone === undefined) {

@@ -1258,18 +1258,28 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
           const payLogs = [];
           db.trips.forEach(trip => {
             if (trip.date && trip.date.startsWith(modalMonth) && (trip.status === "completed" || trip.status === "dispatched")) {
-              trip.guideIds.forEach(gid => {
-                const emp = db.employees.find(e => e.id === gid);
-                if (emp && emp.role === "guide") {
-                  payLogs.push({
-                    tripId: trip.id,
-                    date: trip.date,
-                    time: trip.time,
-                    guideName: emp.name,
-                    rate: emp.tripRate
-                  });
-                }
-              });
+              if (trip.guideIds) {
+                trip.guideIds.forEach(gid => {
+                  const emp = db.employees.find(e => e.id === gid);
+                  if (emp) {
+                    let baseRate = (emp.tourRate !== undefined && emp.tourRate > 0) ? emp.tourRate : (emp.tripRate || 100000);
+                    if (trip.bookingId) {
+                      const bk = db.bookings.find(b => b.id === trip.bookingId);
+                      if (bk && (bk.serviceId === "SRV-001" || bk.serviceId === "SRV-002" || bk.serviceId === "SRV-005")) {
+                        baseRate = (emp.raftingRate !== undefined && emp.raftingRate > 0) ? emp.raftingRate : 150000;
+                      }
+                    }
+                    const rate = baseRate + (emp.specialRate || 0);
+                    payLogs.push({
+                      tripId: trip.id,
+                      date: trip.date,
+                      time: trip.time,
+                      guideName: emp.name,
+                      rate: rate
+                    });
+                  }
+                });
+              }
             }
           });
           rows = payLogs.map((log, idx) => (
