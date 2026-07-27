@@ -634,10 +634,46 @@ export default function AccountingPayroll({ currentUser }) {
     <div className="fade-in">
       <div className="no-print">
         {/* Top Header */}
-      <div className="page-header no-print" style={{ marginBottom: "1.5rem" }}>
+      <div className="page-header no-print" style={{ marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
         <div className="page-title">
           <h1>📊 ລະບົບບັນຊີ ແລະ ລາຍຈ່າຍ / Accounting & Expenses Portal</h1>
           <p>{t("accounting_sub", "ລວມລະບົບບັນທຶກລາຍຮັບ-ລາຍຈ່າຍ, ຈັດການເງິນເດືອນ ແລະ ການອະນຸມັດວົງເງິນ")}</p>
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if ('caches' in window) {
+                caches.keys().then(names => {
+                  names.forEach(name => caches.delete(name));
+                });
+              }
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(regs => {
+                  regs.forEach(r => r.unregister());
+                });
+              }
+              localStorage.removeItem("pos_main_db_v2");
+              window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+            }}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "8px",
+              fontSize: "0.85rem",
+              fontWeight: "800",
+              border: "none",
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              color: "#ffffff",
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            🔄 ອັບເດດລະບົບ (Update App)
+          </button>
         </div>
       </div>
 
