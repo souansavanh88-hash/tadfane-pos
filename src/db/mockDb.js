@@ -708,6 +708,22 @@ export const initFirebase = () => {
 
       memoryDb = cloudData;
       safeSetItem(DB_KEY, JSON.stringify(memoryDb));
+
+      // Sync cloud data back to local dev server disk if running locally
+      const isProductionWeb = typeof window !== "undefined" && 
+        window.location.hostname !== "localhost" && 
+        window.location.hostname !== "127.0.0.1" && 
+        !window.location.hostname.startsWith("192.168.") && 
+        !window.location.hostname.endsWith(".trycloudflare.com");
+
+      if (!isProductionWeb) {
+        fetch("/api/db", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(memoryDb)
+        }).catch(err => console.warn("Local server sync from cloud failed:", err));
+      }
+
       try {
         window.dispatchEvent(new Event("db-update"));
       } catch (e) {}
