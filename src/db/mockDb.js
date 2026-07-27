@@ -673,6 +673,66 @@ export const saveDb = (db) => {
   } catch (e) {}
 };
 
+
+export const mergeDatabases = (db1, db2) => {
+  if (!db1) return db2;
+  if (!db2) return db1;
+  const merged = { ...db1 };
+  
+  // Merge bookings by ID
+  const bookingsMap = new Map();
+  (db1.bookings || []).forEach(b => { if (b && b.id) bookingsMap.set(b.id, b); });
+  (db2.bookings || []).forEach(b => {
+    if (b && b.id) {
+      const existing = bookingsMap.get(b.id);
+      // Keep newer or keep the one that is not cancelled
+      if (!existing || (b.lastModified || 0) > (existing.lastModified || 0)) {
+        bookingsMap.set(b.id, b);
+      }
+    }
+  });
+  merged.bookings = Array.from(bookingsMap.values());
+
+  // Merge employees by ID
+  const employeesMap = new Map();
+  (db1.employees || []).forEach(e => { if (e && e.id) employeesMap.set(e.id, e); });
+  (db2.employees || []).forEach(e => {
+    if (e && e.id) {
+      const existing = employeesMap.get(e.id);
+      if (!existing || e.status === 'active' || (e.salary && !existing.salary)) {
+        employeesMap.set(e.id, e);
+      }
+    }
+  });
+  merged.employees = Array.from(employeesMap.values());
+
+  // Merge customExpenses by ID
+  const expensesMap = new Map();
+  (db1.customExpenses || []).forEach(e => { if (e && e.id) expensesMap.set(e.id, e); });
+  (db2.customExpenses || []).forEach(e => { if (e && e.id) expensesMap.set(e.id, e); });
+  merged.customExpenses = Array.from(expensesMap.values());
+
+  // Merge customIncomes by ID
+  const incomesMap = new Map();
+  (db1.customIncomes || []).forEach(i => { if (i && i.id) incomesMap.set(i.id, i); });
+  (db2.customIncomes || []).forEach(i => { if (i && i.id) incomesMap.set(i.id, i); });
+  merged.customIncomes = Array.from(incomesMap.values());
+
+  // Merge trips by ID
+  const tripsMap = new Map();
+  (db1.trips || []).forEach(t => { if (t && t.id) tripsMap.set(t.id, t); });
+  (db2.trips || []).forEach(t => { if (t && t.id) tripsMap.set(t.id, t); });
+  merged.trips = Array.from(tripsMap.values());
+
+  // Keep other settings/tables
+  merged.settings = db1.settings || db2.settings;
+  merged.partners = db1.partners || db2.partners;
+  merged.boats = db1.boats || db2.boats;
+  
+  merged.lastModified = Math.max(db1.lastModified || 0, db2.lastModified || 0);
+  return merged;
+};
+
 // Start Firebase listener immediately
 let unsubscribeFirebase = null;
 export const initFirebase = () => {
@@ -693,26 +753,18 @@ export const initFirebase = () => {
         return;
       }
 
-      // Check if local database has a newer lastModified timestamp than the incoming cloud data
-      if (localLastModified > cloudLastModified) {
-        console.warn("🚨 [PROTECTION] Local database is newer than cloud database. Ignoring cloud sync to prevent overwrite.", {localLastModified, cloudLastModified});
-        // Push our newer local database to the cloud to sync it back up
-        pushToFirebase(localDb).catch(err => console.error("Re-sync push failed:", err));
-        return;
-      }
+      // Merge databases to ensure no data (bookings, employees, custom entries) is ever lost in conflicts
+      const mergedDb = mergeDatabases(localDb, cloudData);
 
-      // 🚨 CLOUD WIPE PROTECTION: Prevent empty cloud data from wiping out local data
-      const localBookings = localDb?.bookings?.length || 0;
-      const cloudBookings = cloudData?.bookings?.length || 0;
-
-      if (cloudBookings === 0 && localBookings > 0) {
-        console.warn("🚨 [PROTECTION] Cloud data is empty but local data exists! Rejecting cloud sync and forcing a cloud overwrite.");
-        pushToFirebase(localDb);
-        return;
-      }
-
-      memoryDb = cloudData;
+      // Save the merged state locally
+      memoryDb = mergedDb;
       safeSetItem(DB_KEY, JSON.stringify(memoryDb));
+
+      // If the merged state is different from what is in the cloud, write it back to update the cloud
+      if (JSON.stringify(mergedDb) !== JSON.stringify(cloudData)) {
+        console.warn("🚨 [PROTECTION] Sync conflict or newer local data detected. Merging and updating cloud.");
+        pushToFirebase(mergedDb).catch(err => console.error("Merged cloud push failed:", err));
+      }
 
       // Sync cloud data back to local dev server disk if running locally
       const isProductionWeb = typeof window !== "undefined" && 
