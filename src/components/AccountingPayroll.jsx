@@ -643,18 +643,7 @@ export default function AccountingPayroll({ currentUser }) {
           <button
             type="button"
             onClick={() => {
-              if ('caches' in window) {
-                caches.keys().then(names => {
-                  names.forEach(name => caches.delete(name));
-                });
-              }
-              if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(regs => {
-                  regs.forEach(r => r.unregister());
-                });
-              }
-              localStorage.removeItem("pos_main_db_v2");
-              window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+              window.location.reload(true);
             }}
             style={{
               padding: "8px 16px",

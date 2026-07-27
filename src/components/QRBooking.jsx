@@ -2348,13 +2348,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   <button
                     type="button"
                     onClick={() => {
-                      if ('caches' in window) {
-                        caches.keys().then(names => {
-                          names.forEach(name => caches.delete(name));
-                        });
-                      }
-                      localStorage.removeItem("pos_main_db_v2");
-                      window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+                      window.location.reload(true);
                     }}
                     style={{
                       padding: "4px 10px",
