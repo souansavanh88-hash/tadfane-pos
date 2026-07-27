@@ -129,7 +129,14 @@ export default function App() {
     let warningTimeout;
     let countdownInterval;
 
+    let lastResetTime = Date.now();
+
     const resetInactivityTimer = () => {
+      // Throttle reset to at most once per 5 seconds to avoid freezing the main thread
+      const now = Date.now();
+      if (now - lastResetTime < 5000 && warningTimeout) return;
+      lastResetTime = now;
+
       if (warningTimeout) clearTimeout(warningTimeout);
       if (countdownInterval) clearInterval(countdownInterval);
 
@@ -154,7 +161,8 @@ export default function App() {
       }, 29 * 60 * 1000);
     };
 
-    const events = ["mousemove", "mousedown", "keypress", "click", "scroll", "touchstart"];
+    // Removed high-frequency events like mousemove and scroll to prevent freezing
+    const events = ["mousedown", "keypress", "click", "touchstart"];
     events.forEach((event) => {
       window.addEventListener(event, resetInactivityTimer);
     });
@@ -165,6 +173,7 @@ export default function App() {
       events.forEach((event) => {
         window.removeEventListener(event, resetInactivityTimer);
       });
+
       if (warningTimeout) clearTimeout(warningTimeout);
       if (countdownInterval) clearInterval(countdownInterval);
     };
