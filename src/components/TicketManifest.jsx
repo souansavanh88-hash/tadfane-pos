@@ -144,7 +144,7 @@ export default function TicketManifest({ activeTripId, onBack }) {
             const boat = db.boats.find(b => b.id === t.boatId);
             return (
               <option key={t.id} value={t.id}>
-                {formatLocalDate(t.date)} {t.time} | {boat ? boat.name : `Boat ${t.boatId}`} ({t.customerIds.length} Pax) - [{t.status}]
+                {formatLocalDate(t.date)} {t.time} | {boat ? boat.name : `Boat ${t.boatId}`} ({(t.customerIds || []).length} Pax) - [{t.status}]
               </option>
             );
           })}

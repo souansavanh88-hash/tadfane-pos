@@ -435,7 +435,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
     todayDispatchedTrips.forEach(trip => {
       const boat = db.boats.find(b => b.id === trip.boatId);
       if (boat) {
-        const paxCount = trip.customerIds.length;
+        const paxCount = (trip.customerIds || []).length;
         const remaining = boat.capacity - paxCount;
         if (remaining <= 2 && remaining > 0) {
           alerts.push(`⚠️ ${boat.name} ໃກ້ຈະເຕັມແລ້ວ (ເຫຼືອ ${remaining} ບ່ອນ) / ${boat.name} is almost full (${remaining} seats left)`);
@@ -933,7 +933,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
           <div className="dashboard-boat-grid">
             {db.boats.map(boat => {
               const trip = activeTrips.find(t => t.boatId === boat.id);
-              const paxCount = trip ? trip.customerIds.length : 0;
+              const paxCount = trip ? (trip.customerIds || []).length : 0;
               const statusLabel = boat.status === "busy" ? "Busy (ທ່ຽວຢູ່)" : "Ready (ຫວ່າງ)";
               const badgeClass = boat.status === "busy" ? "badge badge-warning" : "badge badge-success";
  
@@ -1015,7 +1015,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
                   >
                     <div>
                       <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "0.925rem" }}>
-                        {boat ? boat.name : `Boat ${trip.boatId}`} - {trip.customerIds.length} ຄົນ (Pax)
+                        {boat ? boat.name : `Boat ${trip.boatId}`} - {(trip.customerIds || []).length} ຄົນ (Pax)
                       </div>
                       <div style={{ fontSize: "0.775rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
                         **ໄກ້ດ:** {guideNames}
@@ -1205,7 +1205,7 @@ export default function Dashboard({ setActiveTab, onSelectTrip, onViewBill, user
                 <td>{captainNames.join(", ")}</td>
                 <td>{guideNames.join(", ") || "-"}</td>
                 <td>{driverNames.join(", ") || "-"}</td>
-                <td style={{ textAlign: "center" }}><strong>{trip.customerIds.length} ຄົນ</strong></td>
+                <td style={{ textAlign: "center" }}><strong>{(trip.customerIds || []).length} ຄົນ</strong></td>
                 <td>
                   <span className={`badge ${
                     trip.status === "completed" ? "badge-success" : 

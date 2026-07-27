@@ -1968,7 +1968,7 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
     todayDispatchedTrips.forEach(trip => {
       const boat = db.boats.find(b => b.id === trip.boatId);
       if (boat) {
-        const paxCount = trip.customerIds.length;
+        const paxCount = (trip.customerIds || []).length;
         const remaining = boat.capacity - paxCount;
         if (remaining <= 2 && remaining > 0) {
           alerts.push(`⚠️ ${boat.name} ໃກ້ຈະເຕັມແລ້ວ (ເຫຼືອ ${remaining} ບ່ອນ) / ${boat.name} is almost full (${remaining} seats left)`);

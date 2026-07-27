@@ -269,6 +269,7 @@ export default function PayrollManager() {
       captainId: emp.role === "captain" ? manualTripEmpId : null,
       driverIds: emp.role === "driver" ? [manualTripEmpId] : [],
       boatIds: [],
+      customerIds: [],
       status: "completed",
       pricePaidLAK: 0,
       createdAt: new Date().toISOString(),

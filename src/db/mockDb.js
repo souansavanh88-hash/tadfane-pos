@@ -436,6 +436,16 @@ export const migrateDb = (parsed) => {
     });
   }
 
+  // Migration: Ensure all trips have customerIds as an array
+  if (parsed.trips && Array.isArray(parsed.trips)) {
+    parsed.trips.forEach(t => {
+      if (!t.customerIds || !Array.isArray(t.customerIds)) {
+        t.customerIds = [];
+        migrated = true;
+      }
+    });
+  }
+
   // Migration: Discount & Debt fields
   (parsed.bookings || []).forEach(bk => {
     if (bk.discountLAK === undefined) bk.discountLAK = 0;

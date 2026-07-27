@@ -145,7 +145,7 @@ export default function SearchDashboard({ onSelectTrip, onSelectCustomer }) {
                       >
                         <div>
                           <div style={{ fontWeight: "600", color: "var(--text-primary)" }}>
-                            {boat ? boat.name : `Boat ${t.boatId}`} - {t.customerIds.length} Pax
+                            {boat ? boat.name : `Boat ${t.boatId}`} - {(t.customerIds || []).length} Pax
                           </div>
                           <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
                             ID: {t.id} | Bill: {t.id.replace("TRIP", "BILL")}
@@ -224,7 +224,7 @@ export default function SearchDashboard({ onSelectTrip, onSelectCustomer }) {
                         <strong>{t("driver", "ຄົນຂັບ / Driver")}:</strong> {selectedItem.data.driverIds && selectedItem.data.driverIds.length > 0 ? selectedItem.data.driverIds.map(did => db.employees.find(e => e.id === did)?.name).join(", ") : "-"}
                       </div>
                       <div>
-                        <strong>{t("all_passengers", "ຜູ້ໂດຍສານທັງໝົດ")} ({selectedItem.data.customerIds.length} {t("pax_unit", "ຄົນ")}):</strong>
+                        <strong>{t("all_passengers", "ຜູ້ໂດຍສານທັງໝົດ")} ({(selectedItem.data.customerIds || []).length} {t("pax_unit", "ຄົນ")}):</strong>
                         <ul style={{ paddingLeft: "1.25rem", marginTop: "5px" }}>
                           {selectedItem.data.customerIds.map(cid => (
                             <li key={cid}>{db.customers.find(c => c.id === cid)?.name}</li>

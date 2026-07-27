@@ -46,6 +46,7 @@ export default function AccountingPayroll({ currentUser }) {
       captainId: emp.role === "captain" ? empId : null,
       driverIds: emp.role === "driver" ? [empId] : [],
       boatIds: [],
+      customerIds: [],
       status: "completed",
       pricePaidLAK: 0,
       createdAt: new Date().toISOString(),
