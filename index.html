@@ -10,42 +10,41 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Phetsarath:wght@400;700&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="screen" />
     <script>
-      // Display UI fallback if React fails to load
+      // Display UI fallback as a fixed OVERLAY (not replacing #root) so React can still mount
       function showHTMLFallback(message, source, lineno, colno, error) {
+        // Don't show if React already mounted successfully
+        if (window.__REACT_MOUNTED__) return;
+        // Don't show duplicate overlays
+        if (document.getElementById('error-overlay')) return;
         try {
-          const rootEl = document.getElementById('root');
-          // Only show fallback if React hasn't successfully mounted yet
-          if (rootEl && (!window.__REACT_MOUNTED__ || rootEl.querySelector('#html-loader'))) {
-            rootEl.innerHTML = `
-              <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; color: #f8fafc; padding: 20px; font-family: system-ui, -apple-system, sans-serif; text-align: center;">
-                <div style="max-width: 500px; width: 100%; background: #1e293b; padding: 32px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); border: 1.5px solid #ef4444; box-sizing: border-box;">
-                  <div style="font-size: 3.5rem; margin-bottom: 16px;">⚠️</div>
-                  <h1 style="font-size: 1.5rem; font-weight: 800; color: #f8fafc; margin: 0 0 8px 0;">ເກີດຂໍ້ຜິດພາດໃນການເລີ່ມລະບົບ</h1>
-                  <h2 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0 0 12px 0;">เกิดข้อผิดพลาดในการเริ่มระบบ</h2>
-                  <h3 style="font-size: 1rem; font-weight: 600; color: #cbd5e1; margin: 0 0 20px 0; font-style: italic;">Failed to initialize POS application</h3>
-                  
-                  <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6; margin-bottom: 24px;">
-                    ລະບົບບໍ່ສາມາດໂຫຼດໄຟລ໌ໄດ້ ສຳເລັດ ຫຼື ບຣາວເຊີບໍ່ຮອງຮັບ (ອາດເກີດຈາກເຄືອຂ່າຍອິນເຕີເນັດ ຫຼື Safari/iOS ເວີຊັນເກົ່າ)<br>
-                    ระบบไม่สามารถโหลดไฟล์ได้สำเร็จ หรือเบราว์เซอร์ไม่รองรับ (อาจเกิดจากเครือข่ายอินเทอร์เน็ต หรือ Safari/iOS เวอร์ชันเก่า)
-                  </p>
-                  
-                  <div style="text-align: left; background: #0f172a; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 0.75rem; color: #f87171; overflow-x: auto; margin-bottom: 24px; border: 1px solid #334155; max-height: 120px; box-sizing: border-box; word-break: break-all;">
-                    <strong>Error:</strong> ${message}<br/>
-                    <strong>Source:</strong> ${source || 'bundle'}:${lineno || 0}:${colno || 0}
-                  </div>
-                  
-                  <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-                    <button onclick="window.location.reload()" style="background: #0f766e; border: none; color: #ffffff; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem; transition: background 0.2s;">
-                      🔄 ໂຫຼດຄືນໃໝ່ / ลองอีกครั้ง
-                    </button>
-                    <button onclick="try { localStorage.clear(); window.location.reload(); } catch(e) {}" style="background: transparent; border: 1.5px solid #475569; color: #cbd5e1; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem;">
-                      🗑️ ລ້າງຂໍ້ມູນ / ล้างแคช
-                    </button>
-                  </div>
-                </div>
+          const overlay = document.createElement('div');
+          overlay.id = 'error-overlay';
+          overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0f172a;color:#f8fafc;padding:20px;font-family:system-ui,-apple-system,sans-serif;text-align:center;box-sizing:border-box;';
+          overlay.innerHTML = `
+            <div style="max-width:500px;width:100%;background:#1e293b;padding:32px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.3);border:1.5px solid #ef4444;box-sizing:border-box;">
+              <div style="font-size:3.5rem;margin-bottom:16px;">⚠️</div>
+              <h1 style="font-size:1.5rem;font-weight:800;color:#f8fafc;margin:0 0 8px 0;">ເກີດຂໍ້ຜິດພາດໃນການເລີ່ມລະບົບ</h1>
+              <h2 style="font-size:1.25rem;font-weight:700;color:#f8fafc;margin:0 0 12px 0;">เกิดข้อผิดพลาดในการเริ่มระบบ</h2>
+              <h3 style="font-size:1rem;font-weight:600;color:#cbd5e1;margin:0 0 20px 0;font-style:italic;">Failed to initialize POS application</h3>
+              <p style="font-size:0.85rem;color:#94a3b8;line-height:1.6;margin-bottom:24px;">
+                ລະບົບໃຊ້ເວລາໂຫຼດດົນ ຫຼື ເກີດຂໍ້ຜິດພາດ<br>ระบบใช้เวลาโหลดนานหรือเกิดข้อผิดพลาด<br><small style="color:#64748b;">${message}</small>
+              </p>
+              <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                <button id="err-reload-btn" style="background:#0f766e;border:none;color:#fff;padding:10px 20px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:0.9rem;">
+                  🔄 ໂຫຼດຄືນໃໝ່ / ลองอีกครั้ง
+                </button>
+                <button id="err-clear-btn" style="background:transparent;border:1.5px solid #475569;color:#cbd5e1;padding:10px 20px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:0.9rem;">
+                  🗑️ ລ້າງ Cache / ล้างแคช
+                </button>
               </div>
-            `;
-          }
+            </div>
+          `;
+          document.body.appendChild(overlay);
+          document.getElementById('err-reload-btn').addEventListener('click', function() { window.location.reload(); });
+          document.getElementById('err-clear-btn').addEventListener('click', function() { try { localStorage.clear(); } catch(e) {} window.location.reload(); });
+          // Hide the loading div
+          var loader = document.getElementById('html-loader');
+          if (loader) loader.style.display = 'none';
         } catch (e) {
           console.error("Fallback handler failed:", e);
         }
@@ -53,44 +52,29 @@
 
       window.onerror = function(message, source, lineno, colno, error) {
         showHTMLFallback(message, source, lineno, colno, error);
-        
         fetch('/api/log', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: window.location.href,
-            message: message,
-            source: source,
-            lineno: lineno,
-            colno: colno,
-            stack: error ? error.stack : ''
-          })
-        }).catch(err => {});
+          body: JSON.stringify({ url: window.location.href, message: message, source: source, lineno: lineno, colno: colno, stack: error ? error.stack : '' })
+        }).catch(function() {});
       };
 
       window.addEventListener('unhandledrejection', function(event) {
-        const errorMsg = event.reason ? event.reason.message : 'Unhandled Promise Rejection';
-        const stack = event.reason ? event.reason.stack : '';
-        
+        var errorMsg = event.reason ? (event.reason.message || String(event.reason)) : 'Unhandled Promise Rejection';
         showHTMLFallback(errorMsg, 'PromiseRejection', 0, 0, event.reason);
-        
         fetch('/api/log', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: window.location.href,
-            message: errorMsg,
-            stack: stack
-          })
-        }).catch(function(err) {});
+          body: JSON.stringify({ url: window.location.href, message: errorMsg, stack: event.reason ? event.reason.stack : '' })
+        }).catch(function() {});
       });
 
-      // Safety watchdog: if React hasn't mounted in 7 seconds, trigger fallback UI automatically
+      // Safety watchdog: increased to 20s for slow networks / large bundles
       setTimeout(function() {
         if (!window.__REACT_MOUNTED__) {
-          showHTMLFallback("Application initialization timeout (network/cache delay)", "WatchdogTimer", 0, 0, null);
+          showHTMLFallback("ໂຫຼດດົນເກີນໄປ — ກໍລຸນາລອງ Reload ໃໝ່ (Loading timeout — please reload)", "WatchdogTimer", 0, 0, null);
         }
-      }, 7000);
+      }, 20000);
     </script>
   </head>
   <body>
