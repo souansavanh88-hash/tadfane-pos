@@ -2363,10 +2363,24 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                   else if (srv.name.toLowerCase().includes("hik") || srv.name.includes("ເດີນ") || srv.name.includes("🥾")) emoji = "🥾";
                   else if (srv.name.toLowerCase().includes("zip") || srv.name.includes("ສະລິງ")) emoji = "🧗";
                   
-                  const p1 = srv.priceTier1 || srv.price || 0;
-                  const p3 = srv.priceTier3 || srv.price || 0;
-                  const isFlat = srv.priceTier1Type === "flat";
-                  const unit = isFlat ? (lang === "en" ? "round" : "ຮອບ") : (lang === "en" ? "pax" : "ທ່ານ");
+                  let p1 = srv.priceTier1 || srv.price || 0;
+                  let p3 = srv.priceTier3 || srv.price || 0;
+                  let p1Type = srv.priceTier1Type || "pax";
+                  let p3Type = srv.priceTier3Type || "pax";
+
+                  if (srv.id === "SRV-004") {
+                    p1 = 1580; p1Type = "pax";
+                    p3 = 1120; p3Type = "pax";
+                  } else if (srv.id === "SRV-005") {
+                    p1 = 1900; p1Type = "flat";
+                    p3 = 780; p3Type = "pax";
+                  } else if (srv.id === "SRV-006") {
+                    p1 = 500; p1Type = "pax";
+                    p3 = 500; p3Type = "pax";
+                  }
+
+                  const unit1 = p1Type === "flat" ? (lang === "en" ? "round" : "ຮອບ") : (lang === "en" ? "pax" : "ທ່ານ");
+                  const unit3 = p3Type === "flat" ? (lang === "en" ? "round" : "ຮອບ") : (lang === "en" ? "pax" : "ທ່ານ");
                   
                   return (
                     <div 
@@ -2415,11 +2429,13 @@ export default function QRBooking({ currentUser, preloadedBookingId, clearPreloa
                       {/* Price Options */}
                       <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
                         <div style={{ marginBottom: "3px" }}>
-                          <strong>1-2 {lang === "en" ? "Pax:" : "ທ່ານ:"}</strong> {p1.toLocaleString()} {srv.currency}/{unit}
+                          <strong>1-2 {lang === "en" ? "Pax:" : "ທ່ານ:"}</strong> {p1.toLocaleString()} {srv.currency}/{unit1}
                         </div>
-                        <div>
-                          <strong>3+ {lang === "en" ? "Pax (Group):" : "ທ່ານ (ກຸ່ມ/ສ່ວນຫຼຸດ):"}</strong> {p3.toLocaleString()} {srv.currency}/{srv.priceTier3Type === "flat" ? unit : (lang === "en" ? "pax" : "ທ່ານ")}
-                        </div>
+                        {p3 !== p1 && (
+                          <div>
+                            <strong>3+ {lang === "en" ? "Pax (Group):" : "ທ່ານ (ກຸ່ມ/ສ່ວນຫຼຸດ):"}</strong> {p3.toLocaleString()} {srv.currency}/{unit3}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

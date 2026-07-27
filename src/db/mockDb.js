@@ -249,30 +249,33 @@ export const migrateDb = (parsed) => {
     }
   }
 
-  // Automatically migrate services to support tiered pricing and flat/pax type flags
+  // Automatically migrate & enforce services to support tiered pricing and flat/pax type flags
   if (parsed.services && Array.isArray(parsed.services)) {
     parsed.services = parsed.services.map(s => {
-      if (s.priceTier1 === undefined) {
-        migrated = true;
-        if (s.id === "SRV-001") {
-          s.priceTier1 = 250000;
-          s.priceTier2 = 230000;
-          s.priceTier3 = 200000;
-        } else {
-          s.priceTier1 = s.price || 0;
-          s.priceTier2 = s.price || 0;
-          s.priceTier3 = s.price || 0;
-        }
-      }
-      if (s.currency === undefined) {
-        migrated = true;
-        s.currency = s.id === "SRV-004" || s.id === "SRV-005" || s.id === "SRV-006" ? "THB" : "LAK";
-      }
-      if (s.priceTier1Type === undefined) {
-        migrated = true;
-        s.priceTier1Type = s.id === "SRV-005" ? "flat" : "pax";
-        s.priceTier2Type = s.id === "SRV-005" ? "flat" : "pax";
+      if (s.id === "SRV-004") {
+        s.priceTier1 = 1580;
+        s.priceTier1Type = "pax";
+        s.priceTier2 = 1580;
+        s.priceTier2Type = "pax";
+        s.priceTier3 = 1120;
         s.priceTier3Type = "pax";
+        s.currency = "THB";
+      } else if (s.id === "SRV-005") {
+        s.priceTier1 = 1900;
+        s.priceTier1Type = "flat";
+        s.priceTier2 = 1900;
+        s.priceTier2Type = "flat";
+        s.priceTier3 = 780;
+        s.priceTier3Type = "pax";
+        s.currency = "THB";
+      } else if (s.id === "SRV-006") {
+        s.priceTier1 = 500;
+        s.priceTier1Type = "pax";
+        s.priceTier2 = 500;
+        s.priceTier2Type = "pax";
+        s.priceTier3 = 500;
+        s.priceTier3Type = "pax";
+        s.currency = "THB";
       }
       return s;
     });
